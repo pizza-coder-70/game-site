@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Memory Match | The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: radial-gradient(ellipse at center, #0f172a 0%, #020617 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Outfit', sans-serif;
+            color: #e2e8f0;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&display=swap');
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            letter-spacing: 3px;
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #hud {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 16px;
+            font-size: 1.1rem;
+            color: #94a3b8;
+        }
+
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(6, 80px);
+            gap: 10px;
+            margin: 10px;
+        }
+
+        .card {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #1e293b, #334155);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.4rem;
+            cursor: pointer;
+            transition: transform .3s, box-shadow .2s;
+            border: 2px solid #334155;
+            user-select: none;
+        }
+
+        .card:hover:not(.matched) {
+            box-shadow: 0 0 20px #38bdf855;
+            transform: scale(1.05);
+        }
+
+        .card.flipped,
+        .card.matched {
+            background: linear-gradient(135deg, #1d4ed8, #4f46e5);
+            border-color: #818cf8;
+        }
+
+        .card.matched {
+            box-shadow: 0 0 16px #818cf8;
+            opacity: 0.7;
+        }
+
+        .card.back {
+            font-size: 2rem;
+        }
+
+        #msg {
+            margin-top: 16px;
+            font-size: 1.2rem;
+            min-height: 1.5em;
+            color: #fff;
+        }
+
+        button {
+            margin-top: 12px;
+            padding: 10px 32px;
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            color: #fff;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            letter-spacing: 2px;
+        }
+
+        button:hover {
+            transform: scale(1.07);
+        }
+
+        #menuBtn {
+            background: linear-gradient(135deg, #334155, #1e293b);
+            display: none;
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999;
+        }
+
+        #homeBtn:hover {
+            background: #1e40af;
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>🃏 MEMORY MATCH</h1>
+    <div id="hud"><span>MOVES: <b id="moves">0</b></span><span>MATCHES: <b id="matches">0</b>/18</span><span>TIME: <b
+                id="time">0</b>s</span></div>
+    <div id="grid"></div>
+    <div id="msg">Press New Game to start!</div>
+    <button onclick="newGame()">NEW GAME</button>
+    <button id="menuBtn" onclick="window.close()">🏠 Return to Menu</button>
+    <script src="../scripts/scores.js"></script>
+    <script>
+        const EMOJIS = ['🍕', '🚀', '👾', '🎮', '🌟', '🔥', '💎', '🦄', '🐉', '🍔', '🎸', '🌈', '🦊', '🐙', '🎯', '🍀', '⚡', '🏆'];
+        let cards = [], flipped = [], matched = 0, moves = 0, canClick = true, timer = 0, timerInt;
+
+        function newGame() {
+            const pairs = [...EMOJIS, ...EMOJIS].sort(() => Math.random() - 0.5);
+            cards = pairs; moves = 0; matched = 0; flipped = []; canClick = true;
+            clearInterval(timerInt); timer = 0;
+            document.getElementById('moves').textContent = 0;
+            document.getElementById('matches').textContent = '0/18';
+            document.getElementById('time').textContent = 0;
+            document.getElementById('msg').textContent = 'Find all matching pairs!';
+            timerInt = setInterval(() => { timer++; document.getElementById('time').textContent = timer; }, 1000);
+            renderGrid();
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            cards.forEach((emoji, i) => {
+                const card = document.createElement('div');
+                card.className = 'card back';
+                card.textContent = '❓';
+                card.dataset.idx = i;
+                card.dataset.emoji = emoji;
+                card.addEventListener('click', () => flipCard(card, i));
+                grid.appendChild(card);
+            });
+        }
+
+        function flipCard(el, idx) {
+            if (!canClick) return;
+            if (el.classList.contains('matched') || el.classList.contains('flipped')) return;
+            el.classList.add('flipped'); el.textContent = el.dataset.emoji;
+            flipped.push({ el, idx });
+            if (flipped.length === 2) {
+                moves++; document.getElementById('moves').textContent = moves;
+                canClick = false;
+                const [a, b] = flipped;
+                if (a.el.dataset.emoji === b.el.dataset.emoji) {
+                    a.el.classList.add('matched'); b.el.classList.add('matched');
+                    matched++; document.getElementById('matches').textContent = `${matched}/18`;
+                    flipped = []; canClick = true;
+                    if (matched === 18) {
+                        clearInterval(timerInt);
+                        document.getElementById('msg').textContent = `🎉 You won in ${moves} moves & ${timer}s!`;
+                        document.getElementById('menuBtn').style.display = '';
+                        PizzaScores.save('Memory Match', matched, `${moves} moves`);
+                    }
+                } else {
+                    setTimeout(() => {
+                        a.el.classList.remove('flipped'); a.el.textContent = '❓';
+                        b.el.classList.remove('flipped'); b.el.textContent = '❓';
+                        flipped = []; canClick = true;
+                    }, 900);
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Memory Pairs 2 – The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0f172a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff;
+            padding: 16px
+        }
+
+        h1 {
+            color: #818cf8;
+            font-size: 2rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(129, 140, 248, 0.5)
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 14px
+        }
+
+        select,
+        button {
+            padding: 8px 16px;
+            background: #1e293b;
+            border: 1px solid #818cf8;
+            color: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: .9rem
+        }
+
+        button {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed)
+        }
+
+        button:hover {
+            transform: translateY(-2px)
+        }
+
+        #board {
+            display: grid;
+            gap: 8px;
+            max-width: 600px
+        }
+
+        .card {
+            background: linear-gradient(135deg, #1e1b4b, #312e81);
+            border: 2px solid rgba(129, 140, 248, 0.3);
+            border-radius: 12px;
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            cursor: pointer;
+            transition: all .3s;
+            transform: rotateY(180deg)
+        }
+
+        .card.revealed,
+        .card.matched {
+            transform: rotateY(0deg)
+        }
+
+        .card.matched {
+            background: linear-gradient(135deg, #14532d, #166534);
+            border-color: #4ade80;
+            cursor: default
+        }
+
+        .card:not(.revealed):not(.matched):hover {
+            border-color: #818cf8;
+            box-shadow: 0 0 12px rgba(129, 140, 248, 0.3)
+        }
+
+        #hud {
+            color: #818cf8;
+            margin-bottom: 10px;
+            font-size: 1rem
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🃏 Memory Pairs 2</h1>
+    <div class="controls">
+        <select id="diff">
+            <option value="4">Easy (4×4)</option>
+            <option value="5" selected>Medium (5×4)</option>
+            <option value="6">Hard (6×5)</option>
+        </select>
+        <button onclick="init()">New Game</button>
+    </div>
+    <div id="hud">Pairs: <span id="pr">0</span> / <span id="tp">0</span> &nbsp; Moves: <span id="mv">0</span> &nbsp;
+        Time: <span id="tm">0</span>s</div>
+    <div id="board"></div>
+    <script>
+        const EMOJIS = ['🎮', '🚀', '💎', '🌙', '⭐', '🔥', '🌊', '🎨', '🦄', '🐉', '🏆', '🎯', '💡', '🎸', '🌺', '🍕', '🎭', '🎪', '🎫', '🎲', '🦁', '🐺', '🦊', '🦋', '🐋', '🌈', '⚡', '🎃'];
+        let cards, flipped, matched, moves, timer, startTime, cols;
+        function init() {
+            const d = +document.getElementById('diff').value; cols = d;
+            const rows = d === 4 ? 4 : d === 5 ? 4 : 5; const pairs = (cols * rows) / 2;
+            const emojis = EMOJIS.slice(0, pairs); const pool = [...emojis, ...emojis].sort(() => Math.random() - .5);
+            cards = pool.map((e, i) => ({ emoji: e, id: i, revealed: false, matched: false }));
+            flipped = []; matched = 0; moves = 0; timer = 0; startTime = null;
+            document.getElementById('pr').textContent = 0; document.getElementById('tp').textContent = pairs; document.getElementById('mv').textContent = 0; document.getElementById('tm').textContent = 0;
+            const board = document.getElementById('board'); board.style.gridTemplateColumns = `repeat(${cols},1fr)`; board.style.width = cols * 90 + 'px';
+            if (timer) clearInterval(timer);
+            render();
+        }
+        function render() {
+            const board = document.getElementById('board'); board.innerHTML = '';
+            cards.forEach((c, i) => {
+                const div = document.createElement('div'); div.className = 'card'; div.style.width = '82px'; div.style.height = '82px'; div.style.fontSize = '2.2rem';
+                if (c.revealed || c.matched) div.classList.add('revealed'); if (c.matched) div.classList.add('matched');
+                if (c.revealed || c.matched) div.textContent = c.emoji;
+                div.addEventListener('click', () => click(i)); board.appendChild(div);
+            });
+        }
+        function click(i) {
+            if (flipped.length === 2 || cards[i].matched || cards[i].revealed) return;
+            if (!startTime) { startTime = Date.now(); timer = setInterval(() => { document.getElementById('tm').textContent = Math.floor((Date.now() - startTime) / 1000); }, 500); }
+            cards[i].revealed = true; flipped.push(i); render();
+            if (flipped.length === 2) {
+                moves++; document.getElementById('mv').textContent = moves;
+                const [a, b] = flipped;
+                if (cards[a].emoji === cards[b].emoji) { cards[a].matched = cards[b].matched = true; matched++; document.getElementById('pr').textContent = matched; flipped = []; render(); if (matched === cards.length / 2) { clearInterval(timer); const elapsed = Math.floor((Date.now() - startTime) / 1000); setTimeout(() => { const overlay = document.createElement('div'); overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.93);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99;font-family:inherit'; overlay.innerHTML = `<div style="font-size:3.5rem;color:#818cf8;text-shadow:0 0 30px #818cf8;margin-bottom:12px">YOU WIN! 🎉</div><div style="font-size:1.2rem;color:#4ade80;margin-bottom:6px">${moves} moves in ${elapsed}s</div><div style="font-size:.9rem;color:#64748b;margin-bottom:24px">All pairs matched!</div><button onclick="this.parentNode.remove();init()" style="padding:12px 28px;background:linear-gradient(135deg,#4f46e5,#7c3aed);border:none;color:#fff;border-radius:10px;cursor:pointer;font-size:1rem;font-family:inherit">Play Again</button>`; document.body.appendChild(overlay); }, 300); } }
+                else setTimeout(() => { cards[a].revealed = cards[b].revealed = false; flipped = []; render(); }, 900);
+            }
+        }
+        init();
+    </script>
+</body>
+
+</html>

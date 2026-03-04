@@ -1,0 +1,159 @@
+@font-face {
+    font-family: 'Terminus';
+    src: url('https://fonts.cdnfonts.com/s/15875/TerminusTTF-4.47.0.woff') format('woff');
+}
+
+:root {
+    --terminal-green: #33ff33;
+    --terminal-bg: #050505;
+    --terminal-dim: #1a661a;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--terminal-bg);
+    color: var(--terminal-green);
+    font-family: 'Terminus', 'Courier New', Courier, monospace;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    text-transform: uppercase;
+}
+
+/* CRT Effect */
+.crt-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    background-size: 100% 2px, 3px 100%;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.terminal {
+    width: 900px;
+    height: 600px;
+    padding: 2rem;
+    position: relative;
+    border: 10px solid #222;
+    border-radius: 10px;
+    box-shadow: 0 0 40px rgba(51, 255, 51, 0.1);
+}
+
+header {
+    margin-bottom: 2rem;
+    border-bottom: 2px solid var(--terminal-green);
+    padding-bottom: 0.5rem;
+}
+
+.game-container {
+    display: flex;
+    gap: 2rem;
+    height: 400px;
+}
+
+.sidebar {
+    width: 250px;
+}
+
+.main-display {
+    flex: 1;
+    display: flex;
+    gap: 2rem;
+}
+
+.memory-dump {
+    flex: 2;
+    font-size: 1.1rem;
+    line-height: 1.2;
+    word-break: break-all;
+    cursor: pointer;
+}
+
+.memory-dump span {
+    transition: background-color 0.1s;
+}
+
+.memory-dump span:hover {
+    background-color: var(--terminal-green);
+    color: var(--terminal-bg);
+}
+
+.log {
+    flex: 1;
+    border-left: 1px solid var(--terminal-dim);
+    padding-left: 1rem;
+    font-size: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.input-line {
+    margin-top: 2rem;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.cursor {
+    animation: blink 0.8s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+/* Game Over Overlay */
+.game-over-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--terminal-bg);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+
+.message {
+    text-align: center;
+    max-width: 500px;
+}
+
+.message h1 {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.message button {
+    background: transparent;
+    border: 2px solid var(--terminal-green);
+    color: var(--terminal-green);
+    padding: 1rem 2rem;
+    margin-top: 2rem;
+    cursor: pointer;
+    font-family: inherit;
+    text-transform: uppercase;
+    font-weight: bold;
+    transition: all 0.3s;
+}
+
+.message button:hover {
+    background: var(--terminal-green);
+    color: var(--terminal-bg);
+}

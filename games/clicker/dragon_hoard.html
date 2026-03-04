@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Dragon Hoard – The Pizza Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0d0006;
+            min-height: 100vh;
+            font-family: 'Outfit', sans-serif;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px
+        }
+
+        h1 {
+            color: #f59e0b;
+            font-size: 2rem;
+            text-shadow: 0 0 20px #f59e0b;
+            margin-bottom: 4px
+        }
+
+        #counter {
+            font-size: 1.2rem;
+            color: #fcd34d;
+            margin-bottom: 4px
+        }
+
+        #cps {
+            font-size: .85rem;
+            color: #57534e;
+            margin-bottom: 8px
+        }
+
+        /* Hero attack */
+        #hero-wrap {
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px
+        }
+
+        #hero-box {
+            display: none;
+            background: rgba(239, 68, 68, .15);
+            border: 2px solid #ef4444;
+            border-radius: 14px;
+            padding: 10px 20px;
+            text-align: center
+        }
+
+        #hero-hp-bar {
+            height: 8px;
+            background: rgba(239, 68, 68, .2);
+            border-radius: 4px;
+            margin: 6px 0
+        }
+
+        #hero-hp-fill {
+            height: 100%;
+            background: #ef4444;
+            border-radius: 4px;
+            transition: width .2s
+        }
+
+        #fight-btn {
+            padding: 6px 18px;
+            background: linear-gradient(135deg, #f59e0b, #ef4444);
+            border: none;
+            color: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-family: inherit;
+            margin-top: 4px
+        }
+
+        .layout {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            max-width: 900px
+        }
+
+        #click-zone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px
+        }
+
+        #dragon {
+            width: 150px;
+            height: 150px;
+            border-radius: 20px;
+            background: radial-gradient(circle at 35% 30%, #7c3aed, #4c0519, #0d0006);
+            border: 3px solid #f59e0b;
+            cursor: pointer;
+            font-size: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 40px rgba(245, 158, 11, .4);
+            user-select: none;
+            transition: transform .1s
+        }
+
+        #dragon:active {
+            transform: scale(.92)rotate(-5deg)
+        }
+
+        .xp-bar {
+            height: 7px;
+            background: rgba(245, 158, 11, .15);
+            border-radius: 4px;
+            width: 150px
+        }
+
+        .xp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #f59e0b, #ef4444);
+            border-radius: 4px;
+            transition: width .2s
+        }
+
+        #dlvl {
+            font-size: .78rem;
+            color: #f59e0b;
+            text-align: center
+        }
+
+        #shop {
+            flex: 1;
+            min-width: 260px;
+            background: rgba(255, 255, 255, .03);
+            border: 1px solid rgba(245, 158, 11, .2);
+            border-radius: 20px;
+            padding: 20px;
+            max-height: 70vh;
+            overflow-y: auto
+        }
+
+        #shop h2 {
+            color: #f59e0b;
+            font-size: 1.1rem;
+            margin-bottom: 14px
+        }
+
+        .upg {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(245, 158, 11, .06);
+            border: 1px solid rgba(245, 158, 11, .18);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background .15s
+        }
+
+        .upg:hover {
+            background: rgba(245, 158, 11, .18)
+        }
+
+        .upg.locked {
+            opacity: .4;
+            cursor: not-allowed
+        }
+
+        .ui {
+            font-size: 1.6rem;
+            flex-shrink: 0
+        }
+
+        .inf {
+            flex: 1
+        }
+
+        .un {
+            font-weight: 700;
+            font-size: .9rem
+        }
+
+        .ud {
+            font-size: .72rem;
+            color: #a8a29e
+        }
+
+        .uc {
+            font-size: .78rem;
+            color: #fcd34d;
+            margin-top: 2px
+        }
+
+        .uo {
+            font-size: .72rem;
+            color: #4ade80
+        }
+
+        #toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(245, 158, 11, .9);
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-weight: 700;
+            opacity: 0;
+            transition: opacity .3s;
+            pointer-events: none;
+            z-index: 99
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🐉 Dragon Hoard</h1>
+    <div id="counter">0 gold</div>
+    <div id="cps">0/sec | Dragon Lv 1</div>
+    <div id="hero-wrap">
+        <div id="hero-box">
+            <div id="hero-name">⚔️ A Hero attacks!</div>
+            <div id="hero-hp-bar">
+                <div id="hero-hp-fill" style="width:100%"></div>
+            </div>
+            <div id="hero-hp-txt" style="font-size:.75rem;color:#fca5a5">HP: 100/100</div>
+            <button id="fight-btn" onclick="fightHero()">🔥 Breathe Fire!</button>
+        </div>
+    </div>
+    <div class="layout">
+        <div id="click-zone">
+            <div id="dragon" onclick="breathe()">🐉</div>
+            <div class="xp-bar">
+                <div class="xp-fill" id="xpf"></div>
+            </div>
+            <div id="dlvl">Lv 1 · +1/breathe</div>
+        </div>
+        <div id="shop">
+            <h2>🏰 Upgrades</h2>
+            <div id="upgrades"></div>
+        </div>
+    </div>
+    <div id="toast"></div>
+    <script>
+        let gold = 0, gps = 0, cp = 1, dlvl = 1, xp = 0, xpMax = 60;
+        let heroHp = 0, heroMaxHp = 0, heroActive = false, heroReward = 0;
+        const UPS = [
+            { n: 'Treasure Chest', i: '📦', d: '+0.5/s gold', base: 20, own: 0, rate: .5 },
+            { n: 'Kobold Miners', i: '⛏️', d: '+2/s gold', base: 120, own: 0, rate: 2 },
+            { n: 'Dungeon', i: '🗝️', d: '+8/s gold', base: 600, own: 0, rate: 8 },
+            { n: 'Dragon Lair', i: '🏔️', d: '+25/s gold', base: 3000, own: 0, rate: 25 },
+            { n: 'Magic Scales', i: '✨', d: '+80/s gold', base: 12000, own: 0, rate: 80 },
+            { n: 'Fire Army', i: '⚔️', d: '+250/s gold', base: 60000, own: 0, rate: 250 },
+        ];
+        const HEROES = [
+            { name: '⚔️ Knight attacks!', hp: 30, reward: 50 },
+            { name: '🧙 Mage attacks!', hp: 20, reward: 80 },
+            { name: '🏹 Ranger attacks!', hp: 25, reward: 60 },
+            { name: '🛡️ Paladin attacks!', hp: 60, reward: 150 },
+            { name: '👑 Hero King!', hp: 150, reward: 500 },
+        ];
+        function fmt(n) { if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B'; if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M'; if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K'; return Math.floor(n) + '' }
+        function cost(u) { return Math.floor(u.base * Math.pow(1.15, u.own)) }
+        function breathe() {
+            gold += cp; xp += 1;
+            if (heroActive) { fightHero(); return; }
+            if (xp >= xpMax) { dlvl++; xp -= xpMax; xpMax = Math.floor(xpMax * 1.8); cp = dlvl; }
+            const el = document.createElement('div');
+            el.textContent = '🔥+' + cp; el.style.cssText = 'position:fixed;color:#fcd34d;font-weight:700;pointer-events:none;z-index:50';
+            const r = document.getElementById('dragon').getBoundingClientRect();
+            el.style.left = (r.left + r.width / 2 + (Math.random() - .5) * 40) + 'px'; el.style.top = r.top + 'px';
+            el.animate([{ opacity: 1, transform: 'translateY(0)scale(1)' }, { opacity: 0, transform: 'translateY(-60px)scale(1.3)' }], { duration: 800, fill: 'forwards' });
+            document.body.appendChild(el); setTimeout(() => el.remove(), 800);
+        }
+        function spawnHero() {
+            if (heroActive) return;
+            const h = HEROES[Math.min(HEROES.length - 1, Math.floor(Math.random() * (HEROES.length)))];
+            const scaledHp = Math.floor(h.hp * (1 + dlvl * .3));
+            heroHp = scaledHp; heroMaxHp = scaledHp; heroActive = true;
+            heroReward = Math.floor(h.reward * (1 + dlvl * .5));
+            document.getElementById('hero-name').textContent = h.name;
+            document.getElementById('hero-box').style.display = 'block';
+            updateHeroUI();
+            toast('⚠️ ' + h.name + ' Click the dragon to fight!');
+        }
+        function fightHero() {
+            const dmg = cp + Math.floor(gps * .1);
+            heroHp = Math.max(0, heroHp - dmg);
+            updateHeroUI();
+            if (heroHp <= 0) {
+                gold += heroReward; heroActive = false;
+                document.getElementById('hero-box').style.display = 'none';
+                toast('🏆 Hero defeated! +' + fmt(heroReward) + ' gold!');
+                setTimeout(() => { if (Math.random() < .6) spawnHero(); }, 15000 + Math.random() * 30000);
+            }
+        }
+        function updateHeroUI() {
+            const pct = heroHp / heroMaxHp * 100;
+            document.getElementById('hero-hp-fill').style.width = pct + '%';
+            document.getElementById('hero-hp-txt').textContent = 'HP: ' + heroHp + '/' + heroMaxHp;
+        }
+        function buy(u) {
+            const co = cost(u); if (gold < co) return;
+            gold -= co; u.own++; gps += u.rate;
+            renderUpgrades(); toast('✅ ' + u.n + '!');
+        }
+        function toast(msg) {
+            const t = document.getElementById('toast'); t.textContent = msg; t.style.opacity = 1;
+            clearTimeout(t._t); t._t = setTimeout(() => t.style.opacity = 0, 2200);
+        }
+        function renderUpgrades() {
+            const d = document.getElementById('upgrades'); d.innerHTML = '';
+            UPS.forEach(u => {
+                const co = cost(u), div = document.createElement('div');
+                div.className = 'upg' + (gold < co ? ' locked' : '');
+                div.innerHTML = `<div class="ui">${u.i}</div><div class="inf"><div class="un">${u.n}</div><div class="ud">${u.d}</div><div class="uc">💰 ${fmt(co)}</div><div class="uo">Owned: ${u.own}</div></div>`;
+                div.addEventListener('click', () => buy(u));
+                d.appendChild(div);
+            });
+        }
+        setTimeout(spawnHero, 25000 + Math.random() * 20000);
+        let last = 0, lastR = 0;
+        function loop(ts) {
+            if (last) gold += gps * (ts - last) / 1000;
+            last = ts;
+            document.getElementById('counter').textContent = fmt(gold) + ' gold';
+            document.getElementById('cps').textContent = gps.toFixed(1) + '/sec | Dragon Lv ' + dlvl;
+            document.getElementById('xpf').style.width = Math.min(100, xp / xpMax * 100) + '%';
+            document.getElementById('dlvl').textContent = 'Lv ' + dlvl + ' · +' + cp + '/breathe';
+            if (ts - lastR > 500) { lastR = ts; renderUpgrades(); }
+            requestAnimationFrame(loop);
+        }
+        renderUpgrades(); requestAnimationFrame(loop);
+    </script>
+</body>
+
+</html>

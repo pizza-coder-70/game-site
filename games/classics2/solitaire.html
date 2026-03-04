@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Solitaire – The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #065f46;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff;
+            padding: 20px
+        }
+
+        h1 {
+            color: #a7f3d0;
+            font-size: 2rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(167, 243, 208, 0.5)
+        }
+
+        #board {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap
+        }
+
+        #tableau {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px
+        }
+
+        .pile {
+            position: relative;
+            min-width: 70px;
+            min-height: 100px
+        }
+
+        .card {
+            width: 68px;
+            height: 95px;
+            border-radius: 8px;
+            position: absolute;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.3)
+        }
+
+        .card.red {
+            color: #ef4444
+        }
+
+        .card.black {
+            color: #1e293b
+        }
+
+        .card.face-down {
+            background: linear-gradient(135deg, #1e40af, #1e3a8a);
+            color: transparent
+        }
+
+        .card.face-up {
+            background: linear-gradient(135deg, #f8fafc, #e2e8f0)
+        }
+
+        .foundation {
+            border: 2px dashed rgba(167, 243, 208, 0.4);
+            border-radius: 8px;
+            width: 68px;
+            height: 95px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(167, 243, 208, 0.4);
+            font-size: .8rem
+        }
+
+        #msg {
+            margin-top: 12px;
+            color: #a7f3d0
+        }
+
+        #restartBtn {
+            margin-top: 8px;
+            padding: 8px 24px;
+            background: #059669;
+            border: none;
+            color: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem
+        }
+
+        #restartBtn:hover {
+            background: #047857
+        }
+    </style>
+</head>
+
+<body>
+    <h1>♠ Klondike Solitaire</h1>
+    <div id="board">
+        <div id="stock-area">
+            <div id="stock" class="foundation" style="cursor:pointer">STOCK</div>
+            <div id="waste" class="pile" style="min-height:100px;margin-top:8px"></div>
+        </div>
+        <div style="display:flex;gap:8px" id="foundations">
+            <div class="foundation" id="f0">♠</div>
+            <div class="foundation" id="f1">♥</div>
+            <div class="foundation" id="f2">♦</div>
+            <div class="foundation" id="f3">♣</div>
+        </div>
+    </div>
+    <div id="tableau" id="tab"></div>
+    <div id="msg"></div>
+    <button id="restartBtn" onclick="init()">🔄 New Game</button>
+    <script>
+        const SUITS = ['♠', '♥', '♦', '♣']; const VALS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+        const RED = new Set(['♥', '♦']);
+        let deck, tableau, foundations, stock, waste, selected, selectedFrom;
+        function card(suit, val) { return { suit, val, faceUp: false }; }
+        function makeDeck() { const d = []; SUITS.forEach(s => VALS.forEach(v => d.push(card(s, v)))); return d; }
+        function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[a[i], a[j]] = [a[j], a[i]]; } return a; }
+        function init() {
+            deck = shuffle(makeDeck());
+            tableau = Array.from({ length: 7 }, (_, i) => { const col = []; for (let j = 0; j <= i; j++) { const c = deck.pop(); c.faceUp = j === i; col.push(c); } return col; });
+            foundations = [[], [], [], []];
+            stock = [...deck]; waste = []; selected = null; selectedFrom = null;
+            deck = []; render();
+        }
+        function suitIdx(s) { return SUITS.indexOf(s); }
+        function valIdx(v) { return VALS.indexOf(v); }
+        function canPlaceFoundation(card, foundation) {
+            if (foundation.length === 0) return card.val === 'A';
+            const top = foundation[foundation.length - 1];
+            return top.suit === card.suit && valIdx(card.val) === valIdx(top.val) + 1;
+        }
+        function canPlaceTableau(card, pile) {
+            if (pile.length === 0) return card.val === 'K';
+            const top = pile[pile.length - 1];
+            if (!top.faceUp) return false;
+            const diffColor = (RED.has(card.suit) && !RED.has(top.suit)) || (!RED.has(card.suit) && RED.has(top.suit));
+            return diffColor && valIdx(card.val) === valIdx(top.val) - 1;
+        }
+        function autoFoundation() {
+            let moved = true;
+            while (moved) {
+                moved = false;
+                for (let t = 0; t < 7; t++) {
+                    if (tableau[t].length === 0) continue;
+                    const c = tableau[t][tableau[t].length - 1]; if (!c.faceUp) continue;
+                    const fi = suitIdx(c.suit);
+                    if (canPlaceFoundation(c, foundations[fi])) { foundations[fi].push(tableau[t].pop()); moved = true; if (tableau[t].length > 0) tableau[t][tableau[t].length - 1].faceUp = true; }
+                }
+                if (waste.length > 0) { const c = waste[waste.length - 1]; const fi = suitIdx(c.suit); if (canPlaceFoundation(c, foundations[fi])) { foundations[fi].push(waste.pop()); moved = true; } }
+            }
+        }
+        function render() {
+            // stock
+            document.getElementById('stock').textContent = stock.length ? '🂠 ' + stock.length : '(click to reset)';
+            // waste
+            const wasteEl = document.getElementById('waste'); wasteEl.innerHTML = '';
+            if (waste.length > 0) { const c = waste[waste.length - 1]; wasteEl.appendChild(makeCardEl(c, true, 'waste', waste.length - 1)); }
+            // foundations
+            for (let i = 0; i < 4; i++) { const fEl = document.getElementById('f' + i); const f = foundations[i]; if (f.length > 0) { const c = f[f.length - 1]; fEl.innerHTML = ''; fEl.style.color = ''; fEl.appendChild(makeCardEl(c, true, 'foundation', i)); } else { fEl.innerHTML = SUITS[i]; fEl.style.color = 'rgba(167,243,208,0.4)'; } }
+            // tableau
+            const tabEl = document.getElementById('tab') || document.querySelector('#tab');
+            const tab = document.getElementById('tableau');
+            tab.innerHTML = ''; tab.style.display = 'flex'; tab.style.gap = '8px'; tab.style.marginTop = '15px';
+            for (let t = 0; t < 7; t++) {
+                const pile = document.createElement('div'); pile.className = 'pile'; pile.style.position = 'relative'; pile.style.minWidth = '70px'; pile.style.minHeight = '120px';
+                tableau[t].forEach((c, i) => { const el = makeCardEl(c, c.faceUp, 'tableau', t, i); el.style.top = (i * 22) + 'px'; el.style.position = 'absolute'; pile.appendChild(el); });
+                pile.style.height = (tableau[t].length * 22 + 95) + 'px';
+                pile.addEventListener('click', () => { if (tableau[t].length === 0 && selected) { moveSelected('tableau', t); } });
+                tab.appendChild(pile);
+            }
+            checkWin();
+        }
+        function makeCardEl(c, faceUp, from, idx, subIdx) {
+            const el = document.createElement('div');
+            el.className = `card ${faceUp ? (RED.has(c.suit) ? 'red' : 'black') + ' face-up' : 'face-down'}`;
+            el.style.width = '68px'; el.style.height = '95px';
+            if (faceUp) el.innerHTML = `<div style="font-size:22px">${c.suit}</div><div>${c.val}</div>`;
+            el.addEventListener('click', e => { e.stopPropagation(); handleClick(c, faceUp, from, idx, subIdx); });
+            return el;
+        }
+        function handleClick(c, faceUp, from, idx, subIdx) {
+            if (from === 'stock') { if (!faceUp) return; if (selected) { clearSel(); } return; }
+            // stock click handled separately
+            if (!faceUp) {
+                if (from === 'tableau' && subIdx === tableau[idx].length - 1) { tableau[idx][subIdx].faceUp = true; render(); return; }
+                return;
+            }
+            if (selected === null) { selected = c; selectedFrom = { from, idx, subIdx }; render(); highlightSelected(); }
+            else { moveSelected(from, idx, subIdx); }
+        }
+        function highlightSelected() {/* visual feedback would go here */ }
+        function moveSelected(to, toIdx, toSubIdx) {
+            if (!selected) return;
+            const c = selected; const sf = selectedFrom;
+            let moved = false;
+            if (to === 'foundation') { const fi = toIdx; if (canPlaceFoundation(c, foundations[fi])) { removeCard(sf); foundations[fi].push(c); moved = true; } }
+            else if (to === 'tableau') { if (canPlaceTableau(c, tableau[toIdx])) { removeCard(sf); tableau[toIdx].push(c); moved = true; } }
+            clearSel(); if (moved) { autoFoundation(); } render();
+        }
+        function removeCard(sf) {
+            if (sf.from === 'tableau') { const t = tableau[sf.idx]; const i = t.indexOf(sf.subIdx >= 0 ? t[sf.subIdx] : sc_ref); t.splice(sf.subIdx, 1); if (t.length > 0) t[t.length - 1].faceUp = true; }
+            else if (sf.from === 'waste') waste.pop();
+        }
+        function clearSel() { selected = null; selectedFrom = null; }
+        function checkWin() { if (foundations.every(f => f.length === 13)) { document.getElementById('msg').textContent = '🎉 You Win! Congratulations!'; } }
+        document.getElementById('stock').addEventListener('click', () => {
+            if (stock.length > 0) { const c = stock.pop(); c.faceUp = true; waste.push(c); }
+            else { stock = [...waste].reverse(); waste = []; stock.forEach(c => c.faceUp = false); }
+            clearSel(); render();
+        });
+        init();
+    </script>
+</body>
+
+</html>

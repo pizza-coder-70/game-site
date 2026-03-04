@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Asteroids | The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #00001a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #adf;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px #adf;
+            letter-spacing: 4px;
+        }
+
+        #hud {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+
+        canvas {
+            border: 2px solid #2af;
+            box-shadow: 0 0 30px #2af4;
+        }
+
+        #msg {
+            margin-top: 12px;
+            font-size: 1.2rem;
+            min-height: 1.5em;
+            color: #fff;
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 10px 32px;
+            background: linear-gradient(135deg, #2af, #17a);
+            color: #000;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            letter-spacing: 2px;
+        }
+
+        button:hover {
+            transform: scale(1.07);
+        }
+
+        #menuBtn {
+            background: linear-gradient(135deg, #334155, #1e293b);
+            color: #fff;
+            display: none;
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999;
+        }
+
+        #homeBtn:hover {
+            background: #1e40af;
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>☄️ ASTEROIDS</h1>
+    <div id="hud"><span>SCORE: <b id="score">0</b></span><span>LIVES: <b id="lives">3</b></span></div>
+    <canvas id="c" width="600" height="520"></canvas>
+    <div id="msg">Arrow Keys to move, Space to shoot!</div>
+    <button onclick="startGame()">START</button>
+    <button id="menuBtn" onclick="window.close()">🏠 Return to Menu</button>
+    <script src="../scripts/scores.js"></script>
+    <script>
+        const C = document.getElementById('c'), ctx = C.getContext('2d');
+        const W = 600, H = 520;
+        let ship, bullets, asteroids, score, lives, running, animId, invincible;
+        const keys = {};
+
+        function randPts(n, r) { const pts = []; for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, d = r * (0.7 + Math.random() * 0.5); pts.push({ x: Math.cos(a) * d, y: Math.sin(a) * d }); } return pts; }
+
+        function makeAsteroid(x, y, r, vx, vy) {
+            return { x, y, r, vx: vx || (Math.random() - 0.5) * 2, vy: vy || (Math.random() - 0.5) * 2, rot: 0, rotSpeed: (Math.random() - 0.5) * 0.05, pts: randPts(10, r) };
+        }
+
+        function startGame() {
+            score = 0; lives = 3; running = true; invincible = 120;
+            ship = { x: W / 2, y: H / 2, vx: 0, vy: 0, angle: -Math.PI / 2, thrust: false, shootCooldown: 0 };
+            bullets = [];
+            asteroids = [];
+            for (let i = 0; i < 6; i++) asteroids.push(makeAsteroid(Math.random() * W, Math.random() * H > H / 2 ? Math.random() * H : Math.random() * 50, 40));
+            document.getElementById('score').textContent = 0;
+            document.getElementById('lives').textContent = 3;
+            document.getElementById('msg').textContent = '';
+            if (animId) cancelAnimationFrame(animId);
+            loop();
+        }
+
+        document.addEventListener('keydown', e => { keys[e.key] = true; if (e.key === ' ') { e.preventDefault(); if (!running) startGame(); } });
+        document.addEventListener('keyup', e => keys[e.key] = false);
+
+        function update() {
+            if (!running) return;
+            if (invincible > 0) invincible--;
+            // Ship
+            if (keys['ArrowLeft'] || keys['a']) ship.angle -= 0.07;
+            if (keys['ArrowRight'] || keys['d']) ship.angle += 0.07;
+            if (keys['ArrowUp'] || keys['w']) {
+                ship.vx += Math.cos(ship.angle) * 0.3;
+                ship.vy += Math.sin(ship.angle) * 0.3;
+                ship.thrust = true;
+            } else ship.thrust = false;
+            // Friction
+            ship.vx *= 0.99; ship.vy *= 0.99;
+            const spd = Math.hypot(ship.vx, ship.vy); if (spd > 8) { ship.vx = ship.vx / spd * 8; ship.vy = ship.vy / spd * 8; }
+            ship.x = (ship.x + ship.vx + W) % W; ship.y = (ship.y + ship.vy + H) % H;
+            // Shoot
+            if (ship.shootCooldown > 0) ship.shootCooldown--;
+            if (keys[' '] && ship.shootCooldown === 0) {
+                bullets.push({ x: ship.x + Math.cos(ship.angle) * 20, y: ship.y + Math.sin(ship.angle) * 20, vx: Math.cos(ship.angle) * 12, vy: Math.sin(ship.angle) * 12, life: 50 });
+                ship.shootCooldown = 12;
+            }
+            // Bullets
+            bullets = bullets.filter(b => { b.x = (b.x + b.vx + W) % W; b.y = (b.y + b.vy + H) % H; b.life--; return b.life > 0; });
+            // Asteroids
+            asteroids.forEach(a => { a.x = (a.x + a.vx + W) % W; a.y = (a.y + a.vy + H) % H; a.rot += a.rotSpeed; });
+            // Bullet-asteroid collision
+            bullets.forEach((b, bi) => {
+                asteroids.forEach((a, ai) => {
+                    if (Math.hypot(b.x - a.x, b.y - a.y) < a.r) {
+                        bullets.splice(bi, 1);
+                        score += (a.r > 30 ? 20 : a.r > 15 ? 50 : 100);
+                        document.getElementById('score').textContent = score;
+                        const children = [];
+                        if (a.r > 20) {
+                            for (let k = 0; k < 2; k++) children.push(makeAsteroid(a.x + (Math.random() - 0.5) * a.r, a.y + (Math.random() - 0.5) * a.r, a.r / 2));
+                        }
+                        asteroids.splice(ai, 1, ...children);
+                    }
+                });
+            });
+            // Ship-asteroid
+            if (invincible <= 0) {
+                asteroids.forEach(a => {
+                    if (Math.hypot(ship.x - a.x, ship.y - a.y) < a.r + 14) {
+                        lives--; document.getElementById('lives').textContent = lives;
+                        invincible = 180;
+                        ship.vx = 0; ship.vy = 0; ship.x = W / 2; ship.y = H / 2;
+                        if (lives <= 0) { running = false; document.getElementById('msg').textContent = 'GAME OVER! Press Start.'; document.getElementById('menuBtn').style.display = ''; PizzaScores.save('Asteroids', score); }
+                    }
+                });
+            }
+            if (asteroids.length === 0) {
+                for (let i = 0; i < 6; i++) asteroids.push(makeAsteroid(Math.random() * W, 0, 40 + Math.floor(score / 500) * 5));
+                document.getElementById('msg').textContent = 'Wave cleared! 🌟';
+                setTimeout(() => document.getElementById('msg').textContent = '', 1500);
+            }
+        }
+
+        function drawPoly(pts, x, y, rot, color, glow) {
+            ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+            ctx.strokeStyle = color; ctx.lineWidth = 2;
+            if (glow) { ctx.shadowColor = color; ctx.shadowBlur = 10; }
+            ctx.beginPath();
+            pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+            ctx.closePath(); ctx.stroke(); ctx.restore();
+        }
+
+        function draw() {
+            ctx.fillStyle = 'rgba(0,0,26,0.85)'; ctx.fillRect(0, 0, W, H);
+            // Stars
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            for (let i = 0; i < 80; i++) ctx.fillRect((i * 73) % W, (i * 113) % H, 1, 1);
+            // Asteroids
+            asteroids.forEach(a => drawPoly(a.pts, a.x, a.y, a.rot, '#adf', true));
+            // Bullets
+            bullets.forEach(b => { ctx.fillStyle = '#fff'; ctx.shadowColor = '#0ff'; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(b.x, b.y, 3, 0, Math.PI * 2); ctx.fill(); });
+            ctx.shadowBlur = 0;
+            // Ship
+            if (invincible === 0 || Math.floor(invincible / 8) % 2 === 0) {
+                ctx.save(); ctx.translate(ship.x, ship.y); ctx.rotate(ship.angle);
+                ctx.strokeStyle = '#0ff'; ctx.lineWidth = 2; ctx.shadowColor = '#0ff'; ctx.shadowBlur = 10;
+                ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(-12, -10); ctx.lineTo(-6, 0); ctx.lineTo(-12, 10); ctx.closePath(); ctx.stroke();
+                if (ship.thrust && Math.random() > 0.4) {
+                    ctx.strokeStyle = '#f80'; ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(-20 + (Math.random() - 0.5) * 10, (Math.random() - 0.5) * 6); ctx.stroke();
+                }
+                ctx.restore();
+            }
+        }
+
+        function loop() { update(); draw(); if (running) animId = requestAnimationFrame(loop); }
+        draw();
+    </script>
+</body>
+
+</html>

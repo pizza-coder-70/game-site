@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Mastermind | The Pizza Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #050510;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Outfit', sans-serif;
+            color: #e2e8f0;
+            padding: 16px
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: 3px;
+            margin-bottom: 4px;
+            background: linear-gradient(135deg, #a855f7, #ec4899);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent
+        }
+
+        p.sub {
+            color: #64748b;
+            font-size: .85rem;
+            margin-bottom: 14px;
+            text-align: center
+        }
+
+        .panel {
+            background: #0d0d20;
+            border: 1px solid #1e1e3f;
+            border-radius: 18px;
+            padding: 20px;
+            width: 100%;
+            max-width: 480px
+        }
+
+        .row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px
+        }
+
+        .peg {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px solid #1e1e3f;
+            cursor: pointer;
+            transition: all .15s;
+            flex-shrink: 0
+        }
+
+        .feedback {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px;
+            margin-left: 6px
+        }
+
+        .fp {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #1e293b
+        }
+
+        .fp.black {
+            background: #000;
+            border: 2px solid #fff
+        }
+
+        .fp.white {
+            background: #fff;
+            border: 2px solid #94a3b8
+        }
+
+        #palette {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 12px 0
+        }
+
+        .pc {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: all .15s
+        }
+
+        .pc:hover,
+        .pc.sel {
+            border-color: #fff;
+            transform: scale(1.15)
+        }
+
+        #guess-row {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin: 10px 0
+        }
+
+        .gp {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px dashed #334155;
+            cursor: pointer;
+            transition: all .15s
+        }
+
+        #controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 10px
+        }
+
+        button {
+            padding: 9px 22px;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Outfit', sans-serif;
+            font-size: .9rem;
+            font-weight: 700;
+            cursor: pointer
+        }
+
+        #submitBtn {
+            background: linear-gradient(135deg, #a855f7, #ec4899);
+            color: #fff
+        }
+
+        #newBtn {
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            border: 1px solid #475569
+        }
+
+        #menuBtn {
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            border: 1px solid #475569;
+            display: none
+        }
+
+        #msg {
+            text-align: center;
+            font-size: 1rem;
+            font-weight: 700;
+            min-height: 1.4em;
+            margin: 8px 0;
+            color: #fbbf24
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(13, 13, 32, 0.9);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999
+        }
+
+        #attLabel {
+            text-align: center;
+            font-size: .85rem;
+            color: #64748b;
+            margin-bottom: 4px
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>🔮 MASTERMIND</h1>
+    <p class="sub">⚫ = Right color & position &nbsp;|&nbsp; ⚪ = Right color, wrong position</p>
+    <div id="attLabel">Attempts: <b id="attCount">0</b> / 10</div>
+    <div class="panel">
+        <div id="history"></div>
+        <div id="palette"></div>
+        <div id="guess-row"></div>
+        <div id="msg">Pick 4 colors then submit!</div>
+        <div id="controls">
+            <button id="submitBtn" onclick="submit()">SUBMIT GUESS</button>
+            <button id="newBtn" onclick="newGame()">NEW GAME</button>
+            <button id="menuBtn" onclick="window.close()">🏠 Return to Menu</button>
+        </div>
+    </div>
+    <script src="../scripts/scores.js"></script>
+    <script>
+        const COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#8b5cf6', '#ec4899', '#f1f5f9'];
+        const COLOR_NAMES = ['Red', 'Orange', 'Yellow', 'Green', 'Cyan', 'Purple', 'Pink', 'White'];
+        const CODE_LEN = 4, MAX = 10;
+        let secret, guess, selectedColor, attempts, won;
+
+        function newGame() {
+            secret = Array.from({ length: CODE_LEN }, () => Math.floor(Math.random() * COLORS.length));
+            guess = Array(CODE_LEN).fill(null);
+            selectedColor = 0; attempts = 0; won = false;
+            document.getElementById('history').innerHTML = '';
+            document.getElementById('attCount').textContent = 0;
+            document.getElementById('msg').textContent = 'Pick 4 colors then submit!';
+            document.getElementById('submitBtn').style.display = '';
+            document.getElementById('menuBtn').style.display = 'none';
+            renderPalette(); renderGuessRow();
+        }
+
+        function renderPalette() {
+            const el = document.getElementById('palette'); el.innerHTML = '';
+            COLORS.forEach((c, i) => {
+                const d = document.createElement('div');
+                d.className = 'pc' + (i === selectedColor ? ' sel' : '');
+                d.style.background = c; d.title = COLOR_NAMES[i];
+                d.onclick = () => { selectedColor = i; renderPalette(); };
+                el.appendChild(d);
+            });
+        }
+
+        function renderGuessRow() {
+            const el = document.getElementById('guess-row'); el.innerHTML = '';
+            guess.forEach((g, i) => {
+                const d = document.createElement('div');
+                d.className = 'gp';
+                d.style.background = g !== null ? COLORS[g] : 'transparent';
+                d.title = 'Click to place color here';
+                d.onclick = () => {
+                    if (won) return;
+                    guess[i] = selectedColor; renderGuessRow();
+                };
+                el.appendChild(d);
+            });
+        }
+
+        function submit() {
+            if (won) return;
+            if (guess.some(g => g === null)) { document.getElementById('msg').textContent = 'Fill all 4 slots first!'; return; }
+            attempts++; document.getElementById('attCount').textContent = attempts;
+            const { black, white } = score(guess, secret);
+            addHistory(guess, black, white);
+            guess = Array(CODE_LEN).fill(null); renderGuessRow();
+            if (black === CODE_LEN) {
+                won = true;
+                const sc = Math.max(10, (MAX - attempts + 1) * 100);
+                document.getElementById('msg').textContent = `🎉 Cracked it in ${attempts} tries!`;
+                document.getElementById('submitBtn').style.display = 'none';
+                document.getElementById('menuBtn').style.display = '';
+                PizzaScores.save('Mastermind', sc, `${attempts} attempts`);
+            } else if (attempts >= MAX) {
+                won = true;
+                const reveal = secret.map(s => `<span style="color:${COLORS[s]}">■</span>`).join(' ');
+                document.getElementById('msg').innerHTML = `💥 Out of tries! Secret was: ${reveal}`;
+                document.getElementById('submitBtn').style.display = 'none';
+                document.getElementById('menuBtn').style.display = '';
+                PizzaScores.save('Mastermind', 0, 'failed');
+            } else {
+                document.getElementById('msg').textContent = `⚫ ${black} &nbsp; ⚪ ${white} — Keep guessing!`;
+            }
+        }
+
+        function score(g, s) {
+            let black = 0, white = 0;
+            const sc = [...s], gc = [...g];
+            for (let i = 0; i < CODE_LEN; i++)if (gc[i] === sc[i]) { black++; sc[i] = gc[i] = -1; }
+            for (let i = 0; i < CODE_LEN; i++) {
+                if (gc[i] === -1) continue;
+                const j = sc.indexOf(gc[i]); if (j > -1) { white++; sc[j] = -1; }
+            }
+            return { black, white };
+        }
+
+        function addHistory(g, black, white) {
+            const el = document.getElementById('history');
+            const row = document.createElement('div'); row.className = 'row';
+            g.forEach(ci => {
+                const p = document.createElement('div'); p.className = 'peg'; p.style.background = COLORS[ci]; row.appendChild(p);
+            });
+            const fb = document.createElement('div'); fb.className = 'feedback';
+            for (let i = 0; i < CODE_LEN; i++) {
+                const fp = document.createElement('div'); fp.className = 'fp';
+                if (i < black) fp.classList.add('black');
+                else if (i < black + white) fp.classList.add('white');
+                fb.appendChild(fp);
+            }
+            row.appendChild(fb);
+            el.insertBefore(row, el.firstChild);
+        }
+
+        newGame();
+    </script>
+</body>
+
+</html>

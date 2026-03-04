@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Potion Brewer – The Pizza Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #07030f;
+            min-height: 100vh;
+            font-family: 'Outfit', sans-serif;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px
+        }
+
+        h1 {
+            color: #c084fc;
+            font-size: 2rem;
+            text-shadow: 0 0 20px #c084fc;
+            margin-bottom: 4px
+        }
+
+        #counter {
+            font-size: 1.2rem;
+            color: #d8b4fe;
+            margin-bottom: 4px
+        }
+
+        #cps {
+            font-size: .85rem;
+            color: #4b5563;
+            margin-bottom: 8px
+        }
+
+        /* Timing minigame */
+        #brew-game {
+            background: rgba(192, 132, 252, .06);
+            border: 1px solid rgba(192, 132, 252, .2);
+            border-radius: 16px;
+            padding: 12px 20px;
+            text-align: center;
+            margin-bottom: 12px;
+            max-width: 400px;
+            width: 100%
+        }
+
+        #brew-track {
+            height: 20px;
+            background: rgba(192, 132, 252, .1);
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            margin: 8px 0;
+            cursor: pointer
+        }
+
+        #brew-zone {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            background: rgba(192, 132, 252, .3);
+            border-radius: 10px;
+            transition: none
+        }
+
+        #brew-needle {
+            position: absolute;
+            top: 0;
+            width: 4px;
+            height: 100%;
+            background: #c084fc;
+            border-radius: 2px;
+            box-shadow: 0 0 8px #c084fc
+        }
+
+        #brew-result {
+            font-size: .82rem;
+            min-height: 18px;
+            color: #d8b4fe
+        }
+
+        .potions-shelf {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 8px
+        }
+
+        .pot-slot {
+            background: rgba(192, 132, 252, .07);
+            border: 1px solid rgba(192, 132, 252, .18);
+            border-radius: 10px;
+            padding: 6px 12px;
+            font-size: .82rem;
+            text-align: center
+        }
+
+        .pot-slot span {
+            display: block;
+            font-weight: 700;
+            color: #c084fc;
+            font-size: .95rem
+        }
+
+        .layout {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            max-width: 900px
+        }
+
+        #click-zone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px
+        }
+
+        #cauldron {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 40% 30%, #7c3aed, #2e1065, #07030f);
+            border: 4px solid #c084fc;
+            cursor: pointer;
+            font-size: 78px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 40px rgba(192, 132, 252, .4);
+            user-select: none;
+            transition: transform .1s
+        }
+
+        #cauldron:active {
+            transform: scale(.92)
+        }
+
+        #shop {
+            flex: 1;
+            min-width: 260px;
+            background: rgba(255, 255, 255, .03);
+            border: 1px solid rgba(192, 132, 252, .2);
+            border-radius: 20px;
+            padding: 20px;
+            max-height: 70vh;
+            overflow-y: auto
+        }
+
+        #shop h2 {
+            color: #c084fc;
+            font-size: 1.1rem;
+            margin-bottom: 14px
+        }
+
+        .upg {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(192, 132, 252, .06);
+            border: 1px solid rgba(192, 132, 252, .18);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background .15s
+        }
+
+        .upg:hover {
+            background: rgba(192, 132, 252, .18)
+        }
+
+        .upg.locked {
+            opacity: .4;
+            cursor: not-allowed
+        }
+
+        .ui {
+            font-size: 1.6rem;
+            flex-shrink: 0
+        }
+
+        .inf {
+            flex: 1
+        }
+
+        .un {
+            font-weight: 700;
+            font-size: .9rem
+        }
+
+        .ud {
+            font-size: .72rem;
+            color: #6b7280
+        }
+
+        .uc {
+            font-size: .78rem;
+            color: #d8b4fe;
+            margin-top: 2px
+        }
+
+        .uo {
+            font-size: .72rem;
+            color: #4ade80
+        }
+
+        #toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(192, 132, 252, .9);
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-weight: 700;
+            opacity: 0;
+            transition: opacity .3s;
+            pointer-events: none;
+            z-index: 99
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🧪 Potion Brewer</h1>
+    <div id="counter">0 mana</div>
+    <div id="cps">0/sec</div>
+    <div class="potions-shelf">
+        <div class="pot-slot">🔴 Health<span id="hp-p">0</span></div>
+        <div class="pot-slot">🔵 Mana<span id="mp-p">0</span></div>
+        <div class="pot-slot">💛 Speed<span id="sp-p">0</span></div>
+        <div class="pot-slot">🟣 Power<span id="pw-p">0</span></div>
+    </div>
+    <!-- Timing minigame -->
+    <div id="brew-game">
+        <div style="font-size:.82rem;color:#94a3b8;margin-bottom:4px">🎯 Stop the needle in the purple zone for a bonus
+            brew!</div>
+        <div id="brew-track" onclick="stopNeedle()">
+            <div id="brew-zone" style="left:30%;width:25%"></div>
+            <div id="brew-needle" style="left:0%"></div>
+        </div>
+        <div id="brew-result">Click the track when the needle is in the zone!</div>
+    </div>
+    <div class="layout">
+        <div id="click-zone">
+            <div id="cauldron" onclick="brew()">🧪</div>
+            <div style="font-size:.78rem;color:#4b5563;text-align:center">Stir the cauldron!</div>
+        </div>
+        <div id="shop">
+            <h2>📚 Helpers</h2>
+            <div id="upgrades"></div>
+        </div>
+    </div>
+    <div id="toast"></div>
+    <script>
+        let mana = 0, mps = 0, cp = 1, brews = 0, hpPot = 0, mpPot = 0, spPot = 0, pwPot = 0;
+        let needlePos = 0, needleDir = 1, zoneStart = 30, zoneWidth = 25, needleMoving = true;
+        const UPS = [
+            { n: 'Apprentice', i: '🧑‍🎓', d: '+0.5/s mana', base: 25, own: 0, rate: .5 },
+            { n: 'Herb Garden', i: '🌿', d: '+2/s mana', base: 120, own: 0, rate: 2 },
+            { n: 'Magic Staff', i: '🪄', d: '+3/brew', base: 200, own: 0, rate: 0, cp: 3 },
+            { n: 'Spell Tome', i: '📖', d: '+7/s mana', base: 600, own: 0, rate: 7 },
+            { n: 'Familiar', i: '🦉', d: '+22/s mana', base: 2500, own: 0, rate: 22 },
+            { n: 'Alchemy Lab', i: '⚗️', d: '+70/s mana', base: 12000, own: 0, rate: 70 },
+            { n: 'Mage Tower', i: '🗼', d: '+240/s mana', base: 60000, own: 0, rate: 240 },
+        ];
+        function fmt(n) { if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B'; if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M'; if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K'; return Math.floor(n) + '' }
+        function cost(u) { return Math.floor(u.base * Math.pow(1.15, u.own)) }
+        // Needle animation
+        let lastNeedle = 0;
+        function animNeedle(ts) {
+            const dt = (ts - lastNeedle) / 1000; lastNeedle = ts;
+            if (needleMoving) { needlePos += needleDir * 80 * dt; }
+            if (needlePos > 96) { needlePos = 96; needleDir = -1; }
+            if (needlePos < 0) { needlePos = 0; needleDir = 1; }
+            document.getElementById('brew-needle').style.left = needlePos + '%';
+            requestAnimationFrame(animNeedle);
+        }
+        requestAnimationFrame(ts => { lastNeedle = ts; animNeedle(ts); });
+
+        function stopNeedle() {
+            needleMoving = false;
+            const inZone = needlePos >= zoneStart && needlePos <= (zoneStart + zoneWidth);
+            if (inZone) {
+                const bonus = cp * 5; mana += bonus; brews++; collectPotion();
+                document.getElementById('brew-result').textContent = '🎉 Perfect! +' + fmt(bonus) + ' mana!';
+                document.getElementById('brew-result').style.color = '#4ade80';
+            } else {
+                mana += cp; brews++; collectPotion();
+                document.getElementById('brew-result').textContent = 'Missed zone. +' + cp + ' mana.';
+                document.getElementById('brew-result').style.color = '#9ca3af';
+            }
+            setTimeout(() => {
+                needleMoving = true;
+                document.getElementById('brew-result').textContent = 'Click again!';
+                document.getElementById('brew-result').style.color = '#d8b4fe';
+                // Shrink zone as player gets better
+                zoneWidth = Math.max(10, 25 - Math.floor(brews / 20));
+                const track = document.getElementById('brew-zone');
+                zoneStart = 20 + Math.random() * 40;
+                track.style.left = zoneStart + '%'; track.style.width = zoneWidth + '%';
+            }, 1200);
+        }
+        function brew() {
+            mana += cp; brews++; collectPotion();
+            const el = document.createElement('div');
+            el.textContent = '✨+' + cp; el.style.cssText = 'position:fixed;color:#d8b4fe;font-weight:700;pointer-events:none;z-index:50';
+            const r = document.getElementById('cauldron').getBoundingClientRect();
+            el.style.left = (r.left + r.width / 2 + (Math.random() - .5) * 40) + 'px'; el.style.top = r.top + 'px';
+            el.animate([{ opacity: 1, transform: 'translateY(0)' }, { opacity: 0, transform: 'translateY(-55px)' }], { duration: 800, fill: 'forwards' });
+            document.body.appendChild(el); setTimeout(() => el.remove(), 800);
+        }
+        function collectPotion() {
+            if (brews % 4 === 0) hpPot++;
+            if (brews % 10 === 0) mpPot++;
+            if (brews % 25 === 0) spPot++;
+            if (brews % 50 === 0) pwPot++;
+        }
+        function buy(u) {
+            const co = cost(u); if (mana < co) return;
+            mana -= co; u.own++;
+            if (u.rate) mps += u.rate; if (u.cp) cp += u.cp;
+            renderUpgrades(); toast('✅ ' + u.n + '!');
+        }
+        function toast(msg) {
+            const t = document.getElementById('toast'); t.textContent = msg; t.style.opacity = 1;
+            clearTimeout(t._t); t._t = setTimeout(() => t.style.opacity = 0, 2200);
+        }
+        function renderUpgrades() {
+            const d = document.getElementById('upgrades'); d.innerHTML = '';
+            UPS.forEach(u => {
+                const co = cost(u), div = document.createElement('div');
+                div.className = 'upg' + (mana < co ? ' locked' : '');
+                div.innerHTML = `<div class="ui">${u.i}</div><div class="inf"><div class="un">${u.n}</div><div class="ud">${u.d}</div><div class="uc">🔮 ${fmt(co)}</div><div class="uo">Owned: ${u.own}</div></div>`;
+                div.addEventListener('click', () => buy(u));
+                d.appendChild(div);
+            });
+        }
+        let last = 0, lastR = 0;
+        function loop(ts) {
+            if (last) mana += mps * (ts - last) / 1000;
+            last = ts;
+            document.getElementById('counter').textContent = fmt(mana) + ' mana';
+            document.getElementById('cps').textContent = mps.toFixed(1) + '/sec | Brews: ' + brews;
+            document.getElementById('hp-p').textContent = hpPot;
+            document.getElementById('mp-p').textContent = mpPot;
+            document.getElementById('sp-p').textContent = spPot;
+            document.getElementById('pw-p').textContent = pwPot;
+            if (ts - lastR > 500) { lastR = ts; renderUpgrades(); }
+            requestAnimationFrame(loop);
+        }
+        renderUpgrades(); requestAnimationFrame(loop);
+    </script>
+</body>
+
+</html>

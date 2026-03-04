@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minesweeper | The Pizza Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d0d0d;
+            --primary-color: #34495E;
+            --text-color: #fff;
+            --cell-bg: #2C3E50;
+            --cell-revealed: #bdc3c7;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem;
+            user-select: none;
+        }
+
+        h1 {
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            font-weight: 800;
+            background: linear-gradient(45deg, var(--primary-color), #95A5A6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            width: 400px;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(10, 35px);
+            grid-template-rows: repeat(10, 35px);
+            gap: 2px;
+            background: #1a1a1a;
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .cell {
+            width: 35px;
+            height: 35px;
+            background: var(--cell-bg);
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: 800;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.2), inset -2px -2px 0 rgba(0, 0, 0, 0.2);
+            transition: filter 0.2s;
+        }
+
+        .cell:hover {
+            filter: brightness(1.2);
+        }
+
+        .cell.revealed {
+            background: var(--cell-revealed);
+            box-shadow: none;
+            border: 1px solid #95A5A6;
+            cursor: default;
+        }
+
+        .color-1 {
+            color: blue;
+        }
+
+        .color-2 {
+            color: green;
+        }
+
+        .color-3 {
+            color: red;
+        }
+
+        .color-4 {
+            color: darkblue;
+        }
+
+        .color-5 {
+            color: darkred;
+        }
+
+        .color-6 {
+            color: teal;
+        }
+
+        .color-7 {
+            color: black;
+        }
+
+        .color-8 {
+            color: gray;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, var(--primary-color), #7F8C8D);
+            border: none;
+            color: white;
+            padding: 0.8rem 2rem;
+            border-radius: 2rem;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            font-family: inherit;
+            margin-top: 2rem;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 2rem;
+            left: 2rem;
+            color: var(--text-color);
+            text-decoration: none;
+            font-weight: 600;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .back-btn:hover {
+            opacity: 1;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-content {
+            background: #1a1a1a;
+            padding: 3rem;
+            border-radius: 1rem;
+            text-align: center;
+            border: 1px solid var(--primary-color);
+        }
+
+        .modal h2 {
+            margin-bottom: 1rem;
+            font-size: 2rem;
+        }
+    </style>
+</head>
+
+<body>
+    <a href="../games.html" class="back-btn">← Back to Games</a>
+    <h1>Minesweeper</h1>
+
+    <div class="header">
+        <div>💣 <span id="minesCount">10</span></div>
+        <div id="statusBtn" style="cursor:pointer; font-size: 2rem;" onclick="initGame()">🙂</div>
+        <div>⏱️ <span id="time">0</span></div>
+    </div>
+
+    <div class="board" id="board" oncontextmenu="return false;"></div>
+
+    <button class="btn" onclick="initGame()">Restart Game</button>
+
+    <div class="modal" id="gameOverModal">
+        <div class="modal-content">
+            <h2 id="modalTitle">Game Over!</h2>
+            <button class="btn"
+                onclick="initGame(); document.getElementById('gameOverModal').style.display='none';">Play Again</button>
+        </div>
+    </div>
+
+    <script src="../scripts/scores.js"></script>
+    <script>
+        const ROWS = 10;
+        const COLS = 10;
+        const MINES = 10;
+        let board = [];
+        let firstClick = true;
+        let gameOver = false;
+        let flags = 0;
+        let revealedCount = 0;
+        let timer = 0;
+        let timerInterval;
+
+        const boardEl = document.getElementById('board');
+        const minesCountEl = document.getElementById('minesCount');
+        const timeEl = document.getElementById('time');
+        const statusBtn = document.getElementById('statusBtn');
+
+        function initGame() {
+            board = [];
+            firstClick = true;
+            gameOver = false;
+            flags = 0;
+            revealedCount = 0;
+            timer = 0;
+            clearInterval(timerInterval);
+
+            minesCountEl.innerText = MINES;
+            timeEl.innerText = timer;
+            statusBtn.innerText = '🙂';
+            document.getElementById('gameOverModal').style.display = 'none';
+
+            boardEl.innerHTML = '';
+            for (let r = 0; r < ROWS; r++) {
+                let row = [];
+                for (let c = 0; c < COLS; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.r = r;
+                    cell.dataset.c = c;
+
+                    cell.addEventListener('mousedown', handleClick);
+
+                    boardEl.appendChild(cell);
+                    row.push({
+                        el: cell,
+                        mine: false,
+                        revealed: false,
+                        flagged: false,
+                        neighborMines: 0
+                    });
+                }
+                board.push(row);
+            }
+        }
+
+        function placeMines(firstR, firstC) {
+            let minesPlaced = 0;
+            while (minesPlaced < MINES) {
+                let r = Math.floor(Math.random() * ROWS);
+                let c = Math.floor(Math.random() * COLS);
+
+                // Keep first click safe and don't place duplicate mines
+                if (!board[r][c].mine && (r !== firstR || c !== firstC)) {
+                    board[r][c].mine = true;
+                    minesPlaced++;
+                }
+            }
+            calculateNeighbors();
+        }
+
+        function calculateNeighbors() {
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    if (board[r][c].mine) continue;
+                    let count = 0;
+                    for (let dr = -1; dr <= 1; dr++) {
+                        for (let dc = -1; dc <= 1; dc++) {
+                            let nr = r + dr, nc = c + dc;
+                            if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && board[nr][nc].mine) {
+                                count++;
+                            }
+                        }
+                    }
+                    board[r][c].neighborMines = count;
+                }
+            }
+        }
+
+        function handleClick(e) {
+            if (gameOver) return;
+            const r = parseInt(this.dataset.r);
+            const c = parseInt(this.dataset.c);
+
+            // Right click
+            if (e.button === 2) {
+                if (!board[r][c].revealed) {
+                    if (!board[r][c].flagged && flags < MINES) {
+                        board[r][c].flagged = true;
+                        this.innerText = '🚩';
+                        flags++;
+                    } else if (board[r][c].flagged) {
+                        board[r][c].flagged = false;
+                        this.innerText = '';
+                        flags--;
+                    }
+                    minesCountEl.innerText = MINES - flags;
+                }
+                return;
+            }
+
+            // Left click
+            if (e.button === 0 && !board[r][c].flagged && !board[r][c].revealed) {
+                if (firstClick) {
+                    firstClick = false;
+                    placeMines(r, c);
+                    timerInterval = setInterval(() => {
+                        timer++;
+                        timeEl.innerText = timer;
+                    }, 1000);
+                }
+                reveal(r, c);
+            }
+        }
+
+        function reveal(r, c) {
+            if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
+            let cell = board[r][c];
+            if (cell.revealed || cell.flagged) return;
+
+            cell.revealed = true;
+            revealedCount++;
+            cell.el.classList.add('revealed');
+
+            if (cell.mine) {
+                cell.el.innerText = '💣';
+                cell.el.style.backgroundColor = 'red';
+                handleGameOver(false);
+                return;
+            }
+
+            if (cell.neighborMines > 0) {
+                cell.el.innerText = cell.neighborMines;
+                cell.el.classList.add(`color-${cell.neighborMines}`);
+            } else {
+                // Reveal neighbors
+                for (let dr = -1; dr <= 1; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        reveal(r + dr, c + dc);
+                    }
+                }
+            }
+
+            if (revealedCount === ROWS * COLS - MINES) {
+                handleGameOver(true);
+            }
+        }
+
+        function handleGameOver(won) {
+            gameOver = true;
+            clearInterval(timerInterval);
+            statusBtn.innerText = won ? '😎' : '😵';
+
+            if (!won) {
+                // Show all mines
+                for (let r = 0; r < ROWS; r++) {
+                    for (let c = 0; c < COLS; c++) {
+                        if (board[r][c].mine && !board[r][c].flagged) {
+                            board[r][c].el.innerText = '💣';
+                            board[r][c].el.classList.add('revealed');
+                        } else if (!board[r][c].mine && board[r][c].flagged) {
+                            board[r][c].el.innerText = '❌'; // Wrong flag
+                        }
+                    }
+                }
+                document.getElementById('modalTitle').innerText = 'Game Over!';
+            } else {
+                document.getElementById('modalTitle').innerText = 'You Win!';
+            }
+
+            setTimeout(() => {
+                document.getElementById('gameOverModal').style.display = 'flex';
+            }, 1000);
+            PizzaScores.save('Minesweeper', won ? Math.max(1, 1000 - timer * 5) : 0, won ? 'Cleared in ' + timer + 's' : 'Hit a mine');
+        }
+
+        initGame();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Dots & Boxes – The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0a0a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #818cf8;
+            font-size: 2rem;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px #818cf8
+        }
+
+        #board {
+            margin: 16px auto;
+            display: inline-block;
+            position: relative
+        }
+
+        #hud {
+            color: #818cf8;
+            margin-bottom: 8px;
+            font-size: 1rem
+        }
+
+        #msg {
+            color: #facc15;
+            font-size: 1.1rem;
+            margin-top: 8px
+        }
+
+        .turn-indicator {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 6px;
+            vertical-align: middle
+        }
+
+        button {
+            margin-top: 12px;
+            padding: 8px 24px;
+            background: #3730a3;
+            border: none;
+            color: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem
+        }
+
+        button:hover {
+            background: #4338ca
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Dots &amp; Boxes</h1>
+    <div id="hud">
+        <span class="turn-indicator" id="ti"></span>
+        <span id="turn-label">Player 1's turn</span><br>
+        P1 (🔵): <span id="s1">0</span> &nbsp; P2 (🔴): <span id="s2">0</span>
+    </div>
+    <canvas id="c" width="500" height="500"></canvas>
+    <div id="msg"></div>
+    <button onclick="init()">New Game</button>
+    <script>
+        const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+        const GRID = 6, CS = 70, OFFSET = 30, DOT = 7, LINE = 6;
+        let hLines, vLines, boxes, turn, scores, over;
+        function init() {
+            hLines = Array.from({ length: GRID + 1 }, () => Array(GRID).fill(0));
+            vLines = Array.from({ length: GRID }, () => Array(GRID + 1).fill(0));
+            boxes = Array.from({ length: GRID }, () => Array(GRID).fill(0));
+            turn = 1; scores = [0, 0]; over = false;
+            document.getElementById('s1').textContent = 0; document.getElementById('s2').textContent = 0;
+            document.getElementById('msg').textContent = '';
+            updateTurnUI(); draw();
+        }
+        function updateTurnUI() {
+            const ti = document.getElementById('ti');
+            ti.style.background = turn === 1 ? '#3b82f6' : '#ef4444';
+            document.getElementById('turn-label').textContent = `Player ${turn}'s turn`;
+        }
+        function checkBoxes() {
+            let gained = 0;
+            for (let r = 0; r < GRID; r++)for (let c = 0; c < GRID; c++) {
+                if (!boxes[r][c] && hLines[r][c] && hLines[r + 1][c] && vLines[r][c] && vLines[r][c + 1]) { boxes[r][c] = turn; scores[turn - 1]++; gained++; }
+            }
+            document.getElementById('s1').textContent = scores[0]; document.getElementById('s2').textContent = scores[1];
+            if (gained === 0) turn = turn === 1 ? 2 : 1;
+            if (boxes.flat().every(b => b)) { over = true; const winner = scores[0] > scores[1] ? 1 : scores[1] > scores[0] ? 2 : 0; document.getElementById('msg').textContent = winner ? `Player ${winner} wins!` : 'Draw!'; }
+            updateTurnUI();
+        }
+        function getLineFromPoint(mx, my) {
+            // Check horizontal lines
+            for (let r = 0; r <= GRID; r++)for (let c = 0; c < GRID; c++) {
+                const x = OFFSET + c * CS, y = OFFSET + r * CS;
+                if (Math.abs(my - y) < 12 && mx > x + 8 && mx < x + CS - 8) return { type: 'h', r, c };
+            }
+            // Check vertical lines
+            for (let r = 0; r < GRID; r++)for (let c = 0; c <= GRID; c++) {
+                const x = OFFSET + c * CS, y = OFFSET + r * CS;
+                if (Math.abs(mx - x) < 12 && my > y + 8 && my < y + CS - 8) return { type: 'v', r, c };
+            }
+            return null;
+        }
+        canvas.addEventListener('click', e => {
+            if (over) return;
+            const rect = canvas.getBoundingClientRect(), mx = e.clientX - rect.left, my = e.clientY - rect.top;
+            const line = getLineFromPoint(mx, my);
+            if (!line) return;
+            if (line.type === 'h') { if (hLines[line.r][line.c]) return; hLines[line.r][line.c] = turn; }
+            else { if (vLines[line.r][line.c]) return; vLines[line.r][line.c] = turn; }
+            checkBoxes(); draw();
+        });
+        function draw() {
+            ctx.fillStyle = '#0a0a1a'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // boxes
+            for (let r = 0; r < GRID; r++)for (let c = 0; c < GRID; c++) {
+                if (boxes[r][c]) { ctx.fillStyle = boxes[r][c] === 1 ? 'rgba(59,130,246,0.3)' : 'rgba(239,68,68,0.3)'; ctx.fillRect(OFFSET + c * CS + LINE / 2, OFFSET + r * CS + LINE / 2, CS - LINE, CS - LINE); }
+            }
+            // lines
+            const LC = ['#334155', '#3b82f6', '#ef4444'];
+            for (let r = 0; r <= GRID; r++)for (let c = 0; c < GRID; c++) {
+                ctx.strokeStyle = LC[hLines[r][c] || 0]; ctx.lineWidth = hLines[r][c] ? LINE : 3;
+                ctx.beginPath(); ctx.moveTo(OFFSET + c * CS + DOT, OFFSET + r * CS); ctx.lineTo(OFFSET + (c + 1) * CS - DOT, OFFSET + r * CS); ctx.stroke();
+            }
+            for (let r = 0; r < GRID; r++)for (let c = 0; c <= GRID; c++) {
+                ctx.strokeStyle = LC[vLines[r][c] || 0]; ctx.lineWidth = vLines[r][c] ? LINE : 3;
+                ctx.beginPath(); ctx.moveTo(OFFSET + c * CS, OFFSET + r * CS + DOT); ctx.lineTo(OFFSET + c * CS, OFFSET + (r + 1) * CS - DOT); ctx.stroke();
+            }
+            // dots
+            for (let r = 0; r <= GRID; r++)for (let c = 0; c <= GRID; c++) { ctx.beginPath(); ctx.arc(OFFSET + c * CS, OFFSET + r * CS, DOT, 0, Math.PI * 2); ctx.fillStyle = '#818cf8'; ctx.fill(); }
+            // box labels
+            for (let r = 0; r < GRID; r++)for (let c = 0; c < GRID; c++) {
+                if (boxes[r][c]) { ctx.fillStyle = boxes[r][c] === 1 ? '#93c5fd' : '#fca5a5'; ctx.font = 'bold 18px monospace'; ctx.textAlign = 'center'; ctx.fillText(boxes[r][c] === 1 ? '1' : '2', OFFSET + c * CS + CS / 2, OFFSET + r * CS + CS / 2 + 6); }
+            }
+        }
+        init();
+    </script>
+</body>
+
+</html>

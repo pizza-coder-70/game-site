@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Minesweeper 2 – The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0f172a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #38bdf8;
+            font-size: 2rem;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px #38bdf8
+        }
+
+        #board {
+            display: inline-grid;
+            gap: 2px;
+            margin-top: 10px
+        }
+
+        .cell {
+            width: 34px;
+            height: 34px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center
+        }
+
+        .covered {
+            background: #1e3a5f;
+            color: #fff
+        }
+
+        .covered:hover {
+            background: #1e40af
+        }
+
+        .revealed {
+            background: #0f172a;
+            color: #38bdf8;
+            cursor: default
+        }
+
+        .mine {
+            background: #7f1d1d;
+            color: #ef4444
+        }
+
+        .flagged {
+            background: #1e3a5f;
+            color: #facc15
+        }
+
+        #hud {
+            margin-top: 10px;
+            color: #38bdf8;
+            display: flex;
+            gap: 20px
+        }
+
+        #msg {
+            color: #facc15;
+            font-size: 1.1rem;
+            margin-top: 8px;
+            font-weight: bold
+        }
+
+        select,
+        button {
+            padding: 6px 14px;
+            background: #1e3a5f;
+            border: 1px solid #38bdf8;
+            color: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 4px
+        }
+
+        select:hover,
+        button:hover {
+            background: #1e40af
+        }
+
+        #controls {
+            margin-top: 8px
+        }
+    </style>
+</head>
+
+<body>
+    <h1>💣 Minesweeper 2</h1>
+    <div id="controls">
+        <select id="diff">
+            <option value="easy">Easy (9×9, 10 mines)</option>
+            <option value="medium" selected>Medium (16×16, 40 mines)</option>
+            <option value="hard">Hard (20×20, 80 mines)</option>
+        </select>
+        <button onclick="init()">New Game</button>
+    </div>
+    <div id="hud"><span>Mines: <span id="mct">0</span></span><span>Time: <span id="timer">0</span>s</span><span>Flags:
+            <span id="flags">0</span></span></div>
+    <div id="board"></div>
+    <div id="msg"></div>
+    <script>
+        const DIFFS = { easy: { r: 9, c: 9, m: 10 }, medium: { r: 16, c: 16, m: 40 }, hard: { r: 20, c: 20, m: 80 } };
+        let rows, cols, mines, board, revealed, flags, mineSet, firstClick, timerInt, time;
+        function init() {
+            clearInterval(timerInt); time = 0; document.getElementById('timer').textContent = 0;
+            const d = DIFFS[document.getElementById('diff').value];
+            rows = d.r; cols = d.c; mines = d.m;
+            document.getElementById('mct').textContent = mines;
+            document.getElementById('flags').textContent = 0;
+            document.getElementById('msg').textContent = '';
+            board = Array.from({ length: rows }, () => Array(cols).fill(0));
+            revealed = Array.from({ length: rows }, () => Array(cols).fill(false));
+            flags = Array.from({ length: rows }, () => Array(cols).fill(false));
+            mineSet = new Set(); firstClick = true; render();
+        }
+        function placeMines(avoid) {
+            while (mineSet.size < mines) { const r = Math.floor(Math.random() * rows), c = Math.floor(Math.random() * cols), k = r + ',' + c; if (k !== avoid) mineSet.add(k); }
+            mineSet.forEach(k => { const [r, c] = k.split(',').map(Number); board[r][c] = -1; });
+            for (let r = 0; r < rows; r++)for (let c = 0; c < cols; c++) { if (board[r][c] === -1) continue; let ct = 0; for (let dr = -1; dr <= 1; dr++)for (let dc = -1; dc <= 1; dc++) { if (mineSet.has((r + dr) + ',' + (c + dc))) ct++; } board[r][c] = ct; }
+        }
+        function reveal(r, c) {
+            if (r < 0 || r >= rows || c < 0 || c >= cols || revealed[r][c] || flags[r][c]) return;
+            revealed[r][c] = true;
+            if (board[r][c] === 0) for (let dr = -1; dr <= 1; dr++)for (let dc = -1; dc <= 1; dc++)reveal(r + dr, c + dc);
+        }
+        function click(r, c) {
+            if (flags[r][c] || revealed[r][c]) return;
+            if (firstClick) { firstClick = false; placeMines(r + ',' + c); timerInt = setInterval(() => { time++; document.getElementById('timer').textContent = time; }, 1000); }
+            if (mineSet.has(r + ',' + c)) {// game over
+                clearInterval(timerInt); mineSet.forEach(k => { const [mr, mc] = k.split(',').map(Number); revealed[mr][mc] = true; }); render(); document.getElementById('msg').textContent = '💥 BOOM! Game Over! Click New Game.'; return;
+            }
+            reveal(r, c);
+            if (checkWin()) { clearInterval(timerInt); document.getElementById('msg').textContent = `🎉 You win in ${time}s!`; }
+            render();
+        }
+        function rightClick(e, r, c) { e.preventDefault(); if (revealed[r][c]) return; flags[r][c] = !flags[r][c]; document.getElementById('flags').textContent = flags.flat().filter(Boolean).length; render(); }
+        function checkWin() { return revealed.flat().filter(Boolean).length === rows * cols - mines; }
+        const NUM_COLORS = ['', '#3b82f6', '#22c55e', '#ef4444', '#7c3aed', '#92400e', '#0891b2', '#000', '#6b7280'];
+        function render() {
+            const boardEl = document.getElementById('board');
+            boardEl.style.gridTemplateColumns = `repeat(${cols},34px)`;
+            boardEl.innerHTML = '';
+            for (let r = 0; r < rows; r++)for (let c = 0; c < cols; c++) {
+                const cell = document.createElement('button');
+                if (flags[r][c] && !revealed[r][c]) { cell.className = 'cell flagged'; cell.textContent = '🚩'; }
+                else if (!revealed[r][c]) { cell.className = 'cell covered'; }
+                else if (mineSet.has(r + ',' + c)) { cell.className = 'cell mine'; cell.textContent = '💣'; }
+                else { cell.className = 'cell revealed'; if (board[r][c] > 0) { cell.textContent = board[r][c]; cell.style.color = NUM_COLORS[board[r][c]]; } }
+                cell.addEventListener('click', () => click(r, c));
+                cell.addEventListener('contextmenu', e => rightClick(e, r, c));
+                boardEl.appendChild(cell);
+            }
+        }
+        init();
+    </script>
+</body>
+
+</html>

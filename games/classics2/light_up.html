@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Light Up Puzzle – The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0a0018;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff;
+            padding: 16px
+        }
+
+        h1 {
+            color: #fbbf24;
+            font-size: 2rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px #fbbf24
+        }
+
+        #board {
+            display: grid;
+            gap: 2px;
+            margin: 10px
+        }
+
+        .cell {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            cursor: pointer;
+            border-radius: 6px;
+            border: 1px solid #1e293b;
+            transition: all .2s;
+            user-select: none
+        }
+
+        .cell.black {
+            background: #0f172a;
+            border-color: #1e293b;
+            cursor: default
+        }
+
+        .cell.lit {
+            background: rgba(251, 191, 36, 0.15)
+        }
+
+        .cell.bulb {
+            background: rgba(251, 191, 36, 0.3);
+            border-color: #fbbf24
+        }
+
+        .cell.conflict {
+            background: rgba(239, 68, 68, 0.2)
+        }
+
+        .cell.white {
+            background: #1e293b
+        }
+
+        .cell:hover:not(.black) {
+            background: rgba(251, 191, 36, 0.1)
+        }
+
+        #msg {
+            color: #4ade80;
+            font-size: 1.1rem;
+            margin-top: 10px;
+            font-weight: 700;
+            min-height: 28px
+        }
+
+        button {
+            margin-top: 8px;
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #b45309, #d97706);
+            border: none;
+            color: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: .9rem
+        }
+    </style>
+</head>
+
+<body>
+    <h1>💡 Light Up</h1>
+    <div id="board"></div>
+    <div id="msg">Click white cells to place light bulbs! Light up ALL white cells.</div>
+    <button onclick="init()">New Puzzle</button>
+    <script>
+        // 0=white, 1=black, 2..5=black with number clue
+        const PUZZLE = [
+            [1, 0, 0, 1, 0, 0, 1],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0, 1, 0],
+            [1, 0, 0, 2, 0, 0, 1],
+            [0, 1, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [1, 0, 0, 1, 0, 0, 1],
+        ];
+        const ROWS = PUZZLE.length, COLS = PUZZLE[0].length;
+        let bulbs;
+        function init() { bulbs = Array.from({ length: ROWS }, () => Array(COLS).fill(false)); render(); }
+        function toggleBulb(r, c) { if (PUZZLE[r][c] !== 0) return; bulbs[r][c] = !bulbs[r][c]; render(); }
+        function getLit() {
+            const lit = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+            for (let r = 0; r < ROWS; r++)for (let c = 0; c < COLS; c++) {
+                if (bulbs[r][c]) {
+                    lit[r][c] = true;
+                    for (let dc = 1; c + dc < COLS && PUZZLE[r][c + dc] === 0; dc++)lit[r][c + dc] = true;
+                    for (let dc = 1; c - dc >= 0 && PUZZLE[r][c - dc] === 0; dc++)lit[r][c - dc] = true;
+                    for (let dr = 1; r + dr < ROWS && PUZZLE[r + dr][c] === 0; dr++)lit[r + dr][c] = true;
+                    for (let dr = 1; r - dr >= 0 && PUZZLE[r - dr][c] === 0; dr++)lit[r - dr][c] = true;
+                }
+            }
+            return lit;
+        }
+        function getConflicts() {
+            const cf = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+            for (let r = 0; r < ROWS; r++)for (let c = 0; c < COLS; c++) {
+                if (!bulbs[r][c]) continue;
+                // check if any other bulb illuminates this cell
+                for (let dc = 1; c + dc < COLS && PUZZLE[r][c + dc] === 0; dc++)if (bulbs[r][c + dc]) { cf[r][c] = true; cf[r][c + dc] = true; }
+                for (let dc = 1; c - dc >= 0 && PUZZLE[r][c - dc] === 0; dc++)if (bulbs[r][c - dc]) { cf[r][c] = true; cf[r][c - dc] = true; }
+                for (let dr = 1; r + dr < ROWS && PUZZLE[r + dr][c] === 0; dr++)if (bulbs[r + dr][c]) { cf[r][c] = true; cf[r + dr][c] = true; }
+                for (let dr = 1; r - dr >= 0 && PUZZLE[r - dr][c] === 0; dr++)if (bulbs[r - dr][c]) { cf[r][c] = true; cf[r - dr][c] = true; }
+            }
+            return cf;
+        }
+        function render() {
+            const board = document.getElementById('board'); board.style.gridTemplateColumns = `repeat(${COLS},44px)`; board.innerHTML = '';
+            const lit = getLit(); const cf = getConflicts();
+            for (let r = 0; r < ROWS; r++)for (let c = 0; c < COLS; c++) {
+                const cell = document.createElement('div');
+                const v = PUZZLE[r][c];
+                if (v > 0) { cell.className = 'cell black'; if (v >= 2) { cell.textContent = v - 1; cell.style.color = '#60a5fa'; } }
+                else {
+                    cell.className = 'cell white';
+                    if (cf[r][c]) cell.classList.add('conflict');
+                    else if (bulbs[r][c]) cell.classList.add('bulb');
+                    else if (lit[r][c]) cell.classList.add('lit');
+                    if (bulbs[r][c]) cell.textContent = '💡';
+                    cell.addEventListener('click', () => toggleBulb(r, c));
+                }
+                board.appendChild(cell);
+            }
+            // check win
+            let allLit = true; for (let r = 0; r < ROWS; r++)for (let c = 0; c < COLS; c++)if (PUZZLE[r][c] === 0 && !lit[r][c]) allLit = false;
+            let noConflict = cf.every(row => row.every(v => !v));
+            document.getElementById('msg').textContent = allLit && noConflict ? '🎉 Puzzle Solved! Press New Puzzle!' : noConflict ? `${lit.flat().filter(Boolean).length} cells lit up – keep going!` : '⚠️ Conflict! Bulbs cannot see each other.';
+            document.getElementById('msg').style.color = allLit && noConflict ? '#4ade80' : noConflict ? '#fbbf24' : '#ef4444';
+        }
+        init();
+    </script>
+</body>
+
+</html>

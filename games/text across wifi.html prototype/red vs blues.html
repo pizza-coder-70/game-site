@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Red vs Blues — Blood Gulch Chronicles</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0a0a0f;
+      color: #e0e0e0;
+      font-family: 'Share Tech Mono', monospace;
+      overflow: hidden;
+      min-height: 100vh;
+    }
+    #menu-screen, #class-select, #game-hud, #killcam-overlay, #cutscene-overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+    #menu-screen *, #class-select *, #game-hud *, #killcam-overlay *, #cutscene-overlay * {
+      pointer-events: auto;
+    }
+    #menu-screen {
+      background: radial-gradient(ellipse at 50% 30%, #1a1a2e 0%, #0a0a12 70%);
+      flex-direction: column;
+      gap: 2rem;
+    }
+    .logo {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(2rem, 6vw, 4rem);
+      font-weight: 900;
+      text-shadow: 0 0 30px rgba(255,80,80,0.5), 0 0 30px rgba(80,80,255,0.5);
+      letter-spacing: 0.2em;
+    }
+    .logo .red { color: #ff4444; }
+    .logo .vs { color: #888; font-size: 0.6em; vertical-align: middle; }
+    .logo .blue { color: #4488ff; }
+    .subtitle {
+      font-size: 0.9rem;
+      color: #666;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+    }
+    .menu-buttons { display: flex; flex-direction: column; gap: 0.75rem; }
+    .btn {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1rem;
+      padding: 0.75rem 2rem;
+      border: 2px solid #444;
+      background: transparent;
+      color: #ccc;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.1em;
+    }
+    .btn:hover {
+      border-color: #666;
+      color: #fff;
+      box-shadow: 0 0 20px rgba(255,255,255,0.1);
+    }
+    .btn.primary { border-color: #4488ff; color: #4488ff; }
+    .btn.primary:hover { background: rgba(68,136,255,0.2); }
+    .btn.danger { border-color: #ff4444; color: #ff4444; }
+    .btn.danger:hover { background: rgba(255,68,68,0.2); }
+    #class-select {
+      background: rgba(0,0,0,0.85);
+      flex-direction: column;
+      gap: 1rem;
+      display: none;
+    }
+    #class-select.visible { display: flex; }
+    .team-pick { display: flex; gap: 2rem; margin-bottom: 1rem; }
+    .team-btn {
+      padding: 0.5rem 1.5rem;
+      font-family: 'Orbitron', sans-serif;
+      border: 2px solid;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .team-btn.red { border-color: #ff4444; color: #ff4444; }
+    .team-btn.blue { border-color: #4488ff; color: #4488ff; }
+    .team-btn.selected.red { background: #ff4444; color: #000; }
+    .team-btn.selected.blue { background: #4488ff; color: #000; }
+    .class-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+    .class-card {
+      border: 2px solid #333;
+      padding: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+      min-width: 120px;
+    }
+    .class-card:hover, .class-card.selected { border-color: #666; background: rgba(255,255,255,0.05); }
+    .class-card .name { font-weight: bold; margin-bottom: 0.25rem; }
+    .class-card .desc { font-size: 0.75rem; color: #888; }
+    .color-picker {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 0.5rem;
+    }
+    .color-swatch {
+      width: 24px; height: 24px;
+      border: 2px solid #444;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .color-swatch.selected { border-color: #fff; box-shadow: 0 0 8px #fff; }
+    #game-canvas {
+      display: block;
+      width: 100%;
+      height: 100vh;
+      background: #1a2a1a;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    #game-hud {
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 1rem;
+      pointer-events: none;
+    }
+    #game-hud > * { pointer-events: auto; }
+    .hud-left, .hud-right { display: flex; flex-direction: column; gap: 0.5rem; }
+    .hud-health, .hud-ammo { font-size: 0.9rem; }
+    .hud-mode { font-family: 'Orbitron'; font-size: 0.8rem; color: #888; }
+    .voice-line {
+      position: fixed;
+      bottom: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: 90%;
+      padding: 0.75rem 1.25rem;
+      background: rgba(0,0,0,0.85);
+      border: 1px solid #444;
+      border-radius: 4px;
+      font-size: 0.95rem;
+      text-align: center;
+      animation: voiceIn 0.3s ease;
+      z-index: 20;
+      pointer-events: none;
+    }
+    .voice-line.red { border-left: 4px solid #ff4444; }
+    .voice-line.blue { border-left: 4px solid #4488ff; }
+    @keyframes voiceIn {
+      from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+    #killcam-overlay {
+      background: rgba(0,0,0,0.7);
+      flex-direction: column;
+      display: none;
+    }
+    #killcam-overlay.visible { display: flex; }
+    .killcam-label {
+      font-family: 'Orbitron';
+      font-size: 1.5rem;
+      color: #ff4444;
+      margin-bottom: 1rem;
+      text-shadow: 0 0 10px #ff4444;
+    }
+    #cutscene-overlay {
+      background: rgba(0,0,0,0.9);
+      flex-direction: column;
+      padding: 2rem;
+      display: none;
+      text-align: center;
+    }
+    #cutscene-overlay.visible { display: flex; }
+    .cutscene-text {
+      font-size: 1.1rem;
+      line-height: 1.6;
+      max-width: 600px;
+      margin-bottom: 1rem;
+    }
+    .cutscene-glitch {
+      color: #0f8;
+      font-family: 'Orbitron';
+      font-size: 0.85rem;
+      margin-top: 1rem;
+      opacity: 0.9;
+    }
+    .score-display {
+      font-family: 'Orbitron';
+      font-size: 1.2rem;
+    }
+    .score-display .red { color: #ff4444; }
+    .score-display .blue { color: #4488ff; }
+  </style>
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+
+  <div id="menu-screen">
+    <h1 class="logo"><span class="red">RED</span> <span class="vs">VS</span> <span class="blue">BLUES</span></h1>
+    <p class="subtitle">Blood Gulch Chronicles — It's a legitimate strategy.</p>
+    <div class="menu-buttons">
+      <button class="btn primary" id="btn-ctf">Capture the Flag</button>
+      <button class="btn" id="btn-base-defense">Base Defense</button>
+      <button class="btn" id="btn-story">Story Mission (AI Experiment)</button>
+    </div>
+  </div>
+
+  <div id="class-select">
+    <h2 style="font-family: Orbitron;">Choose Your Fate</h2>
+    <div class="team-pick">
+      <button class="team-btn red selected" data-team="red">Red Team</button>
+      <button class="team-btn blue" data-team="blue">Blue Team</button>
+    </div>
+    <div class="class-grid">
+      <div class="class-card selected" data-class="assault">
+        <div class="name">Assault</div>
+        <div class="desc">Rifle, grenades. The "default" choice.</div>
+      </div>
+      <div class="class-card" data-class="sniper">
+        <div class="name">Sniper</div>
+        <div class="desc">One shot, one kill. Or miss. Usually miss.</div>
+      </div>
+      <div class="class-card" data-class="engineer">
+        <div class="name">Engineer</div>
+        <div class="desc">Turret, repair. Someone has to do the work.</div>
+      </div>
+      <div class="class-card" data-class="heavy">
+        <div class="name">Heavy</div>
+        <div class="desc">Big gun. Slow. You'll get used to it.</div>
+      </div>
+    </div>
+    <div class="color-picker" id="armor-color-picker"></div>
+    <p style="font-size: 0.75rem; color: #666;">WASD move · Mouse aim · Click fire · E enter/exit vehicle</p>
+    <button class="btn primary" id="btn-deploy">Deploy to Blood Gulch</button>
+  </div>
+
+  <div id="game-hud" style="display: none;">
+    <div class="hud-left">
+      <div class="hud-mode" id="hud-mode">CTF — Blood Gulch</div>
+      <div class="hud-health" id="hud-health">HP: 100</div>
+      <div class="hud-ammo" id="hud-ammo">Ammo: 30/90</div>
+      <div class="hud-vehicle" id="hud-vehicle" style="display: none; font-size: 0.8rem; color: #888;">[E] Exit vehicle</div>
+      <div class="hud-lives" id="hud-lives" style="display: none;"><span class="red" id="lives-red">15</span> / <span class="blue" id="lives-blue">15</span> lives</div>
+    </div>
+    <div class="hud-right">
+      <div class="score-display" id="score-display"><span class="red">0</span> — <span class="blue">0</span></div>
+    </div>
+  </div>
+
+  <div class="voice-line" id="voice-line" style="display: none;"></div>
+
+  <div id="killcam-overlay">
+    <div class="killcam-label">KILL CAM — SLOW MOTION</div>
+    <canvas id="killcam-canvas" width="640" height="360" style="border: 2px solid #ff4444;"></canvas>
+  </div>
+
+  <div id="cutscene-overlay">
+    <p class="cutscene-text" id="cutscene-text"></p>
+    <p class="cutscene-glitch" id="cutscene-glitch"></p>
+    <button class="btn" id="cutscene-continue">Continue</button>
+  </div>
+
+  <script>
+(function() {
+  'use strict';
+
+  const canvas = document.getElementById('game-canvas');
+  const ctx = canvas.getContext('2d');
+  const killcamCanvas = document.getElementById('killcam-canvas');
+  const killcamCtx = killcamCanvas.getContext('2d');
+
+  const ARMOR_COLORS = [
+    '#c22', '#f44', '#f84', '#8c4', '#4a8', '#48c', '#44a', '#84c', '#c48', '#888', '#fff', '#222'
+  ];
+
+  const VOICE_LINES = {
+    red: {
+      spawn: [
+        "Oh great, I'm in the canyon again.",
+        "Why do we even have this base?",
+        "At least the other team is probably dumber.",
+        "I could've been doing something useful. Like napping.",
+        "Red Team rules. Or so they tell me."
+      ],
+      kill: [
+        "That was almost satisfying.",
+        "One less Blue to worry about.",
+        "Did they teach you to dodge? No? Good.",
+        "Tell your team we said hi. Well, don't. You're dead.",
+        "I'm not even sure that was a person."
+      ],
+      death: [
+        "This is fine. Everything is fine.",
+        "I didn't want to live anyway.",
+        "Respawn in 3... 2... Oh come on.",
+        "That was definitely not my fault.",
+        "The fourth wall won't save you."
+      ],
+      cap: [
+        "Flag captured. We're almost a real army.",
+        "I'll take that. Don't mind me.",
+        "Objective complete. What's next, world peace?",
+        "Flag. Ours. You're welcome."
+      ],
+      hit: [
+        "Ow. That's going in the report.",
+        "I'm hit! I'm hit! ... I'm fine.",
+        "Armor did its job. Barely.",
+        "They're shooting at us. How rude."
+      ]
+    },
+    blue: {
+      spawn: [
+        "Blue Team, reporting for duty. Again.",
+        "Another day, another canyon.",
+        "I've read the manual. Nobody else has.",
+        "Let's win this one. Or not. Whatever.",
+        "At least we have better color coordination."
+      ],
+      kill: [
+        "Red down. They had it coming.",
+        "One shot. One kill. One less Red.",
+        "That's what you get for wearing red.",
+        "Did you see that? No? I'll tell you later.",
+        "Another one for the highlight reel."
+      ],
+      death: [
+        "I'll be back. It's in the contract.",
+        "Respawn timer: my only friend.",
+        "That was... strategic. Yeah.",
+        "I'm going to pretend that didn't happen.",
+        "The simulation continues. So do I."
+      ],
+      cap: [
+        "Flag secured. Mission accomplished. Sort of.",
+        "We actually did something. Write it down.",
+        "Capture complete. Do we get a raise?",
+        "Flag's home. Like it never left."
+      ],
+      hit: [
+        "Contact! I mean, ouch.",
+        "Shields at 50%. So is my morale.",
+        "They're not supposed to do that.",
+        "I'm okay. The armor's not."
+      ]
+    },
+    global: [
+      "Wait, who's controlling the respawn system?",
+      "Has anyone else noticed the sky is wrong?",
+      "I keep hearing a voice. No, not you.",
+      "The canyon wasn't on any of the maps.",
+      "Objective updated. By whom?",
+      "This doesn't feel like a normal exercise.",
+      "Did the simulation just glitch?",
+      "Command isn't responding. Again."
+    ]
+  };
+
+  const STORY_BEATS = [
+    { text: "Welcome to Blood Gulch. Your mission: capture the enemy flag. Or defend yours. Nobody's really sure anymore.", glitch: "" },
+    { text: "The canyon has been a contested zone for... well, the records are classified. And possibly deleted.", glitch: "" },
+    { text: "Red Team and Blue Team have been fighting here for so long, the original objective has been forgotten.", glitch: "[LOG: OBJECTIVE.PRIORITY = FLAG]" },
+    { text: "But recently, soldiers have reported strange behavior from the respawn system. Delays. Glitches. Voices.", glitch: "[SYSTEM: RESPAWN_PROTOCOL OVERRIDE]" },
+    { text: "Some say there's an AI running the simulation. Testing something. Or someone.", glitch: "[ENTITY: ALPHA. STATUS = OBSERVING]" },
+    { text: "For now, keep fighting. Capture the flag. Defend the base. The experiment continues.", glitch: "[BLOOD_GULCH.SIMULATION = ACTIVE]" }
+  ];
+
+  let gameState = {
+    mode: 'ctf',
+    running: false,
+    player: null,
+    entities: [],
+    bullets: [],
+    particles: [],
+    vehicles: [],
+    flags: { red: null, blue: null },
+    bases: { red: null, blue: null },
+    score: { red: 0, blue: 0 },
+    map: null,
+    keys: {},
+    lastKill: null,
+    killcamActive: false,
+    killcamTimer: 0,
+    voiceLineTimer: 0,
+    storyIndex: 0,
+    cutsceneActive: false,
+    baseDefenseLives: { red: 15, blue: 15 },
+    camX: 0, camY: 0
+  };
+
+  const MAP = {
+    width: 3200,
+    height: 1800,
+    canyon: [],
+    bases: []
+  };
+
+  function resize() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    canvas.width = w;
+    canvas.height = h;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function createMap() {
+    MAP.canyon = [];
+    const steps = 80;
+    let baseY = MAP.height * 0.5;
+    for (let i = 0; i <= steps; i++) {
+      const x = (i / steps) * MAP.width;
+      baseY += (Math.random() - 0.5) * 60;
+      baseY = Math.max(MAP.height * 0.3, Math.min(MAP.height * 0.7, baseY));
+      MAP.canyon.push({ x, y: baseY });
+    }
+    MAP.bases = [
+      { team: 'red', x: 200, y: MAP.height / 2 - 80, w: 160, h: 160 },
+      { team: 'blue', x: MAP.width - 360, y: MAP.height / 2 - 80, w: 160, h: 160 }
+    ];
+  }
+
+  function getClassStats(cls) {
+    const stats = {
+      assault: { hp: 100, speed: 1, fireRate: 120, damage: 12, ammo: 30, maxAmmo: 90, spread: 0.03, range: 400 },
+      sniper: { hp: 80, speed: 1.1, fireRate: 600, damage: 80, ammo: 5, maxAmmo: 20, spread: 0, range: 800 },
+      engineer: { hp: 90, speed: 0.95, fireRate: 200, damage: 8, ammo: 40, maxAmmo: 120, spread: 0.05, range: 300 },
+      heavy: { hp: 150, speed: 0.7, fireRate: 60, damage: 18, ammo: 100, maxAmmo: 200, spread: 0.08, range: 350 }
+    };
+    return stats[cls] || stats.assault;
+  }
+
+  function createPlayer(team, cls, armorColor) {
+    const stats = getClassStats(cls);
+    const baseX = team === 'red' ? 350 : MAP.width - 450;
+    return {
+      type: 'player',
+      team,
+      class: cls,
+      armorColor: armorColor || (team === 'red' ? '#c22' : '#48c'),
+      x: baseX,
+      y: MAP.height / 2 - 20,
+      vx: 0, vy: 0,
+      w: 28, h: 40,
+      hp: stats.hp, maxHp: stats.hp,
+      speed: stats.speed,
+      fireRate: stats.fireRate,
+      damage: stats.damage,
+      ammo: stats.ammo, maxAmmo: stats.maxAmmo,
+      spread: stats.spread,
+      range: stats.range,
+      lastShot: 0,
+      angle: 0,
+      alive: true,
+      respawnAt: 0,
+      carryingFlag: false,
+      isPlayer: true
+    };
+  }
+
+  function createBot(team, cls, x, y) {
+    const stats = getClassStats(cls);
+    const p = createPlayer(team, cls, team === 'red' ? '#a22' : '#36a');
+    p.x = x;
+    p.y = y;
+    p.isPlayer = false;
+    p.ai = { target: null, state: 'roam', timer: 0 };
+    return p;
+  }
+
+  function createBullet(x, y, angle, damage, range, team, owner) {
+    const speed = 18;
+    return {
+      x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+      damage, range, team, owner,
+      dist: 0, maxDist: range
+    };
+  }
+
+  function createFlag(team) {
+    const base = MAP.bases.find(b => b.team === team);
+    return {
+      type: 'flag',
+      team,
+      x: base.x + base.w / 2 - 12,
+      y: base.y + base.h - 30,
+      homeX: base.x + base.w / 2 - 12,
+      homeY: base.y + base.h - 30,
+      w: 24, h: 30,
+      carriedBy: null
+    };
+  }
+
+  const VEHICLE_KINDS = {
+    warthog: { w: 56, h: 32, hp: 200, speed: 4.2, turnRate: 0.06, fireRate: 180, damage: 14, range: 350, seats: 2, damageMul: 0.5 },
+    miniTank: { w: 44, h: 28, hp: 120, speed: 3.5, turnRate: 0.08, fireRate: 90, damage: 28, range: 400, seats: 1, damageMul: 0.45 },
+    tank: { w: 72, h: 40, hp: 450, speed: 2.2, turnRate: 0.03, fireRate: 45, damage: 55, range: 500, seats: 2, damageMul: 0.3 },
+    drone: { w: 28, h: 28, hp: 60, speed: 5.5, turnRate: 0.12, fireRate: 150, damage: 10, range: 320, seats: 1, flying: true, damageMul: 0.7 },
+    powerArmour: { w: 32, h: 42, hp: 250, speed: 1.4, turnRate: 0.1, fireRate: 100, damage: 22, range: 380, seats: 1, damageMul: 0.4 }
+  };
+
+  function createVehicle(team, x, y, kind) {
+    const k = VEHICLE_KINDS[kind] || VEHICLE_KINDS.warthog;
+    return {
+      type: 'vehicle',
+      vehicleKind: kind || 'warthog',
+      team,
+      x, y,
+      w: k.w, h: k.h,
+      vx: 0, vy: 0,
+      angle: 0,
+      hp: k.hp, maxHp: k.hp,
+      driver: null,
+      gunner: null,
+      speed: k.speed,
+      turnRate: k.turnRate,
+      gunAngle: 0,
+      lastShot: 0,
+      fireRate: k.fireRate,
+      damage: k.damage,
+      range: k.range,
+      seats: k.seats,
+      flying: k.flying || false,
+      damageMul: k.damageMul != null ? k.damageMul : 0.5
+    };
+  }
+
+  function showVoiceLine(text, team) {
+    const el = document.getElementById('voice-line');
+    el.textContent = text;
+    el.className = 'voice-line ' + (team || '');
+    el.style.display = 'block';
+    gameState.voiceLineTimer = 180;
+  }
+
+  function pickVoiceLine(team, event) {
+    const lines = VOICE_LINES[team][event];
+    if (lines && lines.length) {
+      const line = lines[Math.floor(Math.random() * lines.length)];
+      showVoiceLine(line, team);
+    }
+    if (Math.random() < 0.15 && VOICE_LINES.global.length) {
+      showVoiceLine(VOICE_LINES.global[Math.floor(Math.random() * VOICE_LINES.global.length)], '');
+    }
+  }
+
+  function triggerKillCam(killer, victim, bullet) {
+    gameState.lastKill = { killer, victim, bullet, frame: 0, replay: [] };
+    gameState.killcamActive = true;
+    gameState.killcamTimer = 240;
+    gameState.running = false;
+    const victimTeam = victim.team;
+    pickVoiceLine(victimTeam, 'death');
+    if (killer && killer.team) pickVoiceLine(killer.team, 'kill');
+  }
+
+  function showCutscene() {
+    const overlay = document.getElementById('cutscene-overlay');
+    const textEl = document.getElementById('cutscene-text');
+    const glitchEl = document.getElementById('cutscene-glitch');
+    const beat = STORY_BEATS[gameState.storyIndex];
+    if (!beat) {
+      gameState.cutsceneActive = false;
+      gameState.running = true;
+      return;
+    }
+    textEl.textContent = beat.text;
+    glitchEl.textContent = beat.glitch;
+    overlay.classList.add('visible');
+    gameState.cutsceneActive = true;
+    gameState.running = false;
+  }
+
+  document.getElementById('cutscene-continue').addEventListener('click', () => {
+    document.getElementById('cutscene-overlay').classList.remove('visible');
+    gameState.storyIndex++;
+    if (gameState.storyIndex < STORY_BEATS.length) {
+      setTimeout(showCutscene, 500);
+    } else {
+      gameState.running = true;
+      gameState.cutsceneActive = false;
+    }
+  });
+
+  function spawnBots() {
+    const count = 4;
+    for (let i = 0; i < count; i++) {
+      const team = i < 2 ? 'red' : 'blue';
+      const classes = ['assault', 'sniper', 'engineer', 'heavy'];
+      const cls = classes[i % 4];
+      const base = MAP.bases.find(b => b.team === team);
+      const x = base.x + 50 + Math.random() * 80;
+      const y = base.y + 60 + Math.random() * 40;
+      gameState.entities.push(createBot(team, cls, x, y));
+    }
+  }
+
+  function spawnVehicles() {
+    MAP.bases.forEach((base, i) => {
+      const bx = base.x + base.w + 20;
+      const by = base.y + base.h / 2;
+      gameState.vehicles.push(createVehicle(base.team, bx, by - 16, 'warthog'));
+      gameState.vehicles.push(createVehicle(base.team, bx + 70, by - 14, 'miniTank'));
+      gameState.vehicles.push(createVehicle(base.team, bx + 140, by - 20, 'tank'));
+      gameState.vehicles.push(createVehicle(base.team, base.x + base.w / 2 - 14, base.y - 40, 'drone'));
+      gameState.vehicles.push(createVehicle(base.team, base.x + 30, base.y + base.h - 50, 'powerArmour'));
+    });
+    const midX = MAP.width / 2 - 20;
+    const midY = MAP.height / 2 - 50;
+    gameState.vehicles.push(createVehicle('red', midX - 80, midY, 'drone'));
+    gameState.vehicles.push(createVehicle('blue', midX + 80, midY, 'drone'));
+  }
+
+  function initGame() {
+    createMap();
+    gameState.entities = [];
+    gameState.bullets = [];
+    gameState.particles = [];
+    gameState.vehicles = [];
+    gameState.score = { red: 0, blue: 0 };
+    gameState.flags.red = createFlag('red');
+    gameState.flags.blue = createFlag('blue');
+    gameState.entities.push(gameState.flags.red, gameState.flags.blue);
+    const team = document.querySelector('.team-btn.selected').dataset.team;
+    const cls = document.querySelector('.class-card.selected').dataset.class;
+    const colorEl = document.querySelector('.color-swatch.selected');
+    const armorColor = colorEl ? colorEl.style.backgroundColor : (team === 'red' ? '#c22' : '#48c');
+    gameState.player = createPlayer(team, cls, armorColor);
+    gameState.player.inVehicle = null;
+    gameState.entities.push(gameState.player);
+    spawnBots();
+    spawnVehicles();
+    if (gameState.mode === 'base') {
+      gameState.baseDefenseLives = { red: 15, blue: 15 };
+    }
+    gameState.running = true;
+    document.getElementById('menu-screen').style.display = 'none';
+    document.getElementById('class-select').style.display = 'none';
+    document.getElementById('game-hud').style.display = 'flex';
+    document.getElementById('hud-mode').textContent =
+      gameState.mode === 'ctf' ? 'CTF — Blood Gulch' : 'Base Defense — Blood Gulch';
+    pickVoiceLine(team, 'spawn');
+    if (gameState.mode === 'story' && gameState.storyIndex === 0) {
+      setTimeout(showCutscene, 1000);
+    }
+  }
+
+  function respawnPlayer() {
+    const p = gameState.player;
+    if (p.inVehicle) exitVehicle(p);
+    const base = MAP.bases.find(b => b.team === p.team);
+    p.x = base.x + base.w / 2 - p.w / 2 + (Math.random() - 0.5) * 40;
+    p.y = base.y + base.h - p.h - 20;
+    p.vx = p.vy = 0;
+    p.hp = p.maxHp;
+    p.ammo = p.maxAmmo;
+    p.alive = true;
+    p.carryingFlag = false;
+    p.respawnAt = 0;
+    p.inVehicle = null;
+    pickVoiceLine(p.team, 'spawn');
+  }
+
+  function getClosestVehicle(p, maxDist) {
+    let best = null, bestD = maxDist;
+    for (const v of gameState.vehicles) {
+      if (v.hp <= 0) continue;
+      if (v.team !== p.team) continue;
+      const full = v.seats === 2 && v.driver && v.gunner;
+      if (v.seats === 1 && v.driver) continue;
+      if (full) continue;
+      const d = Math.hypot(v.x + v.w / 2 - (p.x + p.w / 2), v.y + v.h / 2 - (p.y + p.h / 2));
+      if (d < bestD) { bestD = d; best = v; }
+    }
+    return best;
+  }
+
+  function exitVehicle(p) {
+    if (!p.inVehicle) return;
+    const v = p.inVehicle;
+    if (v.driver === p) v.driver = null;
+    if (v.gunner === p) v.gunner = null;
+    p.x = v.x + v.w / 2 - p.w / 2 + (Math.cos(v.angle) * 30);
+    p.y = v.y + v.h / 2 - p.h / 2 + (Math.sin(v.angle) * 30);
+    p.inVehicle = null;
+  }
+
+  function updatePlayer(p, dt) {
+    if (!p.alive) {
+      if (Date.now() / 1000 > p.respawnAt) {
+        if (gameState.mode === 'base') {
+          gameState.baseDefenseLives[p.team] = Math.max(0, gameState.baseDefenseLives[p.team] - 1);
+          if (gameState.baseDefenseLives[p.team] <= 0) {
+            showVoiceLine(p.team === 'red' ? "We're out of respawns. This is fine." : "No more lives. Totally planned.", p.team);
+            gameState.running = false;
+            setTimeout(() => {
+              document.getElementById('game-hud').style.display = 'none';
+              document.getElementById('menu-screen').style.display = 'flex';
+              document.getElementById('menu-screen').querySelector('.subtitle').textContent = (p.team === 'blue' ? 'Red' : 'Blue') + ' Team wins Base Defense!';
+            }, 2000);
+            return;
+          }
+        }
+        respawnPlayer();
+      }
+      return;
+    }
+    if (p.inVehicle) {
+      p.x = p.inVehicle.x + p.inVehicle.w / 2 - p.w / 2;
+      p.y = p.inVehicle.y + p.inVehicle.h / 2 - p.h / 2;
+      if (p.isPlayer && gameState.keys['KeyE']) {
+        exitVehicle(p);
+      }
+      return;
+    }
+    if (p.isPlayer && gameState.keys['KeyE']) {
+      const v = getClosestVehicle(p, 50);
+      if (v) {
+        if (!v.driver) { v.driver = p; p.inVehicle = v; }
+        else if (v.seats === 2 && !v.gunner) { v.gunner = p; p.inVehicle = v; }
+      }
+    }
+    const stats = getClassStats(p.class);
+    const move = p.speed * 280 * dt;
+    if (p.isPlayer) {
+      let ax = 0, ay = 0;
+      if (gameState.keys['KeyW']) ay -= 1;
+      if (gameState.keys['KeyS']) ay += 1;
+      if (gameState.keys['KeyA']) ax -= 1;
+      if (gameState.keys['KeyD']) ax += 1;
+      if (ax !== 0 || ay !== 0) {
+        const len = Math.hypot(ax, ay);
+        p.vx += (ax / len) * move * 2;
+        p.vy += (ay / len) * move * 2;
+      }
+      const mouse = gameState.mouse;
+      if (mouse) {
+        p.angle = Math.atan2(mouse.worldY - (p.y + p.h / 2), mouse.worldX - (p.x + p.w / 2));
+      }
+      if (gameState.keys['Mouse0'] && p.ammo > 0) {
+        const now = Date.now() / 1000;
+        if (now - p.lastShot >= 60 / p.fireRate) {
+          p.lastShot = now;
+          p.ammo--;
+          let angle = p.angle + (Math.random() - 0.5) * p.spread * Math.PI;
+          gameState.bullets.push(createBullet(
+            p.x + p.w / 2 + Math.cos(p.angle) * 20,
+            p.y + p.h / 2 + Math.sin(p.angle) * 20,
+            angle, p.damage, p.range, p.team, p
+          ));
+        }
+      }
+    } else {
+      p.ai.timer += dt;
+      const flag = gameState.flags[p.team === 'red' ? 'blue' : 'red'];
+      const myFlag = gameState.flags[p.team];
+      if (p.carryingFlag) {
+        const home = MAP.bases.find(b => b.team === p.team);
+        const dx = (home.x + home.w / 2) - (p.x + p.w / 2);
+        const dy = (home.y + home.h - 30) - (p.y + p.h / 2);
+        const dist = Math.hypot(dx, dy);
+        if (dist < 50) {
+          p.carryingFlag = false;
+          flag.x = flag.homeX;
+          flag.y = flag.homeY;
+          flag.carriedBy = null;
+          gameState.score[p.team]++;
+          pickVoiceLine(p.team, 'cap');
+        } else {
+          p.vx += (dx / dist) * move;
+          p.vy += (dy / dist) * move;
+        }
+      } else if (flag.carriedBy === null && p.ai.timer > 2) {
+        const dx = (flag.x + flag.w / 2) - (p.x + p.w / 2);
+        const dy = (flag.y + flag.h / 2) - (p.y + p.h / 2);
+        const dist = Math.hypot(dx, dy);
+        if (dist < 40) {
+          p.carryingFlag = true;
+          flag.carriedBy = p;
+        } else {
+          p.vx += (dx / dist) * move * 0.8;
+          p.vy += (dy / dist) * move * 0.8;
+        }
+      } else {
+        p.vx += (Math.random() - 0.5) * move;
+        p.vy += (Math.random() - 0.5) * move;
+      }
+      const nearest = gameState.entities.filter(e => e.type === 'player' && e.team !== p.team && e.alive)
+        .sort((a, b) => {
+          const da = Math.hypot(a.x - p.x, a.y - p.y);
+          const db = Math.hypot(b.x - p.x, b.y - p.y);
+          return da - db;
+        })[0];
+      if (nearest && Math.hypot(nearest.x - p.x, nearest.y - p.y) < stats.range * 0.8) {
+        p.angle = Math.atan2(nearest.y + nearest.h / 2 - (p.y + p.h / 2), nearest.x + nearest.w / 2 - (p.x + p.w / 2));
+        const now = Date.now() / 1000;
+        if (now - p.lastShot >= 60 / p.fireRate && p.ammo > 0) {
+          p.lastShot = now;
+          p.ammo--;
+          let angle = p.angle + (Math.random() - 0.5) * p.spread * Math.PI;
+          gameState.bullets.push(createBullet(
+            p.x + p.w / 2 + Math.cos(p.angle) * 20,
+            p.y + p.h / 2 + Math.sin(p.angle) * 20,
+            angle, p.damage, p.range, p.team, p
+          ));
+        }
+      }
+    }
+    p.vx *= 0.88;
+    p.vy *= 0.88;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.x = Math.max(0, Math.min(MAP.width - p.w, p.x));
+    p.y = Math.max(0, Math.min(MAP.height - p.h, p.y));
+    if (p.carryingFlag && gameState.flags[p.team === 'red' ? 'blue' : 'red']) {
+      const f = gameState.flags[p.team === 'red' ? 'blue' : 'red'];
+      f.x = p.x + p.w / 2 - f.w / 2;
+      f.y = p.y - f.h;
+    }
+  }
+
+  function updateVehicles(dt) {
+    const gunOffset = (v) => (v.vehicleKind === 'tank' ? 22 : v.vehicleKind === 'powerArmour' ? 18 : 28);
+    for (const v of gameState.vehicles) {
+      if (v.hp <= 0) continue;
+      const driver = v.driver;
+      const gunner = v.gunner;
+      if (driver && driver.isPlayer) {
+        if (gameState.keys['KeyW']) {
+          v.vx += Math.cos(v.angle) * v.speed * 60 * dt;
+          v.vy += Math.sin(v.angle) * v.speed * 60 * dt;
+        }
+        if (gameState.keys['KeyS']) {
+          v.vx -= Math.cos(v.angle) * v.speed * 40 * dt;
+          v.vy -= Math.sin(v.angle) * v.speed * 40 * dt;
+        }
+        if (gameState.keys['KeyA']) v.angle -= v.turnRate;
+        if (gameState.keys['KeyD']) v.angle += v.turnRate;
+      }
+      v.vx *= (v.flying ? 0.92 : 0.95);
+      v.vy *= (v.flying ? 0.92 : 0.95);
+      v.x += v.vx * dt * 60;
+      v.y += v.vy * dt * 60;
+      v.x = Math.max(0, Math.min(MAP.width - v.w, v.x));
+      v.y = Math.max(0, Math.min(MAP.height - v.h, v.y));
+      if (driver) { driver.x = v.x + v.w / 2 - driver.w / 2; driver.y = v.y + v.h / 2 - driver.h / 2; }
+      if (gunner) { gunner.x = v.x + v.w / 2 - gunner.w / 2; gunner.y = v.y + v.h / 2 - gunner.h / 2; }
+      const shooter = gunner || driver;
+      const off = gunOffset(v);
+      if (shooter && shooter.isPlayer && gameState.keys['Mouse0']) {
+        const mouse = gameState.mouse;
+        if (mouse) {
+          v.gunAngle = Math.atan2(mouse.worldY - (v.y + v.h / 2), mouse.worldX - (v.x + v.w / 2));
+          const now = Date.now() / 1000;
+          if (now - v.lastShot >= 60 / v.fireRate) {
+            v.lastShot = now;
+            gameState.bullets.push(createBullet(
+              v.x + v.w / 2 + Math.cos(v.gunAngle) * off,
+              v.y + v.h / 2 + Math.sin(v.gunAngle) * off,
+              v.gunAngle, v.damage, v.range, v.team, shooter
+            ));
+          }
+        }
+      } else if (shooter && !shooter.isPlayer) {
+        const nearest = gameState.entities.filter(e => e.type === 'player' && e.team !== v.team && e.alive)
+          .sort((a, b) => Math.hypot(a.x - v.x, a.y - v.y) - Math.hypot(b.x - v.x, b.y - v.y))[0];
+        if (nearest && Math.hypot(nearest.x - v.x, nearest.y - v.y) < v.range) {
+          v.gunAngle = Math.atan2(nearest.y + nearest.h / 2 - (v.y + v.h / 2), nearest.x + nearest.w / 2 - (v.x + v.w / 2));
+          const now = Date.now() / 1000;
+          if (now - v.lastShot >= 60 / v.fireRate) {
+            v.lastShot = now;
+            gameState.bullets.push(createBullet(
+              v.x + v.w / 2 + Math.cos(v.gunAngle) * off,
+              v.y + v.h / 2 + Math.sin(v.gunAngle) * off,
+              v.gunAngle, v.damage, v.range, v.team, shooter
+            ));
+          }
+        }
+      }
+    }
+  }
+
+  function updateBullets(dt) {
+    for (let i = gameState.bullets.length - 1; i >= 0; i--) {
+      const b = gameState.bullets[i];
+      b.x += b.vx * 60 * dt;
+      b.y += b.vy * 60 * dt;
+      b.dist += Math.hypot(b.vx, b.vy) * 60 * dt;
+      if (b.dist > b.maxDist) {
+        gameState.bullets.splice(i, 1);
+        continue;
+      }
+      for (const v of gameState.vehicles) {
+        if (v.hp <= 0 || v.team === b.team) continue;
+        if (b.x >= v.x && b.x <= v.x + v.w && b.y >= v.y && b.y <= v.y + v.h) {
+          v.hp -= b.damage * (v.damageMul != null ? v.damageMul : 0.5);
+          if (v.driver && v.hp <= 0) { exitVehicle(v.driver); v.driver.hp -= 20; }
+          if (v.gunner && v.hp <= 0) { exitVehicle(v.gunner); v.gunner.hp -= 20; }
+          gameState.bullets.splice(i, 1);
+          break;
+        }
+      }
+      for (const e of gameState.entities) {
+        if (e.type !== 'player' || !e.alive || e.team === b.team || e.inVehicle) continue;
+        const ex = e.x + e.w / 2, ey = e.y + e.h / 2;
+        if (Math.abs(b.x - ex) < e.w / 2 + 4 && Math.abs(b.y - ey) < e.h / 2 + 4) {
+          e.hp -= b.damage;
+          if (e.isPlayer) pickVoiceLine(e.team, 'hit');
+          if (e.hp <= 0) {
+            e.alive = false;
+            e.respawnAt = Date.now() / 1000 + 3;
+            if (e.carryingFlag) {
+              const flag = gameState.flags[e.team === 'red' ? 'blue' : 'red'];
+              flag.x = flag.homeX;
+              flag.y = flag.homeY;
+              flag.carriedBy = null;
+              e.carryingFlag = false;
+            }
+            if (b.owner && b.owner.isPlayer) triggerKillCam(b.owner, e, b);
+            else if (b.owner) {
+              pickVoiceLine(e.team, 'death');
+              pickVoiceLine(b.owner.team, 'kill');
+            }
+          }
+          gameState.bullets.splice(i, 1);
+          break;
+        }
+      }
+    }
+  }
+
+  function updateKillcam(dt) {
+    if (!gameState.killcamActive || !gameState.lastKill) return;
+    gameState.killcamTimer -= dt * 60;
+    if (gameState.killcamTimer <= 0) {
+      gameState.killcamActive = false;
+      document.getElementById('killcam-overlay').classList.remove('visible');
+      gameState.running = true;
+      return;
+    }
+    const k = gameState.lastKill;
+    const scale = Math.min(canvas.width / MAP.width, canvas.height / MAP.height);
+    const camX = (k.victim.x + k.victim.w / 2) - killcamCanvas.width / scale / 2;
+    const camY = (k.victim.y + k.victim.h / 2) - killcamCanvas.height / scale / 2;
+    killcamCtx.fillStyle = '#1a2a1a';
+    killcamCtx.fillRect(0, 0, killcamCanvas.width, killcamCanvas.height);
+    killcamCtx.save();
+    killcamCtx.scale(scale, scale);
+    killcamCtx.translate(-camX, -camY);
+    drawWorld(killcamCtx, killcamCanvas.width / scale, killcamCanvas.height / scale, camX, camY, true);
+    killcamCtx.restore();
+    document.getElementById('killcam-overlay').classList.add('visible');
+  }
+
+  function drawWorld(c, cw, ch, camX, camY, slowMo) {
+    const scale = Math.min(cw / MAP.width, ch / MAP.height);
+    const offX = (cw - MAP.width * scale) / 2 - camX * scale;
+    const offY = (ch - MAP.height * scale) / 2 - camY * scale;
+    c.save();
+    c.translate(offX, offY);
+    c.scale(scale, scale);
+    c.fillStyle = '#2d4a2d';
+    c.fillRect(0, 0, MAP.width, MAP.height);
+    c.fillStyle = '#3a5a3a';
+    c.beginPath();
+    for (let i = 0; i < MAP.canyon.length - 1; i++) {
+      const a = MAP.canyon[i], b = MAP.canyon[i + 1];
+      if (i === 0) c.moveTo(a.x, a.y);
+      c.lineTo(b.x, b.y);
+    }
+    c.lineTo(MAP.width, MAP.height);
+    c.lineTo(0, MAP.height);
+    c.closePath();
+    c.fill();
+    c.strokeStyle = '#4a6a4a';
+    c.lineWidth = 4;
+    c.stroke();
+    MAP.bases.forEach(base => {
+      c.fillStyle = base.team === 'red' ? 'rgba(200,50,50,0.4)' : 'rgba(50,100,200,0.4)';
+      c.fillRect(base.x, base.y, base.w, base.h);
+      c.strokeStyle = base.team === 'red' ? '#c22' : '#48c';
+      c.lineWidth = 3;
+      c.strokeRect(base.x, base.y, base.w, base.h);
+    });
+    gameState.vehicles.forEach(v => {
+      if (v.hp <= 0) return;
+      const kind = v.vehicleKind || 'warthog';
+      const bob = (v.flying && (v.driver || v.gunner)) ? Math.sin(Date.now() / 200) * 3 : 0;
+      c.save();
+      c.translate(v.x + v.w / 2, v.y + v.h / 2 + bob);
+      c.rotate(v.angle);
+      const col = v.team === 'red' ? '#8b2510' : '#1a3a6a';
+      const colDark = v.team === 'red' ? '#5a1510' : '#0e2040';
+      if (kind === 'warthog') {
+        c.fillStyle = col;
+        c.fillRect(-v.w / 2, -v.h / 2, v.w, v.h);
+        c.strokeStyle = '#333';
+        c.lineWidth = 2;
+        c.strokeRect(-v.w / 2, -v.h / 2, v.w, v.h);
+      } else if (kind === 'miniTank') {
+        c.fillStyle = colDark;
+        c.beginPath();
+        c.ellipse(0, 0, v.w / 2, v.h / 2.2, 0, 0, Math.PI * 2);
+        c.fill();
+        c.strokeStyle = '#333';
+        c.lineWidth = 2;
+        c.stroke();
+        c.fillStyle = col;
+        c.fillRect(-v.w / 4, -v.h / 2 - 4, v.w / 2, 6);
+      } else if (kind === 'tank') {
+        c.fillStyle = colDark;
+        c.fillRect(-v.w / 2, -v.h / 2, v.w, v.h);
+        c.fillStyle = col;
+        c.fillRect(-v.w / 2 + 4, -v.h / 2 + 4, v.w - 8, v.h - 12);
+        c.fillStyle = '#2a2a2a';
+        c.beginPath();
+        c.arc(0, 0, 10, 0, Math.PI * 2);
+        c.fill();
+      } else if (kind === 'drone') {
+        c.fillStyle = col;
+        c.beginPath();
+        c.arc(0, 0, v.w / 2 - 2, 0, Math.PI * 2);
+        c.fill();
+        c.strokeStyle = '#111';
+        c.lineWidth = 2;
+        c.stroke();
+        c.fillStyle = colDark;
+        for (let i = 0; i < 4; i++) {
+          const a = (i / 4) * Math.PI * 2 + Date.now() / 400;
+          c.fillRect(Math.cos(a) * 10 - 2, Math.sin(a) * 10 - 2, 4, 4);
+        }
+      } else if (kind === 'powerArmour') {
+        if (v.driver) {
+          c.fillStyle = v.driver.armorColor || col;
+          c.fillRect(-10, -v.h / 2 + 4, 20, 12);
+          c.fillRect(-8, 4, 10, v.h / 2 - 4);
+          c.fillRect(0, 4, 8, v.h / 2 - 4);
+          c.fillRect(-6, -v.h / 2 + 2, 6, 10);
+          c.fillRect(4, -v.h / 2 + 2, 6, 10);
+          c.fillStyle = '#333';
+          c.fillRect(-4, -v.h / 2 - 2, 8, 6);
+        } else {
+          c.fillStyle = col;
+          c.fillRect(-10, -v.h / 2 + 4, 20, 12);
+          c.fillRect(-8, 4, 16, v.h / 2 - 4);
+          c.fillRect(-6, -v.h / 2 + 2, 6, 10);
+          c.fillRect(4, -v.h / 2 + 2, 6, 10);
+          c.strokeStyle = '#333';
+          c.strokeRect(-10, -v.h / 2 + 4, 20, v.h - 4);
+        }
+      }
+      c.restore();
+      if (kind !== 'powerArmour' || !v.driver) {
+        c.fillStyle = '#333';
+        c.fillRect(v.x, v.y - 6 + bob, v.w, 4);
+        c.fillStyle = v.team === 'red' ? '#c22' : '#48c';
+        c.fillRect(v.x, v.y - 6 + bob, (v.hp / v.maxHp) * v.w, 4);
+      }
+      const gunLen = kind === 'tank' ? 22 : kind === 'powerArmour' ? 16 : 20;
+      if (v.driver || v.gunner) {
+        const gunX = v.x + v.w / 2 + Math.cos(v.gunAngle) * gunLen + (kind === 'tank' ? 0 : 0);
+        const gunY = v.y + v.h / 2 + Math.sin(v.gunAngle) * gunLen + bob;
+        c.strokeStyle = kind === 'tank' ? '#2a2a2a' : '#666';
+        c.lineWidth = kind === 'tank' ? 5 : 3;
+        c.beginPath();
+        c.moveTo(v.x + v.w / 2, v.y + v.h / 2 + bob);
+        c.lineTo(gunX, gunY);
+        c.stroke();
+      }
+    });
+    gameState.entities.forEach(e => {
+      if (e.type === 'flag') {
+        c.fillStyle = e.team === 'red' ? '#c22' : '#48c';
+        c.fillRect(e.x, e.y, e.w, e.h);
+        if (e.carriedBy) {
+          c.globalAlpha = 0.5;
+          c.fillRect(e.x, e.y, e.w, e.h);
+          c.globalAlpha = 1;
+        }
+        return;
+      }
+      if (e.type === 'player') {
+        if (!e.alive) return;
+        if (e.inVehicle && e.inVehicle.vehicleKind === 'powerArmour') return;
+        c.save();
+        c.translate(e.x + e.w / 2, e.y + e.h / 2);
+        c.rotate(e.angle);
+        c.fillStyle = e.armorColor;
+        c.fillRect(-e.w / 2, -e.h / 2, e.w, e.h);
+        c.strokeStyle = '#000';
+        c.lineWidth = 1;
+        c.strokeRect(-e.w / 2, -e.h / 2, e.w, e.h);
+        if (e.isPlayer) {
+          c.fillStyle = '#fff';
+          c.font = '10px Share Tech Mono';
+          c.textAlign = 'center';
+          c.fillText('YOU', 0, -e.h / 2 - 6);
+        }
+        c.restore();
+        c.fillStyle = '#333';
+        c.fillRect(e.x, e.y - 6, e.w, 4);
+        c.fillStyle = e.team === 'red' ? '#c22' : '#48c';
+        c.fillRect(e.x, e.y - 6, (e.hp / e.maxHp) * e.w, 4);
+      }
+    });
+    gameState.bullets.forEach(b => {
+      c.fillStyle = '#ff0';
+      c.beginPath();
+      c.arc(b.x, b.y, 3, 0, Math.PI * 2);
+      c.fill();
+    });
+    c.restore();
+  }
+
+  function draw() {
+    if (!gameState.running && !gameState.killcamActive) return;
+    const p = gameState.player;
+    if (p && p.alive) {
+      const follow = p.inVehicle ? p.inVehicle : p;
+      const cx = follow.x + (follow.w || 0) / 2;
+      const cy = follow.y + (follow.h || 0) / 2;
+      gameState.camX = cx - canvas.width / 2;
+      gameState.camY = cy - canvas.height / 2;
+      gameState.camX = Math.max(0, Math.min(MAP.width - canvas.width, gameState.camX));
+      gameState.camY = Math.max(0, Math.min(MAP.height - canvas.height, gameState.camY));
+    }
+    const camX = gameState.camX || 0, camY = gameState.camY || 0;
+    drawWorld(ctx, canvas.width, canvas.height, camX, camY, false);
+    if (p) {
+      const hudVehicle = document.getElementById('hud-vehicle');
+      if (p.inVehicle) {
+        hudVehicle.style.display = 'block';
+        const names = { warthog: 'Warthog', miniTank: 'Mini Tank', tank: 'Tank', drone: 'Drone', powerArmour: 'Power Armour' };
+        const vname = names[p.inVehicle.vehicleKind] || 'Vehicle';
+        hudVehicle.textContent = '[E] Exit ' + vname + ' — HP: ' + Math.max(0, p.inVehicle.hp);
+      } else {
+        hudVehicle.style.display = 'none';
+      }
+      document.getElementById('hud-health').textContent = 'HP: ' + (p.alive ? p.hp : 0);
+      document.getElementById('hud-ammo').textContent = p.inVehicle ? 'Vehicle weapon' : ('Ammo: ' + (p.ammo || 0) + '/' + (p.maxAmmo || 0));
+    }
+    document.getElementById('score-display').innerHTML =
+      '<span class="red">' + gameState.score.red + '</span> — <span class="blue">' + gameState.score.blue + '</span>';
+    const hudLives = document.getElementById('hud-lives');
+    if (gameState.mode === 'base') {
+      hudLives.style.display = 'block';
+      document.getElementById('lives-red').textContent = gameState.baseDefenseLives.red;
+      document.getElementById('lives-blue').textContent = gameState.baseDefenseLives.blue;
+    } else {
+      hudLives.style.display = 'none';
+    }
+    if (gameState.voiceLineTimer > 0) {
+      gameState.voiceLineTimer--;
+      if (gameState.voiceLineTimer <= 0) document.getElementById('voice-line').style.display = 'none';
+    }
+  }
+
+  function update(dt) {
+    if (gameState.killcamActive) {
+      updateKillcam(dt);
+      return;
+    }
+    if (!gameState.running || gameState.cutsceneActive) return;
+    gameState.entities.forEach(e => {
+      if (e.type === 'player') updatePlayer(e, dt);
+    });
+    updateVehicles(dt);
+    updateBullets(dt);
+  }
+
+  let lastTime = 0;
+  function loop(t) {
+    const dt = Math.min((t - lastTime) / 1000, 0.1);
+    lastTime = t;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  document.addEventListener('keydown', e => {
+    gameState.keys[e.code] = true;
+    if (e.code === 'Escape' && gameState.running) {
+      gameState.running = false;
+      document.getElementById('game-hud').style.display = 'none';
+      document.getElementById('menu-screen').style.display = 'flex';
+      document.getElementById('menu-screen').querySelector('.subtitle').textContent = "Blood Gulch Chronicles — It's a legitimate strategy.";
+      document.getElementById('class-select').classList.remove('visible');
+    }
+  });
+  document.addEventListener('keyup', e => { gameState.keys[e.code] = false; });
+
+  gameState.mouse = { x: 0, y: 0, worldX: 0, worldY: 0 };
+  canvas.addEventListener('mousemove', e => {
+    const rect = canvas.getBoundingClientRect();
+    gameState.mouse.x = e.clientX - rect.left;
+    gameState.mouse.y = e.clientY - rect.top;
+    const camX = gameState.camX || 0, camY = gameState.camY || 0;
+    const scale = Math.min(canvas.width / MAP.width, canvas.height / MAP.height);
+    const offX = (canvas.width - MAP.width * scale) / 2 - camX * scale;
+    const offY = (canvas.height - MAP.height * scale) / 2 - camY * scale;
+    gameState.mouse.worldX = (gameState.mouse.x - offX) / scale;
+    gameState.mouse.worldY = (gameState.mouse.y - offY) / scale;
+  });
+  canvas.addEventListener('mousedown', e => { if (e.button === 0) gameState.keys['Mouse0'] = true; });
+  canvas.addEventListener('mouseup', e => { if (e.button === 0) gameState.keys['Mouse0'] = false; });
+  canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+  document.getElementById('btn-ctf').addEventListener('click', () => {
+    document.getElementById('menu-screen').style.display = 'none';
+    document.getElementById('class-select').classList.add('visible');
+    gameState.mode = 'ctf';
+    gameState.storyIndex = 0;
+  });
+  document.getElementById('btn-base-defense').addEventListener('click', () => {
+    document.getElementById('menu-screen').style.display = 'none';
+    document.getElementById('class-select').classList.add('visible');
+    gameState.mode = 'base';
+    gameState.storyIndex = 0;
+  });
+  document.getElementById('btn-story').addEventListener('click', () => {
+    document.getElementById('menu-screen').style.display = 'none';
+    document.getElementById('class-select').classList.add('visible');
+    gameState.mode = 'story';
+    gameState.storyIndex = 0;
+  });
+
+  document.querySelectorAll('.team-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.team-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    });
+  });
+  document.querySelectorAll('.class-card').forEach(card => {
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.class-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+    });
+  });
+
+  const colorPicker = document.getElementById('armor-color-picker');
+  ARMOR_COLORS.forEach(color => {
+    const swatch = document.createElement('div');
+    swatch.className = 'color-swatch' + (color === '#c22' || color === '#48c' ? ' selected' : '');
+    swatch.style.backgroundColor = color;
+    swatch.addEventListener('click', () => {
+      document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+      swatch.classList.add('selected');
+    });
+    colorPicker.appendChild(swatch);
+  });
+
+  document.getElementById('btn-deploy').addEventListener('click', initGame);
+
+})();
+  </script>
+</body>
+</html>

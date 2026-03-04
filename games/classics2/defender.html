@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Defender – The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #a855f7;
+            font-size: 2rem;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px #a855f7
+        }
+
+        canvas {
+            border: 2px solid #a855f7;
+            box-shadow: 0 0 30px rgba(168, 85, 247, 0.4)
+        }
+
+        #hud {
+            margin-top: 10px;
+            color: #a855f7
+        }
+
+        #ctrl {
+            margin-top: 6px;
+            color: #555;
+            font-size: .8rem
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Defender</h1>
+    <canvas id="c" width="700" height="420"></canvas>
+    <div id="hud">Score: <span id="sc">0</span> &nbsp; Lives: <span id="li">3</span></div>
+    <div id="ctrl">A/D: move | W: up | S: down | Space: shoot | R: restart</div>
+    <script>
+        const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+        const W = 700, H = 420;
+        let ship, enemies, bullets, eBullets, score, lives, over, keys, frame = 0;
+        function rand(a, b) { return a + Math.random() * (b - a); }
+        function makeEnemy() { return { x: rand(W, W + 300), y: rand(40, H - 60), vy: rand(-0.5, 0.5), shoot: rand(60, 180) }; }
+        function init() {
+            ship = { x: 100, y: H / 2, vx: 0, vy: 0, inv: 120 };
+            enemies = Array.from({ length: 8 }, makeEnemy);
+            bullets = []; eBullets = []; score = 0; lives = 3; over = false; keys = {};
+            document.getElementById('sc').textContent = 0; document.getElementById('li').textContent = 3;
+        }
+        document.addEventListener('keydown', e => { keys[e.key] = true; if (e.key === 'r' || e.key === 'R') init(); e.preventDefault(); });
+        document.addEventListener('keyup', e => { keys[e.key] = false; });
+        let shotCool = 0;
+        function update() {
+            if (over) return;
+            frame++;
+            if (keys['a'] || keys['A']) { ship.vx -= 0.5; }
+            if (keys['d'] || keys['D']) { ship.vx += 0.5; }
+            if (keys['w'] || keys['W']) { ship.vy -= 0.5; }
+            if (keys['s'] || keys['S']) { ship.vy += 0.5; }
+            ship.vx *= 0.92; ship.vy *= 0.92;
+            ship.x += ship.vx; ship.y += ship.vy;
+            ship.x = Math.max(20, Math.min(W - 20, ship.x));
+            ship.y = Math.max(20, Math.min(H - 20, ship.y));
+            if (ship.inv > 0) ship.inv--;
+            shotCool--;
+            if (keys[' '] && shotCool <= 0) { bullets.push({ x: ship.x + 20, y: ship.y, vx: 10 + Math.abs(ship.vx), vy: 0, life: 80 }); shotCool = 15; }
+            bullets = bullets.filter(b => { b.x += b.vx; b.life--; return b.life > 0 && b.x < W; });
+            enemies = enemies.filter(e => {
+                e.y += e.vy; e.x -= 1.2;
+                if (e.y < 40 || e.y > H - 40) e.vy *= -1;
+                if (e.x < -40) { enemies.push(makeEnemy()); return false; }
+                e.shoot--;
+                if (e.shoot <= 0) { eBullets.push({ x: e.x - 12, y: e.y, vx: Math.min(-3, ship.x - e.x) * 0.04, vy: (ship.y - e.y) * 0.04, life: 100 }); e.shoot = rand(80, 200); }
+                return true;
+            });
+            eBullets = eBullets.filter(b => { b.x += b.vx; b.y += b.vy; b.life--; return b.life > 0 && b.x > 0 && b.x < W && b.y > 0 && b.y < H; });
+            // player bullets vs enemies
+            for (let bi = bullets.length - 1; bi >= 0; bi--) {
+                for (let ei = enemies.length - 1; ei >= 0; ei--) {
+                    const b = bullets[bi], e = enemies[ei];
+                    if (Math.hypot(b.x - e.x, b.y - e.y) < 22) {
+                        bullets.splice(bi, 1); enemies.splice(ei, 1); score += 50;
+                        document.getElementById('sc').textContent = score;
+                        enemies.push(makeEnemy());
+                        break;
+                    }
+                }
+            }
+            // enemy bullets vs ship
+            if (ship.inv === 0) {
+                for (let bi = eBullets.length - 1; bi >= 0; bi--) {
+                    if (Math.hypot(eBullets[bi].x - ship.x, eBullets[bi].y - ship.y) < 18) {
+                        eBullets.splice(bi, 1); lives--; document.getElementById('li').textContent = lives;
+                        ship.inv = 120; if (lives <= 0) { over = true; } break;
+                    }
+                }
+            }
+        }
+        function draw() {
+            ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+            // stars
+            ctx.fillStyle = '#333';
+            for (let i = 0; i < 50; i++) { ctx.fillRect((i * 137 + frame) % W, (i * 97) % H, 1, 1); }
+            // enemies
+            enemies.forEach(e => {
+                ctx.save(); ctx.translate(e.x, e.y);
+                ctx.beginPath(); ctx.moveTo(-15, 0); ctx.lineTo(-5, -12); ctx.lineTo(15, 0); ctx.lineTo(-5, 12); ctx.closePath();
+                ctx.fillStyle = '#d946ef'; ctx.fill(); ctx.restore();
+            });
+            // bullets
+            bullets.forEach(b => { ctx.fillStyle = '#facc15'; ctx.fillRect(b.x - 8, b.y - 2, 16, 4); });
+            eBullets.forEach(b => { ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI * 2); ctx.fillStyle = '#ef4444'; ctx.fill(); });
+            // ship
+            if (!over && (ship.inv % 10 < 7)) {
+                ctx.save(); ctx.translate(ship.x, ship.y);
+                ctx.beginPath(); ctx.moveTo(20, 0); ctx.lineTo(-15, 12); ctx.lineTo(-8, 0); ctx.lineTo(-15, -12); ctx.closePath();
+                ctx.fillStyle = '#a855f7'; ctx.fill(); ctx.restore();
+            }
+            if (over) { ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#a855f7'; ctx.font = 'bold 36px monospace'; ctx.textAlign = 'center'; ctx.fillText('GAME OVER', W / 2, H / 2 - 20); ctx.font = '18px monospace'; ctx.fillText('Press R to restart', W / 2, H / 2 + 20); }
+        }
+        function loop() { update(); draw(); requestAnimationFrame(loop); }
+        init(); loop();
+    </script>
+</body>
+
+</html>

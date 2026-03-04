@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Gem Crush – The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0a0018;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #c084fc;
+            font-size: 2rem;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px #c084fc
+        }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(8, 52px);
+            gap: 3px;
+            margin: 12px 0
+        }
+
+        .gem {
+            width: 52px;
+            height: 52px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            cursor: pointer;
+            transition: transform .15s, box-shadow .15s;
+            border: 2px solid transparent
+        }
+
+        .gem:hover {
+            transform: scale(1.1)
+        }
+
+        .gem.selected {
+            border-color: #fff;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
+            transform: scale(1.15)
+        }
+
+        .gem.matched {
+            animation: pop .3s ease forwards
+        }
+
+        @keyframes pop {
+            0% {
+                transform: scale(1)
+            }
+
+            50% {
+                transform: scale(1.3)
+            }
+
+            100% {
+                transform: scale(0);
+                opacity: 0
+            }
+        }
+
+        #hud {
+            color: #c084fc;
+            font-size: 1.1rem
+        }
+
+        #ctrl {
+            color: #555;
+            font-size: .8rem;
+            margin-top: 6px
+        }
+    </style>
+</head>
+
+<body>
+    <h1>💎 Gem Crush</h1>
+    <div id="hud">Score: <span id="sc">0</span> &nbsp; Moves: <span id="mv">30</span></div>
+    <div id="board" id="b"></div>
+    <div id="ctrl">Click two adjacent gems to swap | Match 3 or more to score!</div>
+    <script>
+        const GEMS = ['💎', '🔮', '⭐', '🔥', '❄️', '💜', '🌟'];
+        const COLS = 8, ROWS = 8;
+        let board, selected, score, moves;
+        function rand() { return GEMS[Math.floor(Math.random() * GEMS.length)]; }
+        function init() {
+            board = Array.from({ length: ROWS }, () => Array.from({ length: COLS }, rand));
+            selected = null; score = 0; moves = 30;
+            document.getElementById('sc').textContent = 0; document.getElementById('mv').textContent = 30;
+            // clear initial matches
+            for (let i = 0; i < 5; i++)clearMatches(false);
+            render();
+        }
+        function render() {
+            const b = document.getElementById('board');
+            b.innerHTML = '';
+            for (let r = 0; r < ROWS; r++)for (let c = 0; c < COLS; c++) {
+                const gem = document.createElement('div'); gem.className = 'gem';
+                gem.textContent = board[r][c];
+                const bg = {
+                    '💎': 'linear-gradient(135deg,#1e40af,#3b82f6)',
+                    '🔮': 'linear-gradient(135deg,#6d28d9,#a78bfa)',
+                    '⭐': 'linear-gradient(135deg,#92400e,#fbbf24)',
+                    '🔥': 'linear-gradient(135deg,#991b1b,#ef4444)',
+                    '❄️': 'linear-gradient(135deg,#155e75,#22d3ee)',
+                    '💜': 'linear-gradient(135deg,#581c87,#d946ef)',
+                    '🌟': 'linear-gradient(135deg,#064e3b,#34d399)',
+                };
+                gem.style.background = bg[board[r][c]] || '#1e293b';
+                if (selected && selected[0] === r && selected[1] === c) gem.classList.add('selected');
+                gem.addEventListener('click', () => click(r, c));
+                b.appendChild(gem);
+            }
+        }
+        function click(r, c) {
+            if (!selected) { selected = [r, c]; render(); return; }
+            const [sr, sc2] = selected; selected = null;
+            if (Math.abs(r - sr) + Math.abs(c - sc2) === 1) { swap(r, c, sr, sc2); if (!clearMatches(true)) { swap(r, c, sr, sc2); } else { moves--; document.getElementById('mv').textContent = moves; cascade(); } }
+            render();
+        }
+        function swap(r1, c1, r2, c2) { [board[r1][c1], board[r2][c2]] = [board[r2][c2], board[r1][c1]]; }
+        function findMatches() {
+            const matched = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+            for (let r = 0; r < ROWS; r++)for (let c = 0; c < COLS - 2; c++) { const g = board[r][c]; if (g === board[r][c + 1] && g === board[r][c + 2]) { matched[r][c] = matched[r][c + 1] = matched[r][c + 2] = true; } }
+            for (let r = 0; r < ROWS - 2; r++)for (let c = 0; c < COLS; c++) { const g = board[r][c]; if (g === board[r + 1][c] && g === board[r + 2][c]) { matched[r][c] = matched[r + 1][c] = matched[r + 2][c] = true; } }
+            return matched;
+        }
+        function clearMatches(addScore) {
+            const m = findMatches(); const any = m.some(r => r.some(v => v));
+            if (any) {
+                let cnt = 0; for (let r = 0; r < ROWS; r++)for (let c = 0; c < COLS; c++)if (m[r][c]) { board[r][c] = null; cnt++; }
+                if (addScore) { score += cnt * 10; document.getElementById('sc').textContent = score; }
+                // gravity
+                for (let c = 0; c < COLS; c++) { let emptyRow = ROWS - 1; for (let r = ROWS - 1; r >= 0; r--) { if (board[r][c] !== null) { board[emptyRow][c] = board[r][c]; if (emptyRow !== r) board[r][c] = null; emptyRow--; } } for (let r = emptyRow; r >= 0; r--)board[r][c] = rand(); }
+            }
+            return any;
+        }
+        function cascade() { let cont = true; while (cont) { cont = clearMatches(true); } render(); checkEnd(); }
+        function checkEnd() {
+            if (moves <= 0) {
+                const msg = document.createElement('div');
+                msg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99;font-family:monospace';
+                if (score >= 300) {
+                    msg.innerHTML = `<div style="font-size:3.5rem;color:#c084fc;text-shadow:0 0 30px #c084fc;margin-bottom:16px">YOU WIN!</div><div style="font-size:1.4rem;color:#facc15;margin-bottom:12px">🏆 Score: ${score}</div><div style="color:#aaa;margin-bottom:24px">Amazing gem crushing!</div><button onclick="this.parentNode.remove();init()" style="padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#c084fc);border:none;color:#fff;border-radius:10px;cursor:pointer;font-size:1rem">Play Again</button>`;
+                } else {
+                    msg.innerHTML = `<div style="font-size:2.5rem;color:#ef4444;margin-bottom:16px">No More Moves!</div><div style="font-size:1.2rem;color:#facc15;margin-bottom:12px">Score: ${score}</div><div style="color:#aaa;font-size:.9rem;margin-bottom:24px">Need 300+ to win!</div><button onclick="this.parentNode.remove();init()" style="padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#c084fc);border:none;color:#fff;border-radius:10px;cursor:pointer;font-size:1rem">Try Again</button>`;
+                }
+                document.body.appendChild(msg);
+            }
+        }
+        init();
+    </script>
+</body>
+
+</html>

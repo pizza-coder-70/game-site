@@ -1,0 +1,1712 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Pizza Edition | Unblocked Games</title>
+    <meta name="description" content="Play the best unblocked games at The Pizza Edition. Fast, free, and fun!">
+    <link rel="stylesheet" href="./style/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <header>
+        <div class="container">
+            <div class="logo">
+                <span class="pizza-icon">🍕</span>
+                <h1>THE PIZZA EDITION</h1>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="index.html" class="active">Home</a></li>
+
+                    <li><a href="ai.html">🤖 AI Chat</a></li>
+                    <li><a href="scores.html">🏆 Leaderboard</a></li>
+                    <li><a href="mailto:codepizza70@gmail.com?subject=Game Recommendations" target="_blank">Email</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hero">
+            <h2>Unlimited Fun, <span class="highlight">Unblocked.</span></h2>
+            <p>Dive into our collection games for the ultimate gaming experience.</p>
+        </section>
+
+        <div class="tabs-container">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab(this, 'modern')">
+                    <span class="tab-icon">🕹️</span> Modern Games
+                </button>
+                <button class="tab" onclick="switchTab(this, 'classic')">
+                    <span class="tab-icon">👾</span> Classic Games
+                </button>
+                <button class="tab" onclick="switchTab(this, 'clicker')">
+                    <span class="tab-icon">👆</span> Clicker Games
+                </button>
+                <button class="tab" onclick="switchTab(this, 'games2d')">
+                    <span class="tab-icon">🎮</span> 2D Games
+                </button>
+                <button class="tab" onclick="switchTab(this, 'games3d')">
+                    <span class="tab-icon">🌐</span> 3D Games
+                </button>
+                <div class="tab-slider"></div>
+            </div>
+
+            <div class="tab-content" id="modern">
+                <div class="game-grid" id="gameGrid">
+                    <!-- Unique Game Collection -->
+                    <div class="game-card" onclick="window.open('games/fallout/index.html', '_blank')">
+                        <div class="game-thumb">
+                            <img src="assets/fallout-terminal-v2.png" alt="Fallout: Terminal">
+                        </div>
+                        <div class="game-info">
+                            <h3>Fallout: Terminal</h3>
+                            <button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+
+                    <div class="game-card" onclick="window.open('games/zombie game.html', '_blank')">
+                        <div class="game-thumb">
+                            <img src="assets/zombie-game-v2.png" alt="Zombie Game">
+                        </div>
+                        <div class="game-info">
+                            <h3>Zombie Game</h3>
+                            <button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+
+                    <div class="game-card" onclick="window.open('games/fallout.html', '_blank')">
+                        <div class="game-thumb">
+                            <img src="assets/fallout-classic-v2.png" alt="Fallout: Classic 3D">
+                        </div>
+                        <div class="game-info">
+                            <h3>Fallout: Classic 3D</h3>
+                            <button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+
+                    <div class="game-card" onclick="window.open('games/red dead redemption 2.html', '_blank')">
+                        <div class="game-thumb">
+                            <img src="assets/rdr2-v2.png" alt="Red Dead Redemption 2">
+                        </div>
+                        <div class="game-info">
+                            <h3>Red Dead Redemption 2</h3>
+                            <button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+
+                    <div class="game-card"
+                        onclick="window.open('games/fallout power armour building game.html', '_blank')">
+                        <div class="game-thumb">
+                            <img src="assets/power-armour-build-v2.png" alt="Power Armour Building">
+                        </div>
+                        <div class="game-info">
+                            <h3>Power Armour Building</h3>
+                            <button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+
+                    <div class="game-card" onclick="window.open('games/space flight simulator.html', '_blank')">
+                        <div class="game-thumb">
+                            <img src="assets/space-flight-sim-v2.png" alt="Space Flight Simulator">
+                        </div>
+                        <div class="game-info">
+                            <h3>Space Flight Simulator</h3>
+                            <button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+
+                    <div class="game-card" onclick="window.open('games/space-sim-3d.html', '_blank')">
+                        <div class="game-thumb">
+                            <img src="assets/space-flight-sim-v2.png" alt="Space Sim 3D">
+                        </div>
+                        <div class="game-info">
+                            <h3>Space Sim 3D</h3>
+                            <button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+
+                    <div class="game-card" onclick="window.open('games/red_vs_blue.html', '_blank')">
+                        <div class="game-thumb">
+                            <img src="assets/red-vs-blue-3d.png" alt="Red vs Blue 3D">
+                        </div>
+                        <div class="game-info">
+                            <h3>Red vs Blue 3D</h3>
+                            <button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+
+                    <div class="game-card" onclick="window.open('games/tower defence.html', '_blank')">
+                        <div class="game-thumb">
+                            <img src="assets/game_8.png" alt="Tower Defence">
+                        </div>
+                        <div class="game-info">
+                            <h3>Tower Defence</h3>
+                            <button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content hidden" id="classic">
+                <!-- Classic Sub-tabs -->
+                <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+                    <button id="subtab-orig" onclick="switchClassicSub('orig')"
+                        style="padding:8px 20px;border-radius:10px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:.9rem;">👾
+                        Classics 1</button>
+                    <button id="subtab-more" onclick="switchClassicSub('more')"
+                        style="padding:8px 20px;border-radius:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(124,58,237,0.3);color:#a78bfa;font-weight:700;cursor:pointer;font-family:inherit;font-size:.9rem;">✨
+                        More Classics</button>
+                </div>
+
+                <!-- Search bar -->
+                <div id="classicSearchWrap" style="
+                    display:flex;align-items:center;gap:10px;
+                    background:rgba(13,13,32,0.7);border:1px solid rgba(124,58,237,0.3);
+                    border-radius:14px;padding:10px 18px;margin-bottom:20px;
+                    box-shadow:0 0 20px rgba(124,58,237,0.08);
+                ">
+                    <span style="font-size:1.2rem;flex-shrink:0;">🔍</span>
+                    <input id="classicSearch" type="text" placeholder="Search classic games..."
+                        oninput="filterClassic(this.value)" autocomplete="off" style="
+                            flex:1;background:transparent;border:none;outline:none;
+                            color:#e2e8f0;font-size:1rem;font-family:inherit;
+                        ">
+                    <button onclick="clearClassicSearch()" id="classicClearBtn" style="
+                        display:none;background:none;border:none;color:#64748b;
+                        cursor:pointer;font-size:1.1rem;padding:0 4px;line-height:1;
+                    " title="Clear">✕</button>
+                </div>
+                <div id="classicNoResults" style="
+                    display:none;text-align:center;padding:40px;color:#64748b;
+                    font-size:1rem;
+                ">🕹️ No games match "<span id="classicNoResultsQuery"></span>"</div>
+
+                <!-- Original classics -->
+                <div class="game-grid" id="classicGrid" style="display:grid">
+                    <!-- Original Arcade Game Collection -->
+                    <div class="game-card" onclick="window.open('games/blast_blocks.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#FF6B6B,#C0392B);display:flex;align-items:center;justify-content:center;color:white;font-size:3rem;font-weight:bold;">
+                                Blocks</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Blast Blocks</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/tic_tac_toe.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#3498DB,#2980B9);display:flex;align-items:center;justify-content:center;color:white;font-size:3rem;font-weight:bold;">
+                                X/O</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Tic Tac Toe</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/flappy_bird.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#F1C40F,#F39C12);display:flex;align-items:center;justify-content:center;color:white;font-size:3rem;font-weight:bold;">
+                                Bird</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Flappy Bird</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/snake.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#2ECC71,#27AE60);display:flex;align-items:center;justify-content:center;color:white;font-size:3rem;font-weight:bold;">
+                                Snake</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Snake</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/2048.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#E67E22,#D35400);display:flex;align-items:center;justify-content:center;color:white;font-size:3rem;font-weight:bold;">
+                                2048</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>2048</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/pong.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#95A5A6,#7F8C8D);display:flex;align-items:center;justify-content:center;color:white;font-size:3rem;font-weight:bold;">
+                                Pong</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Pong</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/tetris.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#9B59B6,#8E44AD);display:flex;align-items:center;justify-content:center;color:white;font-size:3rem;font-weight:bold;">
+                                Tetris</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Tetris</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/minesweeper.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#34495E,#2C3E50);display:flex;align-items:center;justify-content:center;color:white;font-size:3rem;font-weight:bold;">
+                                Mines</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Minesweeper</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+
+                    <!-- 20 New Classic Games -->
+                    <div class="game-card" onclick="window.open('games/pacman.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#FFD700,#FF8C00);display:flex;align-items:center;justify-content:center;color:white;font-size:3rem;">
+                                🟡</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Pac-Man</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/space_invaders.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#000,#003300);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                👾</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Space Invaders</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/breakout.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#7c3aed,#c084fc);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🧱</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Breakout</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/asteroids.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0f172a,#1e40af);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                ☄️</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Asteroids</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/frogger.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#16a34a,#052e16);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🐸</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Frogger</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/galaga.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#581c87,#ec4899);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🛸</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Galaga</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/simon_says.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#1a0030,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🎮</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Simon Says</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/memory_match.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#1e293b,#4f46e5);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🃏</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Memory Match</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/connect_four.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#1d4ed8,#facc15);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🔴</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Connect Four</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/checkers.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#92400e,#1a1a1a);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                ♟</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Checkers</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/sudoku.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0c0c1a,#1d4ed8);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🔢</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Sudoku</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/hangman.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0f172a,#7f1d1d);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                💀</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Hangman</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/whack_a_mole.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#14532d,#4ade80);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🔨</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Whack-a-Mole</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/pinball.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#1a0a00,#f59e0b);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🎳</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Pinball</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/slot_machine.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#7f1d1d,#fcd34d);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🎰</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Slot Machine</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/word_scramble.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0c1a0c,#facc15);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🔤</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Word Scramble</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/centipede.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#000,#f97316);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🐛</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Centipede</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/battleship.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0c1a2e,#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                ⚓</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Battleship</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/dino_runner.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0a0a0a,#86efac);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🦕</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Dino Runner</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/typing_speed.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#1a0d2e,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                ⌨️</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Typing Speed</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/reaction_time.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0a0a0f,#38bdf8);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                ⚡</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Reaction Time</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/fifteen_puzzle.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0f172a,#fbbf24);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🔢</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>15 Puzzle</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/color_match.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0f0a1e,#f472b6);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🎨</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Color Match</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/lunar_lander.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0f172a,#1e3a5f);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🚀</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Lunar Lander</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/blackjack.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#062a15,#0a3d1f);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🃏</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Blackjack</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/chess.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#1e293b,#334155);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                ♟️</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Chess</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/tower_of_hanoi.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#431407,#7c2d12);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🗼</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Tower of Hanoi</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/dice_poker.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#1c1917,#3d2b00);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🎲</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Dice Poker</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/mastermind.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#1e0536,#4c1d95);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🔮</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Mastermind</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/mahjong.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#3b0a0a,#7f1d1d);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🀄</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Mah-Jong Solitaire</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/bubble_shooter.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#042f2e,#134e4a);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🫧</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Bubble Shooter</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/paint.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0f0a1e,#1e0a2e);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🎨</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Paint</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/math_blaster.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#052e16,#064e3b);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🧮</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Math Blaster</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- More Classics Grid (hidden by default) -->
+                <div class="game-grid" id="moreClassicGrid" style="display:none">
+                    <div class="game-card" onclick="window.open('games/classics2/qbert.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#7c3aed,#f97316);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🎲</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Q*bert</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/tron.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#000,#0ff);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🟦</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Tron Light Cycle</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/space_rocks.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0f172a,#1e40af);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                ☄️</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Space Rocks</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/defender.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#581c87,#ec4899);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🛸</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Defender</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/pong2.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0c1a2e,#22d3ee);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🏓</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Pong 2-Player</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/arkanoid.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#4a044e,#e879f9);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🧱</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Arkanoid</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/pacman2.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#000,#1d4ed8);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🟡</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Pac-Man II</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/snake2.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#052e16,#4ade80);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🐍</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Snake Extreme</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/missile_command.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#1c1917,#f97316);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🚀</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Missile Command</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/gorillas.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#1c1917,#facc15);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🦍</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Gorillas!</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/sokoban.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0c1a2e,#22d3ee);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                📦</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Sokoban</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/frogger2.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#052e16,#4ade80);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🐸</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Frogger 2</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/solitaire.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#065f46,#34d399);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                ♠️</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Klondike Solitaire</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/minesweeper2.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0f172a,#38bdf8);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                💣</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Minesweeper 2</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/space_invaders2.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#000,#0f0);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                👾</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Space Invaders II</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/tetris2.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#1e0536,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🟪</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Tetris Extreme</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/brick_breaker.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0a0010,#f472b6);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🧱</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Brick Breaker</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/tank_battle.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0a0a0a,#84cc16);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🚗</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Tank Battle</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/bomberman.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#1c0030,#f97316);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                💣</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Bomberman</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/dots_boxes.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0a0a1a,#818cf8);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🔵</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Dots &amp; Boxes</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/number_guess.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0a0018,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🎯</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Number Guessing</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/trivia.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0f172a,#818cf8);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🧠</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Trivia Quiz</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/gem_crush.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0a0018,#c084fc);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                💎</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Gem Crush</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/reaction2.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0f172a,#34d399);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                ⚡</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Reaction Time 2</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/maze_runner.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0a0a1a,#06b6d4);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🏃</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Maze Runner</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/rps.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0f172a,#818cf8);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                ✊</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Rock Paper Scissors</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/typing_race.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0a0a18,#38bdf8);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                ⌨️</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Typing Race</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/snake_vs_mouse.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#052e16,#4ade80);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🐱</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Snake vs Mouse</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/color_rush.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0f172a,#f472b6);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🎨</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Color Rush</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/jump_rope.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0f172a,#fbbf24);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🎀</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Jump Rope</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/wordle.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0f172a,#4ade80);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🟩</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Wordle</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/fruit_catcher.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0a1a0a,#4ade80);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🍓</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Fruit Catcher</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/pong3d.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0a0016,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🏐</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Pong 3D</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/crossword.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0f172a,#fbbf24);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                📰</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Crossword</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/breakout2.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#000,#38bdf8);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                ⚡</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Breakout Deluxe</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/star_fighter.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#000,#f97316);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                ★</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Star Fighter</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/neon2048.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#1e0536,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:3rem;font-weight:900">
+                                2048</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>2048 Neon</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/word_search.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0f172a,#38bdf8);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🔍</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Word Search</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/flappy_dragon.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0a0018,#a855f7);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🐉</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Flappy Dragon</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/infinite_runner.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0a0a0a,#22d3ee);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🏃</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Infinite Runner</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/asteroid_dodge.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#000,#60a5fa);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                ☄️</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Asteroid Dodge</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/paint2.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0f172a,#f472b6);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🎨</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Paint Pixels</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/stack_tower.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0a0a1a,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🏗️</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Stack Tower</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/light_up.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0a0018,#fbbf24);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                💡</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Light Up</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/whack_zombie.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0a1a0a,#4ade80);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🧟</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Whack-a-Zombie</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/chess2.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#1e293b,#facc15);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                ♟</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Chess Enhanced</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/neon_golf.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#000,#4ade80);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                ⛳</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Neon Golf</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/jigsaw.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0a0018,#c084fc);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🧩</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Jigsaw Puzzle</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/memory2.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0f172a,#818cf8);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🃏</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Memory Pairs 2</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/sliding_puzzle.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0f172a,#38bdf8);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🔀</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Sliding Puzzle</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/classics2/rhythm_tap.html', '_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(45deg,#0a0018,#ec4899);display:flex;align-items:center;justify-content:center;font-size:3rem;">
+                                🎵</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Rhythm Tap</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Clicker Games Tab ─────────────────────────────────── -->
+            <div class="tab-content hidden" id="clicker">
+                <div style="text-align:center;margin-bottom:20px">
+                    <h2
+                        style="color:#fb923c;font-size:1.4rem;text-shadow:0 0 16px rgba(251,146,60,.5);margin-bottom:6px">
+                        👆 Clicker Games</h2>
+                    <p style="color:#6b7280;font-size:.9rem">Click to earn, upgrade, and build your empire!</p>
+                </div>
+                <div class="game-grid" id="clickerGrid">
+                    <div class="game-card" onclick="window.open('games/clicker/cookie_clicker.html','_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(135deg,#92400e,#d97706);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                                🍪</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Cookie Clicker</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/clicker/pizza_factory.html','_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(135deg,#7f1d1d,#ef4444);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                                🍕</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Pizza Factory</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/clicker/space_colony.html','_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(135deg,#0c4a6e,#0e7490);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                                🚀</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Space Colony</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/clicker/dragon_hoard.html','_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(135deg,#451a03,#b45309);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                                🐉</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Dragon Hoard</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/clicker/zombie_army.html','_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(135deg,#052e16,#166534);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                                🧟</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Zombie Army</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/clicker/mining_empire.html','_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(135deg,#1e1b4b,#4c1d95);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                                ⛏️</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Mining Empire</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/clicker/neon_city.html','_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(135deg,#0c1445,#1e3a8a);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                                🌆</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Neon City</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/clicker/potion_brewer.html','_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(135deg,#2e1065,#6b21a8);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                                🧪</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Potion Brewer</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/clicker/code_factory.html','_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(135deg,#022c22,#065f46);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                                💻</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Code Factory</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/clicker/galaxy_clicker.html','_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(135deg,#1e1b4b,#312e81);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                                🌌</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Galaxy Clicker</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="window.open('games/clicker/candy_kingdom.html','_blank')">
+                        <div class="game-thumb">
+                            <div
+                                style="width:100%;height:100%;background:linear-gradient(135deg,#500724,#9d174d);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                                🍬</div>
+                        </div>
+                        <div class="game-info">
+                            <h3>Candy Kingdom</h3><button class="play-btn">PLAY</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── 2D Games Tab ─────────────────────────────────────── -->
+        <div class="tab-content hidden" id="games2d">
+            <div style="text-align:center;margin-bottom:20px">
+                <h2 style="color:#818cf8;font-size:1.4rem;text-shadow:0 0 16px rgba(129,140,248,.5);margin-bottom:6px">
+                    🎮 2D Games</h2>
+                <p style="color:#6b7280;font-size:.9rem">Action, puzzles, and arcade fun — all in 2D!</p>
+            </div>
+            <div class="game-grid" id="games2dGrid">
+                <div class="game-card" onclick="window.open('games/games2d/platformer.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#2e1065,#4c1d95);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🎮</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Neon Platformer</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games2d/maze_escape.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#052e16,#166534);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🌿</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Maze Escape</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games2d/tower_stack.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#431407,#9a3412);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🏗️</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Tower Stack</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games2d/gravity_flip.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#0c4a6e,#1e40af);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🔄</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Gravity Flip</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games2d/dungeon_quest.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#1c0505,#7f1d1d);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            ⚔️</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Dungeon Quest</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games2d/space_shooter.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#0f0030,#1e1b4b);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🚀</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Space Shooter</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games2d/dino_jump.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#052e16,#14532d);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🦕</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Dino Jump</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games2d/ninja_fruit.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#450a0a,#991b1b);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🥷</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Ninja Fruit</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games2d/car_dodge.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#0f172a,#1e293b);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🚗</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Car Dodge</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games2d/bubble_shooter.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#2e1065,#6b21a8);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🫧</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Bubble Shooter</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games2d/pong_plus.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#022c22,#065f46);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🏓</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Pong Plus</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games2d/gem_diver.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#0c4a6e,#075985);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            💎</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Gem Diver</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games2d/click_hunt.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#3b0764,#6b21a8);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🎯</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Click Hunt</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games2d/penguin_slide.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#0c1445,#1e40af);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🐧</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Penguin Slide</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games2d/laser_guard.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#1c0505,#450a0a);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🔴</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Laser Guard</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games2d/color_switch.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#0a0010,#1e1b4b);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🎨</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Color Switch</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games2d/crossy_hop.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#052e16,#166534);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🐸</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Crossy Hop</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games2d/breakout_blitz.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#1c0020,#4a044e);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🧱</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Breakout Blitz</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games2d/snake_dash.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#052e16,#15803d);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🐍</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Snake Dash</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games2d/turret_defense.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#022c22,#064e3b);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🗼</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Turret Defense</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games2d/lunar_lander.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#0f0f0f,#1c1c35);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🌙</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Lunar Lander</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games2d/neon_asteroids.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#1e1b4b,#312e81);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            ☄️</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Neon Asteroids</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+
+        <!-- ── 3D Games Tab ─────────────────────────────────────── -->
+        <div class="tab-content hidden" id="games3d">
+            <div style="text-align:center;margin-bottom:20px">
+                <h2 style="color:#a78bfa;font-size:1.4rem;text-shadow:0 0 16px rgba(167,139,250,.5);margin-bottom:6px">
+                    🌐 3D Games</h2>
+                <p style="color:#6b7280;font-size:.9rem">Fully 3D browser games powered by Three.js!</p>
+            </div>
+            <div class="game-grid">
+                <div class="game-card" onclick="window.open('games/games3d/space_fighter.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#0f0030,#1e1b4b);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🚀</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Space Fighter</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games3d/marble_roll.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#052e16,#166534);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🔮</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Marble Roll</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games3d/snake3d.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#052e16,#15803d);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🐍</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Snake 3D</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games3d/road_racer.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#0f172a,#1e293b);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🏎️</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Road Racer</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games3d/planet_defense.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#0f0520,#500724);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🌍</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Planet Defense</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games3d/stack3d.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#431407,#9a3412);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🏗️</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Stack 3D</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games3d/fps_dungeon.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#1c0505,#7f1d1d);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🔫</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>FPS Dungeon</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games3d/sky_jumper.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#0c1445,#1e40af);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🌤️</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Sky Jumper</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games3d/pong3d.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#022c22,#065f46);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            🏓</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Pong 3D</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games3d/crystal_collect.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#2e1065,#6b21a8);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            💎</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Crystal Collect</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+                <div class="game-card" onclick="window.open('games/games3d/asteroid_belt.html','_blank')">
+                    <div class="game-thumb">
+                        <div
+                            style="width:100%;height:100%;background:linear-gradient(135deg,#0a0010,#1e1b4b);display:flex;align-items:center;justify-content:center;font-size:3.5rem;">
+                            ☄️</div>
+                    </div>
+                    <div class="game-info">
+                        <h3>Asteroid Belt</h3><button class="play-btn">PLAY</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 The Pizza Edition. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="./scripts/main.js"></script>
+    <script src="./scripts/switchTabs.js"></script>
+    <script>
+        // ── Classic Sub-tab Switching ─────────────────────────────
+        let currentClassicSub = 'orig';
+        function switchClassicSub(which) {
+            currentClassicSub = which;
+            const origGrid = document.getElementById('classicGrid');
+            const moreGrid = document.getElementById('moreClassicGrid');
+            const origBtn = document.getElementById('subtab-orig');
+            const moreBtn = document.getElementById('subtab-more');
+            if (which === 'orig') {
+                origGrid.style.display = 'grid';
+                moreGrid.style.display = 'none';
+                origBtn.style.background = 'linear-gradient(135deg,#7c3aed,#4f46e5)';
+                origBtn.style.border = 'none';
+                origBtn.style.color = '#fff';
+                moreBtn.style.background = 'rgba(255,255,255,0.06)';
+                moreBtn.style.border = '1px solid rgba(124,58,237,0.3)';
+                moreBtn.style.color = '#a78bfa';
+            } else {
+                origGrid.style.display = 'none';
+                moreGrid.style.display = 'grid';
+                moreBtn.style.background = 'linear-gradient(135deg,#7c3aed,#4f46e5)';
+                moreBtn.style.border = 'none';
+                moreBtn.style.color = '#fff';
+                origBtn.style.background = 'rgba(255,255,255,0.06)';
+                origBtn.style.border = '1px solid rgba(124,58,237,0.3)';
+                origBtn.style.color = '#a78bfa';
+            }
+            // Clear search when switching
+            const inp = document.getElementById('classicSearch');
+            inp.value = '';
+            filterClassic('');
+        }
+
+        // ── Classic Games Search ─────────────────────────────
+        function filterClassic(query) {
+            const q = query.toLowerCase().trim();
+            const origGrid = document.getElementById('classicGrid');
+            const moreGrid = document.getElementById('moreClassicGrid');
+
+            if (q !== '') {
+                // Show both grids when searching
+                origGrid.style.display = 'grid';
+                moreGrid.style.display = 'grid';
+            } else {
+                // Restore sub-tab state
+                if (currentClassicSub === 'orig') {
+                    origGrid.style.display = 'grid';
+                    moreGrid.style.display = 'none';
+                } else {
+                    origGrid.style.display = 'none';
+                    moreGrid.style.display = 'grid';
+                }
+            }
+
+            const cards = document.querySelectorAll('#classicGrid .game-card, #moreClassicGrid .game-card');
+            let visible = 0;
+            cards.forEach(card => {
+                const name = card.querySelector('h3')?.textContent.toLowerCase() || '';
+                const show = q === '' || name.includes(q);
+                card.style.display = show ? '' : 'none';
+                if (show) visible++;
+            });
+            // Clear button
+            document.getElementById('classicClearBtn').style.display = q ? '' : 'none';
+            // No-results message
+            const noRes = document.getElementById('classicNoResults');
+            if (visible === 0 && q !== '') {
+                document.getElementById('classicNoResultsQuery').textContent = query;
+                noRes.style.display = '';
+            } else {
+                noRes.style.display = 'none';
+            }
+        }
+
+        function clearClassicSearch() {
+            const inp = document.getElementById('classicSearch');
+            inp.value = '';
+            filterClassic('');
+            inp.focus();
+        }
+
+        // Escape key clears search
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                const inp = document.getElementById('classicSearch');
+                if (inp && document.activeElement === inp) clearClassicSearch();
+            }
+        });
+
+        // Focus glow on search wrapper
+        document.getElementById('classicSearch')?.addEventListener('focus', () => {
+            document.getElementById('classicSearchWrap').style.borderColor = 'rgba(124,58,237,0.7)';
+            document.getElementById('classicSearchWrap').style.boxShadow = '0 0 20px rgba(124,58,237,0.2)';
+        });
+        document.getElementById('classicSearch')?.addEventListener('blur', () => {
+            document.getElementById('classicSearchWrap').style.borderColor = 'rgba(124,58,237,0.3)';
+            document.getElementById('classicSearchWrap').style.boxShadow = '0 0 20px rgba(124,58,237,0.08)';
+        });
+    </script>
+</body>
+
+</html>

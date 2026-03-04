@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Whack-a-Mole | The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: radial-gradient(ellipse at center, #14532d, #052e16);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 8px;
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px #84cc16;
+        }
+
+        #hud {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 16px;
+            font-size: 1.2rem;
+            color: #bef264;
+        }
+
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(3, 140px);
+            gap: 16px;
+            margin: 10px;
+        }
+
+        .hole {
+            width: 140px;
+            height: 140px;
+            background: radial-gradient(ellipse at 30% 30%, #1a3a0a, #0b1e04);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 8px 16px rgba(0, 0, 0, 0.8), 0 4px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        .mole {
+            position: absolute;
+            bottom: -100%;
+            font-size: 4rem;
+            transition: bottom .15s;
+            cursor: pointer;
+            user-select: none;
+            filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.5));
+        }
+
+        .hole.active .mole {
+            bottom: 0;
+        }
+
+        .hole.whacked .mole {
+            filter: blur(2px) brightness(2);
+            font-size: 4.5rem;
+        }
+
+        #msg {
+            margin-top: 16px;
+            font-size: 1.3rem;
+            min-height: 1.5em;
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 12px 36px;
+            background: linear-gradient(135deg, #84cc16, #4d7c0f);
+            color: #fff;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            letter-spacing: 2px;
+        }
+
+        button:hover {
+            transform: scale(1.07);
+        }
+
+        #menuBtn {
+            margin-top: 0;
+            background: linear-gradient(135deg, #334155, #1e293b);
+            color: #fff;
+            display: none;
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999;
+        }
+
+        #homeBtn:hover {
+            background: #1e40af;
+        }
+
+        #timer-bar {
+            width: 360px;
+            height: 12px;
+            background: #1a3a0a;
+            border-radius: 6px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        #timer-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #84cc16, #facc15);
+            border-radius: 6px;
+            transition: width .5s linear;
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>🔨 WHACK-A-MOLE</h1>
+    <div id="hud"><span>SCORE: <b id="score">0</b></span><span>COMBO: <b id="combo">x1</b></span></div>
+    <div id="timer-bar">
+        <div id="timer-fill" style="width:100%"></div>
+    </div>
+    <div id="grid"></div>
+    <div id="msg">Press START to play!</div>
+    <button id="startBtn" onclick="startGame()">START</button>
+    <button id="menuBtn" onclick="window.close()">🏠 Return to Menu</button>
+    <script src="../scripts/scores.js"></script>
+    <script>
+        const MOLES = ['🦔', '🐹', '🐭', '🐿️', '🐰'];
+        let score, combo, running, moleTimers, gameTimer, totalTime = 30, timeLeft;
+        let active = Array(9).fill(false);
+
+        function buildGrid() {
+            const grid = document.getElementById('grid'); grid.innerHTML = '';
+            for (let i = 0; i < 9; i++) {
+                const hole = document.createElement('div'); hole.className = 'hole'; hole.id = `hole${i}`;
+                const mole = document.createElement('div'); mole.className = 'mole'; mole.id = `mole${i}`;
+                mole.textContent = MOLES[Math.floor(Math.random() * MOLES.length)];
+                mole.onclick = (e) => { e.stopPropagation(); whack(i); };
+                hole.appendChild(mole); grid.appendChild(hole);
+            }
+        }
+
+        function startGame() {
+            score = 0; combo = 1; running = true; timeLeft = totalTime; active = Array(9).fill(false);
+            document.getElementById('score').textContent = 0;
+            document.getElementById('combo').textContent = 'x1';
+            document.getElementById('msg').textContent = '';
+            document.getElementById('startBtn').style.display = 'none';
+            buildGrid();
+            clearInterval(gameTimer);
+            gameTimer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer-fill').style.width = (timeLeft / totalTime * 100) + '%';
+                if (timeLeft <= 0) {
+                    clearInterval(gameTimer); running = false;
+                    for (let i = 0; i < 9; i++) { hideMole(i); }
+                    document.getElementById('msg').textContent = `Game Over! Final Score: ${score} 🏆`;
+                    document.getElementById('startBtn').style.display = '';
+                    document.getElementById('menuBtn').style.display = '';
+                    PizzaScores.save('Whack-a-Mole', score);
+                }
+            }, 1000);
+            scheduleAll();
+        }
+
+        function scheduleAll() {
+            for (let i = 0; i < 9; i++) scheduleMole(i);
+        }
+
+        function scheduleMole(i) {
+            if (!running) return;
+            const delay = 800 + Math.random() * 1200;
+            setTimeout(() => {
+                if (!running) return;
+                showMole(i);
+                const dur = 600 + Math.random() * 700;
+                setTimeout(() => { if (!running) return; hideMole(i); scheduleMole(i); }, dur);
+            }, delay);
+        }
+
+        function showMole(i) {
+            active[i] = true;
+            const hole = document.getElementById(`hole${i}`);
+            if (hole) { hole.classList.add('active'); document.getElementById(`mole${i}`).textContent = MOLES[Math.floor(Math.random() * MOLES.length)]; }
+        }
+
+        function hideMole(i) {
+            active[i] = false; combo = 1; document.getElementById('combo').textContent = 'x1';
+            const hole = document.getElementById(`hole${i}`);
+            if (hole) { hole.classList.remove('active', 'whacked'); }
+        }
+
+        function whack(i) {
+            if (!running || !active[i]) return;
+            active[i] = false;
+            const hole = document.getElementById(`hole${i}`);
+            hole.classList.remove('active'); hole.classList.add('whacked');
+            const pts = 10 * combo; score += pts; combo = Math.min(combo + 1, 8);
+            document.getElementById('score').textContent = score;
+            document.getElementById('combo').textContent = `x${combo}`;
+            // Score popup
+            const pop = document.createElement('div');
+            pop.style.cssText = `position:absolute;top:0;left:50%;transform:translateX(-50%);color:#facc15;font-weight:bold;font-size:1.4rem;pointer-events:none;animation:pop .6s forwards;z-index:99;`;
+            pop.textContent = `+${pts}`;
+            if (!document.getElementById('popstyle')) {
+                const s = document.createElement('style'); s.id = 'popstyle';
+                s.textContent = '@keyframes pop{from{opacity:1;top:0}to{opacity:0;top:-50px}}'; document.head.appendChild(s);
+            }
+            hole.appendChild(pop); setTimeout(() => pop.remove(), 600);
+            setTimeout(() => hole.classList.remove('whacked'), 300);
+        }
+        buildGrid();
+    </script>
+</body>
+
+</html>

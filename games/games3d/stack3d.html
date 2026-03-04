@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>3D Stack Tower</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #000;
+            overflow: hidden;
+            font-family: 'Courier New', monospace
+        }
+
+        #hud {
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            color: #f97316;
+            font-size: .9rem;
+            text-shadow: 0 0 8px #f97316
+        }
+
+        #hud b {
+            color: #fdba74
+        }
+
+        #msg {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, .88);
+            border: 2px solid #f97316;
+            border-radius: 16px;
+            padding: 24px 40px;
+            color: #facc15;
+            font-size: 1.8rem;
+            font-weight: 700;
+            text-align: center;
+            display: none
+        }
+
+        #info {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #475569;
+            font-size: .78rem
+        }
+    </style>
+</head>
+
+<body>
+    <div id="hud">🏗 Score: <b id="sc">0</b> &nbsp;|&nbsp; Height: <b id="ht">0</b> &nbsp;|&nbsp; Combo: <b
+            id="cb">×1</b></div>
+    <div id="msg"></div>
+    <div id="info">Click or Space to drop the block! Stack 20 for the win!</div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(innerWidth, innerHeight); renderer.shadowMap.enabled = true; document.body.appendChild(renderer.domElement);
+        const scene = new THREE.Scene(); scene.background = new THREE.Color(0x0a0510); scene.fog = new THREE.Fog(0x0a0510, 30, 80);
+        const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, .1, 200);
+        scene.add(new THREE.AmbientLight(0x2a1a0a, .8));
+        const dl = new THREE.DirectionalLight(0xfdba74, 1.2); dl.position.set(8, 16, 6); dl.castShadow = true; scene.add(dl);
+
+        // Base block
+        const BASE_W = 4, BASE_D = 4; const blocks = [];
+        let height = 0, score = 0, combo = 1, over = false, won = false;
+        const COLORS = [0xf97316, 0xfacc15, 0xf43f5e, 0xa78bfa, 0x38bdf8, 0x4ade80, 0xfb923c, 0xc084fc];
+
+        function makeBlock(x, z, w, d, y, col) {
+            const geo = new THREE.BoxGeometry(w, .6, d);
+            const mat = new THREE.MeshPhongMaterial({ color: col, shininess: 80, specular: 0x222222 });
+            const m = new THREE.Mesh(geo, mat); m.castShadow = true; m.receiveShadow = true;
+            m.position.set(x, y, z); scene.add(m); blocks.push(m);
+            // Edge glow
+            const edge = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: .3 }));
+            m.add(edge);
+            return m;
+        }
+        // Starting platform
+        makeBlock(0, 0, BASE_W, BASE_D, -.3, 0x374151);
+
+        // Moving block
+        let mover = null, moverDir = 1, moverAxis = 'x', moverSpeed = .04;
+        let curW = BASE_W, curD = BASE_D;
+        function spawnMover() {
+            const col = COLORS[blocks.length % COLORS.length];
+            const y = height * .6 + .3 + .3;
+            const axis = height % 2 === 0 ? 'x' : 'z'; moverAxis = axis;
+            moverDir = 1;
+            mover = makeBlock(axis === 'x' ? -5 : 0, axis === 'z' ? -5 : 0, curW, curD, y, col);
+            mover.userData = { live: true };
+            moverSpeed = Math.min(.14, .04 + height * .004);
+            camera.position.set(12, (height + 3) * .6 + 8, 18); camera.lookAt(0, (height * .6) / 2, 0);
+        }
+        spawnMover();
+
+        function drop() {
+            if (!mover || over || won) return;
+            const prev = blocks[blocks.length - 2];// last placed
+            if (!prev) return;
+            let overlap, newX, newZ, newW, newD;
+            if (moverAxis === 'x') {
+                const pLeft = prev.position.x - prev.geometry.parameters.width / 2;
+                const pRight = prev.position.x + prev.geometry.parameters.width / 2;
+                const mLeft = mover.position.x - curW / 2; const mRight = mover.position.x + curW / 2;
+                overlap = Math.min(pRight, mRight) - Math.max(pLeft, mLeft);
+                if (overlap <= 0.1) { over = true; showOver(); return; }
+                newX = (Math.max(pLeft, mLeft) + Math.min(pRight, mRight)) / 2;
+                newZ = mover.position.z; newW = overlap; newD = curD;
+                // Cut off bit
+                const offW = Math.abs(curW - overlap); if (offW > .2) { const cutX = mover.position.x > prev.position.x ? mRight - offW / 2 : mLeft + offW / 2; const cut = makeBlock(cutX, newZ - 0, offW * .001, newD, mover.position.y, 0x374151); cut.userData.live = false; scene.remove(cut); }// just visual feedback
+            } else {
+                const pFront = prev.position.z - prev.geometry.parameters.depth / 2;
+                const pBack = prev.position.z + prev.geometry.parameters.depth / 2;
+                const mFront = mover.position.z - curD / 2; const mBack = mover.position.z + curD / 2;
+                overlap = Math.min(pBack, mBack) - Math.max(pFront, mFront);
+                if (overlap <= 0.1) { over = true; showOver(); return; }
+                newZ = (Math.max(pFront, mFront) + Math.min(pBack, mBack)) / 2; newX = mover.position.x; newW = curW; newD = overlap;
+            }
+            mover.userData.live = false;
+            // Replace mover with aligned block
+            const perfect = overlap >= (moverAxis === 'x' ? curW : curD) * .88;
+            if (perfect) { combo++; score += 100 * combo; } else { combo = 1; score += Math.floor(overlap * 15); }
+            scene.remove(mover); blocks.pop(); mover = null;
+            const col = COLORS[blocks.length % COLORS.length];
+            const yy = height * .6 + .3; makeBlock(newX, newZ, newW, newD, yy, col);
+            if (perfect) { const pl = new THREE.PointLight(0xfacc15, 2, 4); blocks[blocks.length - 1].add(pl); setTimeout(() => blocks[blocks.length - 1].remove(pl), 600); }
+            curW = newW; curD = newD; height++;
+            document.getElementById('sc').textContent = score; document.getElementById('ht').textContent = height; document.getElementById('cb').textContent = '×' + combo;
+            if (height >= 20) { won = true; showWin(); return; }
+            spawnMover();
+        }
+        function showOver() { document.getElementById('msg').innerHTML = '💥 FELL OFF!<br>Height: ' + height + '<br><small>R to restart</small>'; document.getElementById('msg').style.display = 'block'; }
+        function showWin() { document.getElementById('msg').innerHTML = '🏆 YOU WIN!<br>Score: ' + score + '<br><small>R to restart</small>'; document.getElementById('msg').style.display = 'block'; }
+
+        document.addEventListener('click', drop);
+        document.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); drop(); } if (e.code === 'KeyR' && (over || won)) { blocks.forEach(b => scene.remove(b)); blocks.length = 0; height = 0; score = 0; combo = 1; over = false; won = false; curW = BASE_W; curD = BASE_D; document.getElementById('sc').textContent = 0; document.getElementById('ht').textContent = 0; document.getElementById('cb').textContent = '×1'; document.getElementById('msg').style.display = 'none'; makeBlock(0, 0, BASE_W, BASE_D, -.3, 0x374151); spawnMover(); } });
+        const clock = new THREE.Clock();
+        let camAngle = .8;
+        function animate() {
+            requestAnimationFrame(animate); const dt = clock.getDelta();
+            if (!over && !won && mover) {
+                if (moverAxis === 'x') mover.position.x += moverDir * moverSpeed * 60 * dt;
+                else mover.position.z += moverDir * moverSpeed * 60 * dt;
+                if (Math.abs(mover.position.x) > 7) moverDir *= -1;
+                if (Math.abs(mover.position.z) > 7) moverDir *= -1;
+            }
+            // Gentle camera orbit
+            camAngle += .003; const camR = 22;
+            camera.position.x = Math.sin(camAngle) * camR; camera.position.z = Math.cos(camAngle) * camR;
+            camera.position.y = Math.max(10, height * .6 + 10); camera.lookAt(0, height * .3, 0);
+            renderer.render(scene, camera);
+        } animate();
+        window.addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+    </script>
+
+    <script src="../mobile_controls.js"></script>
+</body>
+
+</html>

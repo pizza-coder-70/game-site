@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Dice Poker | The Pizza Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #050510;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Outfit', sans-serif;
+            color: #e2e8f0;
+            padding: 20px
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: 3px;
+            margin-bottom: 6px;
+            background: linear-gradient(135deg, #fbbf24, #f97316);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent
+        }
+
+        #hud {
+            display: flex;
+            gap: 30px;
+            font-size: .9rem;
+            color: #94a3b8;
+            margin-bottom: 14px
+        }
+
+        #hud b {
+            color: #fbbf24
+        }
+
+        .panel {
+            background: #0d0d20;
+            border: 1px solid #1e1e3f;
+            border-radius: 18px;
+            padding: 24px;
+            width: 100%;
+            max-width: 520px
+        }
+
+        #dice-row {
+            display: flex;
+            gap: 14px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 14px 0
+        }
+
+        .die {
+            width: 72px;
+            height: 72px;
+            background: #1e293b;
+            border: 3px solid #334155;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.4rem;
+            cursor: pointer;
+            transition: all .2s;
+            user-select: none
+        }
+
+        .die:hover {
+            border-color: #7c3aed;
+            transform: translateY(-3px)
+        }
+
+        .die.held {
+            background: rgba(124, 58, 237, 0.2);
+            border-color: #7c3aed;
+            box-shadow: 0 0 14px rgba(124, 58, 237, 0.4)
+        }
+
+        #hand-name {
+            text-align: center;
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: #fbbf24;
+            min-height: 1.6em;
+            margin: 8px 0
+        }
+
+        #hand-pts {
+            text-align: center;
+            font-size: .9rem;
+            color: #94a3b8;
+            margin-bottom: 10px
+        }
+
+        #controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 14px
+        }
+
+        button {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 10px;
+            font-family: 'Outfit', sans-serif;
+            font-size: .95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all .15s
+        }
+
+        #rollBtn {
+            background: linear-gradient(135deg, #f97316, #fbbf24);
+            color: #000
+        }
+
+        #rollBtn:disabled {
+            opacity: .4;
+            cursor: not-allowed
+        }
+
+        #scoreBtn {
+            background: linear-gradient(135deg, #7c3aed, #06b6d4);
+            color: #fff
+        }
+
+        #menuBtn {
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            border: 1px solid #475569;
+            display: none
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(13, 13, 32, 0.9);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999
+        }
+
+        .hint {
+            font-size: .8rem;
+            color: #64748b;
+            text-align: center;
+            margin-top: 6px
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>🎲 DICE POKER</h1>
+    <div id="hud"><span>ROUND: <b id="round">1</b>/8</span><span>TOTAL: <b id="total">0</b></span><span>ROLLS LEFT: <b
+                id="rollsLeft">3</b></span></div>
+    <div class="panel">
+        <div id="dice-row"></div>
+        <div id="hand-name">Roll the dice!</div>
+        <div id="hand-pts"></div>
+        <p class="hint">Click dice to hold them before re-rolling</p>
+        <div id="controls">
+            <button id="rollBtn" onclick="rollDice()">🎲 ROLL</button>
+            <button id="scoreBtn" onclick="bankScore()" style="display:none">✅ BANK SCORE</button>
+            <button id="menuBtn" onclick="window.close()">🏠 Return to Menu</button>
+        </div>
+    </div>
+    <script src="../scripts/scores.js"></script>
+    <script>
+        const FACES = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+        let dice, held, rollsLeft, round, total, gameActive;
+        function init() {
+            dice = [0, 0, 0, 0, 0]; held = [false, false, false, false, false];
+            rollsLeft = 3; round = 1; total = 0; gameActive = true;
+            update(); renderDice();
+            document.getElementById('hand-name').textContent = 'Roll the dice!';
+            document.getElementById('hand-pts').textContent = '';
+            document.getElementById('rollBtn').disabled = false;
+            document.getElementById('scoreBtn').style.display = 'none';
+            document.getElementById('menuBtn').style.display = 'none';
+        }
+        function update() {
+            document.getElementById('round').textContent = round;
+            document.getElementById('total').textContent = total;
+            document.getElementById('rollsLeft').textContent = rollsLeft;
+        }
+        function renderDice() {
+            const row = document.getElementById('dice-row'); row.innerHTML = '';
+            dice.forEach((d, i) => {
+                const el = document.createElement('div');
+                el.className = 'die' + (held[i] ? ' held' : '');
+                el.textContent = d ? FACES[d] : '?';
+                el.title = held[i] ? 'Held' : 'Click to hold';
+                el.onclick = () => { if (d && rollsLeft < 3) { held[i] = !held[i]; renderDice(); } };
+                row.appendChild(el);
+            });
+        }
+        function rollDice() {
+            if (rollsLeft <= 0) return;
+            dice = dice.map((d, i) => held[i] ? d : Math.ceil(Math.random() * 6));
+            rollsLeft--; renderDice(); update();
+            const { name, pts } = evaluate();
+            document.getElementById('hand-name').textContent = name;
+            document.getElementById('hand-pts').textContent = 'Points this hand: ' + pts;
+            document.getElementById('scoreBtn').style.display = '';
+            if (rollsLeft === 0) document.getElementById('rollBtn').disabled = true;
+        }
+        function evaluate() {
+            const counts = {}; dice.forEach(d => { counts[d] = (counts[d] || 0) + 1; });
+            const vals = Object.values(counts).sort((a, b) => b - a);
+            const sorted = [...dice].sort((a, b) => a - b);
+            const s5 = JSON.stringify(sorted) === JSON.stringify([1, 2, 3, 4, 5]) || JSON.stringify(sorted) === JSON.stringify([2, 3, 4, 5, 6]);
+            if (vals[0] === 5) return { name: '🎰 FIVE OF A KIND!', pts: 800 };
+            if (vals[0] === 4) return { name: '🎲 Four of a Kind', pts: 400 };
+            if (s5) return { name: '🎯 Large Straight', pts: 350 };
+            if (vals[0] === 3 && vals[1] === 2) return { name: '🏠 Full House', pts: 250 };
+            if (vals[0] === 3) return { name: '🎲 Three of a Kind', pts: 150 };
+            if (vals[0] === 2 && vals[1] === 2) return { name: '👯 Two Pair', pts: 100 };
+            if (vals[0] === 2) return { name: '👫 One Pair', pts: 50 };
+            return { name: 'High Card', pts: Math.max(...dice) * 2 };
+        }
+        function bankScore() {
+            const { pts } = evaluate(); total += pts;
+            document.getElementById('scoreBtn').style.display = 'none';
+            if (round >= 8) {
+                document.getElementById('hand-name').textContent = '🏆 Game Over! Final: ' + total;
+                document.getElementById('hand-pts').textContent = '';
+                document.getElementById('menuBtn').style.display = '';
+                document.getElementById('rollBtn').disabled = true;
+                PizzaScores.save('Dice Poker', total, '8 rounds'); gameActive = false; return;
+            }
+            round++; dice = [0, 0, 0, 0, 0]; held = [false, false, false, false, false]; rollsLeft = 3;
+            renderDice(); update();
+            document.getElementById('rollBtn').disabled = false;
+            document.getElementById('hand-name').textContent = '+' + pts + ' — Roll again!';
+            document.getElementById('hand-pts').textContent = '';
+        }
+        init();
+    </script>
+</body>
+
+</html>

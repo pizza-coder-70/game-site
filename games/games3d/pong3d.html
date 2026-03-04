@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>3D Pong</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #000;
+            overflow: hidden;
+            font-family: 'Courier New', monospace
+        }
+
+        #hud {
+            position: fixed;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #34d399;
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-shadow: 0 0 12px #34d399;
+            text-align: center
+        }
+
+        #msg {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, .88);
+            border: 2px solid #34d399;
+            border-radius: 16px;
+            padding: 24px 40px;
+            color: #facc15;
+            font-size: 1.8rem;
+            text-align: center;
+            display: none
+        }
+
+        #info {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #475569;
+            font-size: .78rem
+        }
+    </style>
+</head>
+
+<body>
+    <div id="hud"><span id="p1sc">0</span> — Player 1 vs CPU — <span id="p2sc">0</span></div>
+    <div id="msg"></div>
+    <div id="info">Mouse = move paddle | First to 7 wins! Watch the ball shadow!</div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(innerWidth, innerHeight); renderer.shadowMap.enabled = true; document.body.appendChild(renderer.domElement);
+        const scene = new THREE.Scene(); scene.background = new THREE.Color(0x020612); scene.fog = new THREE.Fog(0x020612, 20, 80);
+        const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, .1, 150);
+        camera.position.set(0, 14, 22); camera.lookAt(0, 0, 0);
+        scene.add(new THREE.AmbientLight(0x0a1a2a, .8));
+        scene.add(new THREE.PointLight(0x34d399, 1.5, 50));
+        const dl = new THREE.DirectionalLight(0x7dd3fc, .8); dl.position.set(5, 15, 0); dl.castShadow = true; scene.add(dl);
+
+        const W = 14, H = 8, D = 28; // arena
+        // Arena walls
+        const wallMat = new THREE.MeshPhongMaterial({ color: 0x0a1a2a, transparent: true, opacity: .7, shininess: 50 });
+        [[0, 0, D / 2, .1], [0, 0, -D / 2, .1], [W / 2, 0, 0, .1], [-W / 2, 0, 0, .1]].forEach(([x, _, z]) => {
+            const isZ = z !== 0; const ww = isZ ? W : .1, wd = isZ ? .1 : D;
+            const m = new THREE.Mesh(new THREE.BoxGeometry(ww, H, wd), wallMat); m.position.set(x, 0, z); scene.add(m);
+            const edge = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0x34d399, transparent: true, opacity: .3 })); m.add(edge);
+        });
+        // Floor
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(W, D), new THREE.MeshPhongMaterial({ color: 0x040612, shininess: 40 }));
+        floor.rotation.x = -Math.PI / 2; floor.position.y = -H / 2; floor.receiveShadow = true; scene.add(floor);
+        // Grid lines on floor
+        for (let i = -6; i <= 6; i += 2) { const gl = new THREE.Mesh(new THREE.PlaneGeometry(.05, D), new THREE.MeshBasicMaterial({ color: 0x0a2a1a, transparent: true, opacity: .5 })); gl.rotation.x = -Math.PI / 2; gl.position.set(i, -.499, 0); scene.add(gl); }
+
+        // Paddles
+        function mkPaddle(col) { const m = new THREE.Mesh(new THREE.BoxGeometry(4, 3, .3), new THREE.MeshPhongMaterial({ color: col, shininess: 120, specular: 0xffffff, emissive: new THREE.Color(col).multiplyScalar(.2) })); m.castShadow = true; m.add(new THREE.PointLight(col, .8, 6)); return m; }
+        const p1 = mkPaddle(0x34d399); p1.position.set(0, 0, D / 2 - .5); scene.add(p1);
+        const p2 = mkPaddle(0x818cf8); p2.position.set(0, 0, -D / 2 + .5); scene.add(p2);
+
+        // Ball
+        const ball = new THREE.Mesh(new THREE.SphereGeometry(.5, 16, 16), new THREE.MeshPhongMaterial({ color: 0xffffff, emissive: 0x888888, shininess: 200 })); ball.castShadow = true; scene.add(ball);
+        const ballLight = new THREE.PointLight(0xffffff, 1.5, 8); ball.add(ballLight);
+        const shadow2d = new THREE.Mesh(new THREE.CircleGeometry(.5, 12), new THREE.MeshBasicMaterial({ color: 0x34d399, transparent: true, opacity: .5 }));
+        shadow2d.rotation.x = -Math.PI / 2; shadow2d.position.y = -H / 2 + .02; scene.add(shadow2d);
+        // Trail
+        const trail = []; for (let i = 0; i < 8; i++) { const t = new THREE.Mesh(new THREE.SphereGeometry(.3 * (1 - i / 8), 8, 8), new THREE.MeshBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: .3 * (1 - i / 8) })); scene.add(t); trail.push(t); }
+
+        let bPos = new THREE.Vector3(0, 0, 0), bVel = new THREE.Vector3(.1, (.5 - .5) * 0, .22);
+        let p1x = 0, p1y = 0, p2x = 0, p1sc = 0, p2sc = 0, over = false, won = false;
+        let mouse = { x: 0, y: 0 };
+        document.addEventListener('mousemove', e => { mouse.x = (e.clientX / innerWidth - .5) * W * .9; mouse.y = -(e.clientY / innerHeight - .5) * H * .9; });
+        const msgEl = document.getElementById('msg');
+        function resetBall(dir) { bPos.set(0, 0, 0); bVel.set(.08 * (Math.random() > .5 ? 1 : -1), .04 * (Math.random() - .5), .22 * dir); }
+        resetBall(1);
+        const clock = new THREE.Clock();
+        function update() {
+            const dt = Math.min(clock.getDelta(), .033); if (over || won) return;
+            // Player 1 paddle follows mouse
+            p1x += (mouse.x - p1x) * .15; p1y += (mouse.y - p1y) * .15;
+            p1.position.x = Math.max(-W / 2 + 2, Math.min(W / 2 - 2, p1x)); p1.position.y = Math.max(-H / 2 + 1.5, Math.min(H / 2 - 1.5, p1y));
+            // CPU paddle follows ball
+            p2.position.x += (bPos.x - p2.position.x) * .05; p2.position.y += (bPos.y - p2.position.y) * .04;
+            p2.position.x = Math.max(-W / 2 + 2, Math.min(W / 2 - 2, p2.position.x)); p2.position.y = Math.max(-H / 2 + 1.5, Math.min(H / 2 - 1.5, p2.position.y));
+            // Move ball
+            bPos.addScaledVector(bVel, 60 * dt);
+            // Trail
+            trail.forEach((t, i) => { if (i === 0) t.position.copy(bPos); else t.position.lerp(trail[i - 1].position, .7); });
+            // Wall bounce
+            if (Math.abs(bPos.x) > W / 2 - .5) { bVel.x *= -1; bPos.x = Math.sign(bPos.x) * (W / 2 - .5); }
+            if (Math.abs(bPos.y) > H / 2 - .5) { bVel.y *= -1; bPos.y = Math.sign(bPos.y) * (H / 2 - .5); }
+            // Paddle hit
+            function hitPaddle(paddle, dir) {
+                if (Math.abs(bPos.z - paddle.position.z) < .6 && Math.abs(bPos.x - paddle.position.x) < 2.2 && Math.abs(bPos.y - paddle.position.y) < 1.7) {
+                    bVel.z = Math.abs(bVel.z) * dir; bVel.x += (bPos.x - paddle.position.x) * .04; bVel.y += (bPos.y - paddle.position.y) * .04;
+                    const spd = bVel.length(); if (spd > .4) bVel.multiplyScalar(.4 / spd);
+                }
+            }
+            hitPaddle(p1, -1); hitPaddle(p2, 1);
+            // Score
+            if (bPos.z > D / 2 + 1) { p2sc++; document.getElementById('p2sc').textContent = p2sc; resetBall(-1); if (p2sc >= 7) { won = true; msgEl.innerHTML = '🤖 CPU WINS!<br><small>R restart</small>'; msgEl.style.display = 'block'; } }
+            if (bPos.z < -D / 2 - 1) { p1sc++; document.getElementById('p1sc').textContent = p1sc; resetBall(1); if (p1sc >= 7) { won = true; msgEl.innerHTML = '🏆 YOU WIN!<br><small>R restart</small>'; msgEl.style.display = 'block'; } }
+            ball.position.copy(bPos); ball.rotation.x += bVel.z * .2; ball.rotation.z += bVel.x * .2;
+            shadow2d.position.x = bPos.x; shadow2d.position.z = bPos.z;
+            // Ball color changes with speed
+            const spd = bVel.length(); ballLight.color.setHSL(.33 - spd * .5, 1, .5);
+        }
+        document.addEventListener('keydown', e => { if (e.code === 'KeyR' && won) { p1sc = 0; p2sc = 0; won = false; resetBall(1); msgEl.style.display = 'none'; document.getElementById('p1sc').textContent = 0; document.getElementById('p2sc').textContent = 0; } });
+        function animate() { requestAnimationFrame(animate); update(); renderer.render(scene, camera); } animate();
+        window.addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+    </script>
+
+    <script src="../mobile_controls.js"></script>
+</body>
+
+</html>

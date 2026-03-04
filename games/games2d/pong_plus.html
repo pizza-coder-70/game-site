@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Pong Plus</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #020210;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #34d399;
+            font-size: 1.5rem;
+            text-shadow: 0 0 16px #34d399;
+            margin-bottom: 6px
+        }
+
+        canvas {
+            border: 2px solid #34d399;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(52, 211, 153, .4)
+        }
+
+        #msg {
+            color: #facc15;
+            font-size: .85rem;
+            margin-top: 6px
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🏓 Pong Plus</h1>
+    <canvas id="c" width="500" height="400"></canvas>
+    <div id="msg">W/S = left paddle | ↑↓ = right paddle | First to 7 wins!</div>
+    <script>
+        const cv = document.getElementById('c'), cx = cv.getContext('2d');
+        const W = 500, H = 400;
+        const POWS = [{ name: 'Speed Up', col: '#f97316', emoji: '🔥' }, { name: 'Wide Pad', col: '#38bdf8', emoji: '⬛' }, { name: 'Tiny Ball', col: '#a78bfa', emoji: '•' }, { name: 'Fast Ball', col: '#f43f5e', emoji: '💨' }];
+        let p1 = { y: H / 2, h: 70, score: 0 }, p2 = { y: H / 2, h: 70, score: 0 };
+        let ball = { x: W / 2, y: H / 2, vx: 4, vy: 3, r: 9 };
+        let powerup = null, powerActive = null, powerTimer = 0;
+        let over = false, won = false, keys = {};
+        document.addEventListener('keydown', e => { keys[e.code] = true; if (['ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault(); });
+        document.addEventListener('keyup', e => keys[e.code] = false);
+
+        function spawnPow() { if (Math.random() < .4) { const p = POWS[Math.floor(Math.random() * POWS.length)]; powerup = { x: 150 + Math.random() * 200, y: 80 + Math.random() * (H - 160), p }; } }
+
+        function applyPow(pow, who) {
+            clearTimeout(powerTimer);
+            if (pow.name === 'Speed Up') { const s = who === 1 ? -1 : 1; ball.vx = s * (Math.abs(ball.vx) + 3); }
+            else if (pow.name === 'Wide Pad') { if (who === 1) p1.h = 110; else p2.h = 110; powerTimer = setTimeout(() => { p1.h = 70; p2.h = 70; }, 5000); }
+            else if (pow.name === 'Tiny Ball') { ball.r = 4; powerTimer = setTimeout(() => ball.r = 9, 5000); }
+            else if (pow.name === 'Fast Ball') { ball.vx *= 1.6; ball.vy *= 1.6; powerTimer = setTimeout(() => { ball.vx = Math.sign(ball.vx) * 4; ball.vy = Math.sign(ball.vy) * 3; }, 3000); }
+            powerup = null;
+        }
+
+        function update() {
+            if (over || won) return;
+            // Paddles
+            if (keys['KeyW'] && p1.y - p1.h / 2 > 0) p1.y -= 5;
+            if (keys['KeyS'] && p1.y + p1.h / 2 < H) p1.y += 5;
+            if (keys['ArrowUp'] && p2.y - p2.h / 2 > 0) p2.y -= 5;
+            if (keys['ArrowDown'] && p2.y + p2.h / 2 < H) p2.y += 5;
+            ball.x += ball.vx; ball.y += ball.vy;
+            if (ball.y - ball.r < 0 || ball.y + ball.r > H) ball.vy *= -1;
+            // P1 paddle (left, x=18)
+            if (ball.x - ball.r < 28 && ball.y > p1.y - p1.h / 2 && ball.y < p1.y + p1.h / 2) { ball.vx = Math.abs(ball.vx) + (Math.random() * .5); ball.vy += (ball.y - p1.y) * 0.1; if (Math.abs(ball.vx) > 14) ball.vx = 14; }
+            // P2 paddle (right, x=W-18)
+            if (ball.x + ball.r > W - 28 && ball.y > p2.y - p2.h / 2 && ball.y < p2.y + p2.h / 2) { ball.vx = -(Math.abs(ball.vx) + (Math.random() * .5)); ball.vy += (ball.y - p2.y) * 0.1; if (Math.abs(ball.vx) > 14) ball.vx = -14; }
+            // Score
+            if (ball.x < 0) { p2.score++; ball.x = W / 2; ball.y = H / 2; ball.vx = 4; ball.vy = (Math.random() - .5) * 6; }
+            if (ball.x > W) { p1.score++; ball.x = W / 2; ball.y = H / 2; ball.vx = -4; ball.vy = (Math.random() - .5) * 6; }
+            if (p1.score >= 7 || p2.score >= 7) won = true;
+            // Powerup
+            if (powerup && Math.hypot(ball.x - powerup.x, ball.y - powerup.y) < 20) applyPow(powerup.p, ball.vx > 0 ? 2 : 1);
+            if (!powerup && Math.random() < .002) spawnPow();
+        }
+
+        function draw() {
+            cx.fillStyle = '#020210'; cx.fillRect(0, 0, W, H);
+            // Center line
+            cx.strokeStyle = 'rgba(52,211,153,.2)'; cx.setLineDash([8, 8]); cx.lineWidth = 2; cx.beginPath(); cx.moveTo(W / 2, 0); cx.lineTo(W / 2, H); cx.stroke(); cx.setLineDash([]);
+            // Scores
+            cx.fillStyle = 'rgba(52,211,153,.5)'; cx.font = 'bold 60px monospace'; cx.textAlign = 'center'; cx.fillText(p1.score, W / 4, 80); cx.fillText(p2.score, 3 * W / 4, 80);
+            // Paddles
+            const grad1 = cx.createLinearGradient(6, p1.y - p1.h / 2, 22, p1.y + p1.h / 2); grad1.addColorStop(0, '#34d399'); grad1.addColorStop(1, '#059669');
+            cx.fillStyle = grad1; cx.beginPath(); cx.roundRect(6, p1.y - p1.h / 2, 18, p1.h, 6); cx.fill();
+            const grad2 = cx.createLinearGradient(W - 24, p2.y - p2.h / 2, W - 6, p2.y + p2.h / 2); grad2.addColorStop(0, '#34d399'); grad2.addColorStop(1, '#059669');
+            cx.fillStyle = grad2; cx.beginPath(); cx.roundRect(W - 24, p2.y - p2.h / 2, 18, p2.h, 6); cx.fill();
+            // Ball
+            const bg = cx.createRadialGradient(ball.x - 3, ball.y - 3, 1, ball.x, ball.y, ball.r);
+            bg.addColorStop(0, '#fff'); bg.addColorStop(1, '#34d399');
+            cx.fillStyle = bg; cx.beginPath(); cx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); cx.fill();
+            cx.shadowColor = '#34d399'; cx.shadowBlur = 12; cx.fill(); cx.shadowBlur = 0;
+            // Powerup
+            if (powerup) { cx.font = '22px monospace'; cx.textAlign = 'center'; cx.fillText(powerup.p.emoji, powerup.x, powerup.y + 8); cx.strokeStyle = powerup.p.col; cx.lineWidth = 2; cx.beginPath(); cx.arc(powerup.x, powerup.y, 18, 0, Math.PI * 2); cx.stroke(); }
+            if (won) { cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H); const w = p1.score >= 7 ? 'Player 1' : 'Player 2'; cx.fillStyle = '#facc15'; cx.font = 'bold 44px monospace'; cx.textAlign = 'center'; cx.fillText('YOU WIN! 🏆', W / 2, H / 2 - 24); cx.fillStyle = '#34d399'; cx.font = '20px monospace'; cx.fillText(w + ' wins!', W / 2, H / 2 + 20); cx.fillStyle = '#aaa'; cx.font = '14px monospace'; cx.fillText('Press R to restart', W / 2, H / 2 + 50); }
+        }
+        document.addEventListener('keydown', e => { if (e.code === 'KeyR' && won) { p1 = { y: H / 2, h: 70, score: 0 }; p2 = { y: H / 2, h: 70, score: 0 }; ball = { x: W / 2, y: H / 2, vx: 4, vy: 3, r: 9 }; powerup = null; won = false; } });
+        function loop() { update(); draw(); requestAnimationFrame(loop); } loop();
+    </script>
+
+    <script src="../mobile_controls.js"></script>
+</body>
+
+</html>

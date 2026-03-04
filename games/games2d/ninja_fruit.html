@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Ninja Fruit</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0a0005;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #f43f5e;
+            font-size: 1.5rem;
+            text-shadow: 0 0 16px #f43f5e;
+            margin-bottom: 6px
+        }
+
+        canvas {
+            border: 2px solid #f43f5e;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(244, 63, 94, .4);
+            cursor: crosshair
+        }
+
+        #ui {
+            display: flex;
+            gap: 20px;
+            color: #f43f5e;
+            font-size: .85rem;
+            margin-top: 6px
+        }
+
+        #msg {
+            color: #facc15;
+            font-size: .9rem;
+            min-height: 20px;
+            margin-top: 4px
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🥷 Ninja Fruit</h1>
+    <div id="ui"><span>Score: <b id="sc">0</b></span><span>Lives: <b id="li">❤️❤️❤️</b></span><span>Combo: <b
+                id="cb">x1</b></span></div>
+    <canvas id="c" width="500" height="420"></canvas>
+    <div id="msg">Click to slice fruits! Avoid bombs 💣!</div>
+    <script>
+        const cv = document.getElementById('c'), cx = cv.getContext('2d');
+        const W = 500, H = 420;
+        const FRUITS = ['🍎', '🍊', '🍋', '🍇', '🍓', '🍑', '🍍', '🥝', '🍌', '🍈'];
+        let items = [], particles = [], score = 0, lives = 3, combo = 1, over = false, won = false, comboTimer = 0, spawnTimer = 0, level = 1, slashed = 0;
+        let mouse = { x: -1, y: -1 }, mouseDown = false, prevMouse = { x: -1, y: -1 };
+        cv.addEventListener('mousemove', e => { const r = cv.getBoundingClientRect(); prevMouse.x = mouse.x; prevMouse.y = mouse.y; mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top; if (mouseDown) checkSlash(); });
+        cv.addEventListener('mousedown', () => mouseDown = true);
+        cv.addEventListener('mouseup', () => { mouseDown = false; prevMouse = { x: -1, y: -1 }; });
+        function spawnItem() {
+            const isBomb = Math.random() < .15 + level * .03;
+            const x = 60 + Math.random() * (W - 120);
+            return { x, y: H + 30, vx: (Math.random() - .5) * 4, vy: -(12 + Math.random() * 5), gravity: .3, r: 24, emoji: isBomb ? '💣' : FRUITS[Math.floor(Math.random() * FRUITS.length)], isBomb, sliced: false, opacity: 1 };
+        }
+        function slicePart(item, dx, dy) {
+            for (let i = 0; i < 8; i++) {
+                const a = Math.PI * 2 * i / 8;
+                particles.push({ x: item.x, y: item.y, vx: Math.cos(a) * 3 + Math.random() * 2, vy: Math.sin(a) * 3 + Math.random() * 2, life: 30, col: '#f43f5e', size: 4 + Math.random() * 6 });
+            }
+            particles.push({ x: item.x, y: item.y, vx: dx * .3, vy: dy * .3, life: 50, col: '#fff', size: 18, emoji: item.emoji + ' ✂️' });
+        }
+        function checkSlash() {
+            if (over || prevMouse.x < 0) return;
+            items.forEach(item => {
+                if (item.sliced) return;
+                if (Math.hypot(mouse.x - item.x, mouse.y - item.y) < item.r) {
+                    item.sliced = true;
+                    if (item.isBomb) { lives--; document.getElementById('li').textContent = '❤️'.repeat(Math.max(0, lives)); combo = 1; if (lives <= 0) over = true; }
+                    else {
+                        slashed++; score += 10 * combo; combo = Math.min(10, combo + 1); comboTimer = 90;
+                        document.getElementById('sc').textContent = score; document.getElementById('cb').textContent = 'x' + combo;
+                        slicePart(item, (mouse.x - prevMouse.x), (mouse.y - prevMouse.y));
+                        if (slashed >= 50) won = true;
+                    }
+                }
+            });
+        }
+        function update() {
+            if (over || won) return;
+            spawnTimer--; comboTimer--;
+            if (comboTimer <= 0) { combo = 1; document.getElementById('cb').textContent = 'x1'; }
+            if (spawnTimer <= 0) {
+                const n = 1 + Math.floor(Math.random() * (1 + level * .5));
+                for (let i = 0; i < n; i++)setTimeout(() => items.push(spawnItem()), i * 200);
+                spawnTimer = Math.max(30, 80 - level * 8);
+            }
+            items.forEach(i => { i.x += i.vx; i.y += i.vy; i.vy += i.gravity; if (i.y > H + 60) i.opacity = 0; });
+            items = items.filter(i => i.opacity > 0);
+            // Fruit that falls off without being sliced loses a life
+            const missed = items.filter(i => i.y > H + 50 && !i.sliced && !i.isBomb);
+            missed.forEach(() => { lives--; document.getElementById('li').textContent = '❤️'.repeat(Math.max(0, lives)); if (lives <= 0) over = true; });
+            items = items.filter(i => i.y <= H + 50 || i.sliced);
+            particles = particles.filter(p => { p.x += p.vx; p.y += p.vy; p.life--; return p.life > 0; });
+            level = 1 + Math.floor(slashed / 10);
+        }
+        function draw() {
+            cx.fillStyle = '#0a0005'; cx.fillRect(0, 0, W, H);
+            // Blade trail
+            if (mouseDown && prevMouse.x >= 0) { cx.strokeStyle = 'rgba(255,255,255,.6)'; cx.lineWidth = 3; cx.beginPath(); cx.moveTo(prevMouse.x, prevMouse.y); cx.lineTo(mouse.x, mouse.y); cx.stroke(); }
+            particles.forEach(p => {
+                if (p.emoji) { cx.globalAlpha = p.life / 50; cx.font = '20px monospace'; cx.textAlign = 'center'; cx.fillText(p.emoji, p.x, p.y); }
+                else { cx.globalAlpha = p.life / 30; cx.fillStyle = p.col; cx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size); }
+            }); cx.globalAlpha = 1;
+            items.forEach(i => {
+                if (i.sliced) return;
+                cx.font = i.r * 1.5 + 'px monospace'; cx.textAlign = 'center'; cx.fillText(i.emoji, i.x, i.y + 12);
+                // Glow on hover
+                if (Math.hypot(mouse.x - i.x, mouse.y - i.y) < i.r + 10) { cx.strokeStyle = 'rgba(255,255,255,.3)'; cx.lineWidth = 2; cx.beginPath(); cx.arc(i.x, i.y, i.r + 4, 0, Math.PI * 2); cx.stroke(); }
+            });
+            // Progress bar
+            cx.fillStyle = 'rgba(244,63,94,.2)'; cx.fillRect(0, H - 6, W, 6); cx.fillStyle = '#f43f5e'; cx.fillRect(0, H - 6, W * slashed / 50, 6);
+            if (over) { cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#f43f5e'; cx.font = 'bold 40px monospace'; cx.textAlign = 'center'; cx.fillText('GAME OVER', W / 2, H / 2 - 20); cx.fillStyle = '#aaa'; cx.font = '16px monospace'; cx.fillText('Sliced: ' + slashed + ' | R to restart', W / 2, H / 2 + 18); }
+            if (won) { cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#facc15'; cx.font = 'bold 44px monospace'; cx.textAlign = 'center'; cx.fillText('YOU WIN! 🏆', W / 2, H / 2 - 24); cx.fillStyle = '#f43f5e'; cx.font = '20px monospace'; cx.fillText('Score: ' + score, W / 2, H / 2 + 20); }
+        }
+        document.addEventListener('keydown', e => { if (e.code === 'KeyR' && (over || won)) { score = 0; lives = 3; combo = 1; over = false; won = false; slashed = 0; level = 1; items = []; particles = []; document.getElementById('sc').textContent = 0; document.getElementById('li').textContent = '❤️❤️❤️'; document.getElementById('cb').textContent = 'x1'; } });
+        function loop() { update(); draw(); requestAnimationFrame(loop); } loop();
+    </script>
+
+    <script src="../mobile_controls.js"></script>
+</body>
+
+</html>

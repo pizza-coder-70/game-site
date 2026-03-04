@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Candy Kingdom – The Pizza Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0a0008;
+            min-height: 100vh;
+            font-family: 'Outfit', sans-serif;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px
+        }
+
+        h1 {
+            color: #ec4899;
+            font-size: 2rem;
+            text-shadow: 0 0 20px #ec4899;
+            margin-bottom: 4px
+        }
+
+        #counter {
+            font-size: 1.2rem;
+            color: #f9a8d4;
+            margin-bottom: 4px
+        }
+
+        #cps {
+            font-size: .85rem;
+            color: #4b5563;
+            margin-bottom: 8px
+        }
+
+        /* Sugar Rush meter */
+        #rush-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 12px;
+            width: 100%;
+            max-width: 400px
+        }
+
+        #rush-label {
+            font-size: .82rem;
+            color: #f9a8d4
+        }
+
+        #rush-bar {
+            height: 14px;
+            background: rgba(236, 72, 153, .12);
+            border-radius: 7px;
+            width: 100%;
+            border: 1px solid rgba(236, 72, 153, .3);
+            overflow: hidden;
+            position: relative
+        }
+
+        #rush-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ec4899, #f97316, #facc15);
+            border-radius: 7px;
+            width: 0%;
+            transition: width .15s
+        }
+
+        #rush-status {
+            font-size: .78rem;
+            color: #ec4899;
+            font-weight: 700
+        }
+
+        /* Spin wheel */
+        #wheel-wrap {
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 8px
+        }
+
+        #spin-btn {
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #ec4899, #f97316);
+            border: none;
+            color: #fff;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            font-family: inherit;
+            font-size: .9rem;
+            transition: transform .1s
+        }
+
+        #spin-btn:hover {
+            transform: scale(1.05)
+        }
+
+        #spin-btn:disabled {
+            opacity: .4;
+            cursor: not-allowed;
+            transform: none
+        }
+
+        #spin-result {
+            font-weight: 700;
+            color: #f9a8d4;
+            font-size: .9rem;
+            min-width: 120px
+        }
+
+        #spin-cd {
+            font-size: .75rem;
+            color: #4b5563
+        }
+
+        /* Candy jar */
+        #candy-jar {
+            min-height: 30px;
+            font-size: 1rem;
+            max-width: 350px;
+            text-align: center;
+            margin-bottom: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1px
+        }
+
+        .layout {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            max-width: 900px
+        }
+
+        #click-zone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px
+        }
+
+        #candy {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #ec4899, #7c1d4e, #0a0008);
+            border: 4px solid #ec4899;
+            cursor: pointer;
+            font-size: 78px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 40px rgba(236, 72, 153, .5);
+            user-select: none;
+            transition: transform .1s
+        }
+
+        #candy:active {
+            transform: scale(.92)rotate(-5deg)
+        }
+
+        #shop {
+            flex: 1;
+            min-width: 260px;
+            background: rgba(255, 255, 255, .03);
+            border: 1px solid rgba(236, 72, 153, .2);
+            border-radius: 20px;
+            padding: 20px;
+            max-height: 70vh;
+            overflow-y: auto
+        }
+
+        #shop h2 {
+            color: #ec4899;
+            font-size: 1.1rem;
+            margin-bottom: 14px
+        }
+
+        .upg {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(236, 72, 153, .06);
+            border: 1px solid rgba(236, 72, 153, .18);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background .15s
+        }
+
+        .upg:hover {
+            background: rgba(236, 72, 153, .18)
+        }
+
+        .upg.locked {
+            opacity: .4;
+            cursor: not-allowed
+        }
+
+        .ui {
+            font-size: 1.6rem;
+            flex-shrink: 0
+        }
+
+        .inf {
+            flex: 1
+        }
+
+        .un {
+            font-weight: 700;
+            font-size: .9rem
+        }
+
+        .ud {
+            font-size: .72rem;
+            color: #9ca3af
+        }
+
+        .uc {
+            font-size: .78rem;
+            color: #f9a8d4;
+            margin-top: 2px
+        }
+
+        .uo {
+            font-size: .72rem;
+            color: #4ade80
+        }
+
+        #toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(236, 72, 153, .9);
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-weight: 700;
+            opacity: 0;
+            transition: opacity .3s;
+            pointer-events: none;
+            z-index: 99
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🍬 Candy Kingdom</h1>
+    <div id="counter">0 candies</div>
+    <div id="cps">0/sec</div>
+    <!-- Sugar Rush meter -->
+    <div id="rush-wrap">
+        <div id="rush-label">⚡ Sugar Rush Meter</div>
+        <div id="rush-bar">
+            <div id="rush-fill"></div>
+        </div>
+        <div id="rush-status">Fill the meter for 10s of 5× candy!</div>
+    </div>
+    <!-- Spin wheel -->
+    <div id="wheel-wrap">
+        <div>
+            <div id="spin-result">🎡 Spin the wheel!</div>
+            <div id="spin-cd"></div>
+        </div>
+        <button id="spin-btn" onclick="spinWheel()">🎰 SPIN!</button>
+    </div>
+    <div id="candy-jar"></div>
+    <div class="layout">
+        <div id="click-zone">
+            <div id="candy" onclick="makeCandy()">🍬</div>
+            <div style="font-size:.78rem;color:#4b5563;text-align:center">Click to make candy!</div>
+        </div>
+        <div id="shop">
+            <h2>🏭 Machines</h2>
+            <div id="upgrades"></div>
+        </div>
+    </div>
+    <div id="toast"></div>
+    <script>
+        let candies = 0, cps = 0, cp = 1, jar = [], rushMeter = 0, rushActive = false, rushMulti = 1;
+        const CANDY_TYPES = ['🍬', '🍭', '🍫', '🍡', '🍩', '🧁', '🍰', '🎂'];
+        const UPS = [
+            { n: 'Candy Wrapper', i: '🎁', d: '+0.3/s candies', base: 10, own: 0, rate: .3 },
+            { n: 'Gummy Machine', i: '🐻', d: '+1.5/s candies', base: 60, own: 0, rate: 1.5 },
+            { n: 'Lollipop Tree', i: '🌳', d: '+5/s candies', base: 280, own: 0, rate: 5 },
+            { n: 'Chocolate River', i: '🍫', d: '+15/s candies', base: 1400, own: 0, rate: 15 },
+            { n: 'Sugar Boost', i: '⚡', d: '+5 per click', base: 200, own: 0, rate: 0, cp: 5 },
+            { n: 'Candy Factory', i: '🏭', d: '+55/s candies', base: 7000, own: 0, rate: 55 },
+            { n: 'Sugar Planet', i: '🌍', d: '+200/s candies', base: 45000, own: 0, rate: 200 },
+        ];
+        // Wheel prizes
+        const WHEEL_PRIZES = [
+            { emoji: '🍬', name: 'Mini Bonbon', mult: 5 },
+            { emoji: '🍭', name: 'Lollipop', mult: 15 },
+            { emoji: '🍫', name: 'Chocolate Box', mult: 40 },
+            { emoji: '💰', name: 'Golden Candy!', mult: 100 },
+            { emoji: '⚡', name: 'Sugar Rush!', special: 'rush' },
+            { emoji: '🎂', name: 'Birthday Cake', mult: 25 },
+            { emoji: '💎', name: 'Crystal Candy!', mult: 200 },
+            { emoji: '😞', name: 'Sugar Crash', mult: 0 },
+        ];
+        let spinCooldown = 0, spinInterval;
+        function fmt(n) { if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B'; if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M'; if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K'; return Math.floor(n) + '' }
+        function cost(u) { return Math.floor(u.base * Math.pow(1.15, u.own)) }
+        function makeCandy() {
+            const earned = Math.floor(cp * rushMulti); candies += earned; rushMeter = Math.min(100, rushMeter + 1.5);
+            const c = CANDY_TYPES[Math.floor(Math.random() * CANDY_TYPES.length)];
+            jar.push(c); if (jar.length > 30) jar.shift();
+            // Trigger rush when meter full
+            if (rushMeter >= 100 && !rushActive) {
+                rushActive = true; rushMulti = 5;
+                toast('⚡ SUGAR RUSH! 5× candy for 10 seconds!');
+                setTimeout(() => { rushActive = false; rushMulti = 1; rushMeter = 0; toast('Sugar Rush ended!'); }, 10000);
+            }
+            const el = document.createElement('div');
+            el.textContent = c + (earned > cp ? '🌟' : '') + '+' + earned;
+            el.style.cssText = 'position:fixed;color:#f9a8d4;font-weight:700;pointer-events:none;z-index:50';
+            const r = document.getElementById('candy').getBoundingClientRect();
+            el.style.left = (r.left + r.width / 2 + (Math.random() - .5) * 50) + 'px'; el.style.top = r.top + 'px';
+            el.animate([{ opacity: 1, transform: 'translateY(0)scale(1)' }, { opacity: 0, transform: 'translateY(-60px)scale(1.3)' }], { duration: 800, fill: 'forwards' });
+            document.body.appendChild(el); setTimeout(() => el.remove(), 800);
+        }
+        function spinWheel() {
+            if (spinCooldown > 0) return;
+            const prize = WHEEL_PRIZES[Math.floor(Math.random() * WHEEL_PRIZES.length)];
+            document.getElementById('spin-btn').disabled = true;
+            document.getElementById('spin-result').textContent = '🎰 Spinning...';
+            setTimeout(() => {
+                let result = '';
+                if (prize.special === 'rush') {
+                    rushActive = true; rushMulti = 5; rushMeter = 100;
+                    result = prize.emoji + ' ' + prize.name + '! 5× for 10s!';
+                    setTimeout(() => { rushActive = false; rushMulti = 1; rushMeter = 0; }, 10000);
+                } else if (prize.mult > 0) {
+                    const bonus = Math.max(10, Math.floor((cp + cps) * prize.mult));
+                    candies += bonus; result = prize.emoji + ' ' + prize.name + '! +' + fmt(bonus) + '!';
+                } else {
+                    result = prize.emoji + ' ' + prize.name + '! :(';
+                }
+                document.getElementById('spin-result').textContent = result;
+                toast('🎰 ' + result);
+                spinCooldown = 30;
+                clearInterval(spinInterval);
+                spinInterval = setInterval(() => {
+                    spinCooldown--;
+                    document.getElementById('spin-cd').textContent = spinCooldown > 0 ? 'Next spin in ' + spinCooldown + 's' : '';
+                    if (spinCooldown <= 0) { clearInterval(spinInterval); document.getElementById('spin-btn').disabled = false; document.getElementById('spin-result').textContent = '🎡 Ready to spin!'; }
+                }, 1000);
+            }, 800);
+        }
+        function buy(u) {
+            const co = cost(u); if (candies < co) return;
+            candies -= co; u.own++;
+            if (u.rate) cps += u.rate; if (u.cp) cp += u.cp;
+            renderUpgrades(); toast('✅ ' + u.n + '!');
+        }
+        function toast(msg) {
+            const t = document.getElementById('toast'); t.textContent = msg; t.style.opacity = 1;
+            clearTimeout(t._t); t._t = setTimeout(() => t.style.opacity = 0, 2500);
+        }
+        function renderUpgrades() {
+            const d = document.getElementById('upgrades'); d.innerHTML = '';
+            UPS.forEach(u => {
+                const co = cost(u), div = document.createElement('div');
+                div.className = 'upg' + (candies < co ? ' locked' : '');
+                div.innerHTML = `<div class="ui">${u.i}</div><div class="inf"><div class="un">${u.n}</div><div class="ud">${u.d}</div><div class="uc">🍬 ${fmt(co)}</div><div class="uo">Owned: ${u.own}</div></div>`;
+                div.addEventListener('click', () => buy(u));
+                d.appendChild(div);
+            });
+        }
+        let last = 0, lastR = 0;
+        function loop(ts) {
+            if (last) candies += cps * rushMulti * (ts - last) / 1000;
+            last = ts;
+            document.getElementById('counter').textContent = fmt(candies) + ' candies';
+            const rushMultiTxt = rushMulti > 1 ? ' 🌟' + rushMulti + '×' : '';
+            document.getElementById('cps').textContent = (cps * rushMulti).toFixed(1) + '/sec' + rushMultiTxt;
+            document.getElementById('rush-fill').style.width = rushMeter + '%';
+            document.getElementById('rush-fill').style.background = rushActive ? 'linear-gradient(90deg,#facc15,#f97316,#ec4899)' : 'linear-gradient(90deg,#ec4899,#f97316,#facc15)';
+            document.getElementById('rush-status').textContent = rushActive ? '⚡ SUGAR RUSH ACTIVE! 5× CANDY!' : rushMeter >= 100 ? 'Full! Keep clicking!' : 'Fill meter for 5× candy bonus!';
+            document.getElementById('candy-jar').textContent = jar.join('');
+            if (ts - lastR > 500) { lastR = ts; renderUpgrades(); }
+            requestAnimationFrame(loop);
+        }
+        renderUpgrades(); requestAnimationFrame(loop);
+    </script>
+</body>
+
+</html>

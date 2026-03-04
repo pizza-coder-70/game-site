@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Battleship | The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: radial-gradient(ellipse at center, #0c1a2e, #020617);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #e2e8f0;
+            padding: 10px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px #38bdf8;
+        }
+
+        #hud {
+            font-size: .95rem;
+            color: #94a3b8;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        #boards {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .board-wrap {
+            text-align: center;
+        }
+
+        .board-title {
+            font-size: 1rem;
+            margin-bottom: 6px;
+            color: #38bdf8;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(10, 38px);
+            gap: 2px;
+            background: #1e293b;
+            padding: 4px;
+            border-radius: 6px;
+            border: 2px solid #334155;
+        }
+
+        .cell {
+            width: 38px;
+            height: 38px;
+            background: #0f172a;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            cursor: pointer;
+            transition: background .15s;
+        }
+
+        .cell:hover {
+            background: #1d4ed8;
+        }
+
+        .cell.ship {
+            background: #1d4ed8;
+        }
+
+        .cell.hit {
+            background: #dc2626;
+            cursor: default;
+        }
+
+        .cell.miss {
+            background: #334155;
+            cursor: default;
+            color: #475569;
+        }
+
+        .cell.sunk {
+            background: #7f1d1d;
+            cursor: default;
+        }
+
+        #msg {
+            font-size: 1.1rem;
+            min-height: 1.5em;
+            text-align: center;
+            color: #fff;
+            margin: 10px 0;
+        }
+
+        #status {
+            font-size: .9rem;
+            color: #94a3b8;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        button {
+            padding: 10px 28px;
+            background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+            color: #000;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            letter-spacing: 2px;
+            margin-top: 8px;
+        }
+
+        button:hover {
+            transform: scale(1.07);
+        }
+
+        #menuBtn {
+            background: linear-gradient(135deg, #334155, #1e293b);
+            color: #fff;
+            display: none;
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999;
+        }
+
+        #homeBtn:hover {
+            background: #1e40af;
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>⚓ BATTLESHIP</h1>
+    <div id="hud">Sink all 5 enemy ships (sizes 5,4,3,3,2)!</div>
+    <div id="status">Your hits: <b id="phpHits">0</b>/17 | Enemy hits: <b id="aiHits">0</b>/17</div>
+    <div id="boards">
+        <div class="board-wrap">
+            <div class="board-title">🎯 YOUR FLEET (click enemy to attack)</div>
+            <div class="grid" id="yourGrid"></div>
+        </div>
+        <div class="board-wrap">
+            <div class="board-title">🚢 ENEMY WATERS (click to attack!)</div>
+            <div class="grid" id="enemyGrid"></div>
+        </div>
+    </div>
+    <div id="msg">Press New Game to start!</div>
+    <button onclick="newGame()">NEW GAME</button>
+    <button id="menuBtn" onclick="window.close()">🏠 Return to Menu</button>
+    <script src="../scripts/scores.js"></script>
+    <script>
+        const SHIP_SIZES = [5, 4, 3, 3, 2];
+        let playerBoard, enemyBoard, playerShips, enemyShips, playerTurn, phpHits, aiHits, running;
+        let aiMode = { lastHit: null, targets: [] };
+
+        function emptyBoard() { return Array.from({ length: 10 }, () => Array(10).fill(0)); }
+
+        function placeShipsRandom(board) {
+            const ships = [];
+            SHIP_SIZES.forEach(size => {
+                let placed = false;
+                while (!placed) {
+                    const horiz = Math.random() > 0.5;
+                    const r = Math.floor(Math.random() * (horiz ? 10 : 10 - size + 1));
+                    const c = Math.floor(Math.random() * (horiz ? 10 - size + 1 : 10));
+                    let ok = true;
+                    for (let i = 0; i < size; i++) {
+                        const nr = r + (horiz ? 0 : i), nc = c + (horiz ? i : 0);
+                        if (board[nr][nc]) ok = false;
+                        // Check neighbors
+                        for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+                            const nnr = nr + dr, nnc = nc + dc;
+                            if (nnr >= 0 && nnr < 10 && nnc >= 0 && nnc < 10 && board[nnr][nnc]) ok = false;
+                        }
+                    }
+                    if (ok) {
+                        const cells = [];
+                        for (let i = 0; i < size; i++) { cells.push([r + (horiz ? 0 : i), c + (horiz ? i : 0)]); board[r + (horiz ? 0 : i)][c + (horiz ? i : 0)] = 1; }
+                        ships.push({ cells, hits: 0, sunk: false }); placed = true;
+                    }
+                }
+            });
+            return ships;
+        }
+
+        function newGame() {
+            playerBoard = emptyBoard(); enemyBoard = emptyBoard();
+            playerShips = placeShipsRandom(playerBoard);
+            enemyShips = placeShipsRandom(enemyBoard);
+            playerTurn = true; phpHits = 0; aiHits = 0; running = true; aiMode = { lastHit: null, targets: [] };
+            document.getElementById('msg').textContent = "Your turn! Click the enemy grid.";
+            renderBoards();
+        }
+
+        function renderBoards() {
+            renderGrid('yourGrid', playerBoard, null, true);
+            renderGrid('enemyGrid', enemyBoard, attackEnemy, false);
+            document.getElementById('phpHits').textContent = phpHits;
+            document.getElementById('aiHits').textContent = aiHits;
+        }
+
+        function renderGrid(id, board, clickFn, showShips) {
+            const grid = document.getElementById(id); grid.innerHTML = '';
+            for (let r = 0; r < 10; r++) for (let c = 0; c < 10; c++) {
+                const cell = document.createElement('div'); cell.className = 'cell';
+                const v = board[r][c];
+                if (v === 0) cell.textContent = '';
+                else if (v === 1 && showShips) { cell.classList.add('ship'); cell.textContent = '🚢'; }
+                else if (v === 2) { cell.classList.add('hit'); cell.textContent = '💥'; }
+                else if (v === -1) { cell.classList.add('miss'); cell.textContent = '💧'; }
+                else if (v === 3) { cell.classList.add('sunk'); cell.textContent = '☠'; }
+                if (clickFn && v !== 2 && v !== -1 && v !== 3) cell.onclick = () => clickFn(r, c);
+                grid.appendChild(cell);
+            }
+        }
+
+        function attackEnemy(r, c) {
+            if (!running || !playerTurn) return;
+            if (enemyBoard[r][c] === 2 || enemyBoard[r][c] === -1 || enemyBoard[r][c] === 3) return;
+            const hit = enemyBoard[r][c] === 1;
+            if (hit) {
+                enemyBoard[r][c] = 2; phpHits++;
+                const ship = enemyShips.find(s => s.cells.some(([sr, sc]) => sr === r && sc === c));
+                if (ship) { ship.hits++; if (ship.hits === ship.cells.length) { ship.sunk = true; ship.cells.forEach(([sr, sc]) => enemyBoard[sr][sc] = 3); } }
+                if (phpHits === 17) { running = false; document.getElementById('msg').textContent = '🎉 You WIN! All enemy ships sunk!'; document.getElementById('menuBtn').style.display = ''; PizzaScores.save('Battleship', 1, 'Victory'); renderBoards(); return; }
+                document.getElementById('msg').textContent = '💥 Hit! Go again!';
+            } else {
+                enemyBoard[r][c] = -1;
+                document.getElementById('msg').textContent = '💧 Miss! Enemy attacks...';
+                playerTurn = false;
+                renderBoards();
+                setTimeout(aiAttack, 800); return;
+            }
+            renderBoards();
+        }
+
+        function aiAttack() {
+            if (!running) return;
+            let r, c;
+            if (aiMode.targets.length > 0) {
+                [r, c] = aiMode.targets.shift();
+                while ((playerBoard[r] && (playerBoard[r][c] === 2 || playerBoard[r][c] === -1 || playerBoard[r][c] === 3)) && aiMode.targets.length > 0) [r, c] = aiMode.targets.shift();
+            }
+            if (r === undefined || playerBoard[r] === undefined || playerBoard[r][c] === 2 || playerBoard[r][c] === -1) {
+                do { r = Math.floor(Math.random() * 10); c = Math.floor(Math.random() * 10); }
+                while (playerBoard[r][c] === 2 || playerBoard[r][c] === -1 || playerBoard[r][c] === 3);
+            }
+            const hit = playerBoard[r][c] === 1;
+            if (hit) {
+                playerBoard[r][c] = 2; aiHits++;
+                const ship = playerShips.find(s => s.cells.some(([sr, sc]) => sr === r && sc === c));
+                if (ship) { ship.hits++; if (ship.hits === ship.cells.length) { ship.sunk = true; ship.cells.forEach(([sr, sc]) => playerBoard[sr][sc] = 3); aiMode.targets = []; } }
+                else { [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]].forEach(([nr, nc]) => { if (nr >= 0 && nr < 10 && nc >= 0 && nc < 10 && playerBoard[nr][nc] !== 2 && playerBoard[nr][nc] !== -1) aiMode.targets.push([nr, nc]); }); }
+                if (aiHits === 17) { running = false; document.getElementById('msg').textContent = '💀 Enemy wins! You lost all ships.'; document.getElementById('menuBtn').style.display = ''; PizzaScores.save('Battleship', 0, 'Defeat'); renderBoards(); return; }
+                document.getElementById('msg').textContent = 'Enemy hit your fleet! Your turn.';
+            } else {
+                playerBoard[r][c] = -1;
+                document.getElementById('msg').textContent = 'Enemy missed! Your turn.';
+            }
+            playerTurn = true; renderBoards();
+        }
+    </script>
+</body>
+
+</html>

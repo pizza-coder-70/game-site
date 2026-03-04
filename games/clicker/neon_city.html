@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Neon City – The Pizza Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #020306;
+            min-height: 100vh;
+            font-family: 'Outfit', sans-serif;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px
+        }
+
+        h1 {
+            color: #38bdf8;
+            font-size: 2rem;
+            text-shadow: 0 0 20px #38bdf8;
+            margin-bottom: 4px
+        }
+
+        #counter {
+            font-size: 1.2rem;
+            color: #7dd3fc;
+            margin-bottom: 4px
+        }
+
+        #cps {
+            font-size: .85rem;
+            color: #374151;
+            margin-bottom: 8px
+        }
+
+        #city-stats {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 8px
+        }
+
+        .cs {
+            background: rgba(56, 189, 248, .07);
+            border: 1px solid rgba(56, 189, 248, .2);
+            border-radius: 10px;
+            padding: 5px 12px;
+            font-size: .8rem;
+            text-align: center
+        }
+
+        .cs span {
+            display: block;
+            font-weight: 700;
+            color: #38bdf8
+        }
+
+        /* Crime event */
+        #crime-wrap {
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 8px
+        }
+
+        .crime-evt {
+            background: rgba(239, 68, 68, .12);
+            border: 2px solid #ef4444;
+            border-radius: 12px;
+            padding: 8px 14px;
+            text-align: center;
+            cursor: pointer;
+            transition: all .2s;
+            min-width: 120px
+        }
+
+        .crime-evt:hover {
+            background: rgba(239, 68, 68, .25);
+            transform: scale(1.05)
+        }
+
+        .crime-evt .ce-icon {
+            font-size: 1.6rem
+        }
+
+        .crime-evt .ce-name {
+            font-size: .78rem;
+            font-weight: 700;
+            color: #fca5a5
+        }
+
+        .crime-evt .ce-loss {
+            font-size: .7rem;
+            color: #f87171
+        }
+
+        .crime-evt .ce-time {
+            font-size: .7rem;
+            color: #6b7280
+        }
+
+        #no-crime {
+            color: #4b5563;
+            font-size: .82rem
+        }
+
+        /* City visual */
+        #city-view {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 3px;
+            width: 160px;
+            height: 80px;
+            padding-bottom: 4px;
+            background: linear-gradient(180deg, #020306 0%, #0c1a2e 100%);
+            border-radius: 12px;
+            border: 1px solid rgba(56, 189, 248, .15);
+            overflow: hidden;
+            font-size: 20px
+        }
+
+        .layout {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            max-width: 900px
+        }
+
+        #click-zone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px
+        }
+
+        #city-btn {
+            width: 150px;
+            height: 100px;
+            border-radius: 12px;
+            background: linear-gradient(180deg, #020306, #0c1a2e);
+            border: 2px solid #38bdf8;
+            cursor: pointer;
+            font-size: 32px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 8px;
+            gap: 3px;
+            box-shadow: 0 0 30px rgba(56, 189, 248, .3);
+            user-select: none;
+            transition: transform .1s;
+            overflow: hidden
+        }
+
+        #city-btn:active {
+            transform: scale(.95)
+        }
+
+        #shop {
+            flex: 1;
+            min-width: 260px;
+            background: rgba(255, 255, 255, .03);
+            border: 1px solid rgba(56, 189, 248, .2);
+            border-radius: 20px;
+            padding: 20px;
+            max-height: 70vh;
+            overflow-y: auto
+        }
+
+        #shop h2 {
+            color: #38bdf8;
+            font-size: 1.1rem;
+            margin-bottom: 14px
+        }
+
+        .upg {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(56, 189, 248, .06);
+            border: 1px solid rgba(56, 189, 248, .18);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background .15s
+        }
+
+        .upg:hover {
+            background: rgba(56, 189, 248, .16)
+        }
+
+        .upg.locked {
+            opacity: .4;
+            cursor: not-allowed
+        }
+
+        .ui {
+            font-size: 1.6rem;
+            flex-shrink: 0
+        }
+
+        .inf {
+            flex: 1
+        }
+
+        .un {
+            font-weight: 700;
+            font-size: .9rem
+        }
+
+        .ud {
+            font-size: .72rem;
+            color: #6b7280
+        }
+
+        .uc {
+            font-size: .78rem;
+            color: #7dd3fc;
+            margin-top: 2px
+        }
+
+        .uo {
+            font-size: .72rem;
+            color: #4ade80
+        }
+
+        #toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(56, 189, 248, .9);
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-weight: 700;
+            opacity: 0;
+            transition: opacity .3s;
+            pointer-events: none;
+            z-index: 99
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🌆 Neon City</h1>
+    <div id="counter">0 credits</div>
+    <div id="cps">0/sec</div>
+    <div id="city-stats">
+        <div class="cs">Pop<span id="pop-ct">10</span></div>
+        <div class="cs">Crime<span id="crime-rate">Low</span></div>
+        <div class="cs">Happiness<span id="happy">😊</span></div>
+        <div class="cs">Buildings<span id="bld-ct">0</span></div>
+    </div>
+    <div style="color:#7dd3fc;font-size:.78rem;margin-bottom:4px">🚨 Crime events drain income — click to bust them!
+    </div>
+    <div id="crime-wrap">
+        <div id="no-crime">City is safe... for now.</div>
+    </div>
+    <div class="layout">
+        <div id="click-zone">
+            <div id="city-btn" onclick="collectTax()">🏠🏢🏦</div>
+            <div style="font-size:.78rem;color:#374151;text-align:center">Click to collect taxes</div>
+        </div>
+        <div id="shop">
+            <h2>🏗️ Build</h2>
+            <div id="upgrades"></div>
+        </div>
+    </div>
+    <div id="toast"></div>
+    <script>
+        let credits = 0, cps = 0, cp = 5, pop = 10, buildings = 0, crimeRate = 0;
+        let crimes = [];
+        const UPS = [
+            { n: 'Houses', i: '🏠', d: '+0.5/s, +10 pop', base: 50, own: 0, rate: .5, pop: 10 },
+            { n: 'Shop District', i: '🏪', d: '+2/s credits', base: 200, own: 0, rate: 2, pop: 5 },
+            { n: 'Office Block', i: '🏢', d: '+7/s credits', base: 800, own: 0, rate: 7, pop: 20 },
+            { n: 'Police Dept', i: '🚔', d: 'Reduces crime events', base: 500, own: 0, rate: 0, crime: -1 },
+            { n: 'Factory', i: '🏭', d: '+22/s credits', base: 3000, own: 0, rate: 22, pop: 30 },
+            { n: 'Airport', i: '✈️', d: '+70/s credits', base: 15000, own: 0, rate: 70, pop: 100 },
+            { n: 'Tech Hub', i: '💡', d: '+220/s credits', base: 80000, own: 0, rate: 220, pop: 200 },
+        ];
+        const CRIMES = [
+            { name: '🚗 Street Racing', icon: '🚗', drain: 5, time: 15 },
+            { name: '🔥 Building Fire', icon: '🔥', drain: 12, time: 12 },
+            { name: '💰 Bank Robbery', icon: '💰', drain: 20, time: 10 },
+            { name: '🏍️ Gang Activity', icon: '🏍️', drain: 8, time: 18 },
+        ];
+        let policeLevel = 0;
+        function fmt(n) { if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B'; if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M'; if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K'; return Math.floor(n) + '' }
+        function cost(u) { return Math.floor(u.base * Math.pow(1.15, u.own)) }
+        function collectTax() {
+            const tax = cp + Math.floor(pop * .1); credits += tax;
+            const el = document.createElement('div');
+            el.textContent = '💰+' + tax; el.style.cssText = 'position:fixed;color:#7dd3fc;font-weight:700;pointer-events:none;z-index:50';
+            const r = document.getElementById('city-btn').getBoundingClientRect();
+            el.style.left = (r.left + r.width / 2 + (Math.random() - .5) * 40) + 'px'; el.style.top = r.top + 'px';
+            el.animate([{ opacity: 1, transform: 'translateY(0)' }, { opacity: 0, transform: 'translateY(-55px)' }], { duration: 700, fill: 'forwards' });
+            document.body.appendChild(el); setTimeout(() => el.remove(), 700);
+        }
+        function spawnCrime() {
+            if (crimes.length >= 3) return;
+            const spawnChance = Math.max(.1, .4 - policeLevel * .05);
+            if (Math.random() > spawnChance) return;
+            const c = CRIMES[Math.floor(Math.random() * CRIMES.length)];
+            const id = Date.now(); const loss = Math.floor(cps * c.drain);
+            crimes.push({ ...c, id, timer: c.time, loss });
+            renderCrimes();
+            setTimeout(() => {
+                const i = crimes.findIndex(x => x.id === id);
+                if (i >= 0) { credits = Math.max(0, credits - crimes[i].loss); crimes.splice(i, 1); renderCrimes(); }
+            }, c.time * 1000);
+        }
+        function bustCrime(id) {
+            const i = crimes.findIndex(x => x.id === id); if (i < 0) return;
+            const reward = Math.floor(crimes[i].loss * .5);
+            credits += reward; crimes.splice(i, 1); renderCrimes();
+            toast('🚔 Crime busted! +' + fmt(reward) + ' reward!');
+        }
+        function renderCrimes() {
+            const w = document.getElementById('crime-wrap'); w.innerHTML = '';
+            if (crimes.length === 0) { w.innerHTML = '<div id="no-crime">City is safe... for now.</div>'; return; }
+            crimes.forEach(c => {
+                const div = document.createElement('div'); div.className = 'crime-evt';
+                div.innerHTML = `<div class="ce-icon">${c.icon}</div><div class="ce-name">${c.name}</div><div class="ce-loss">-${fmt(c.loss)} if ignored</div><div class="ce-time">⏱ ${c.timer}s</div>`;
+                div.addEventListener('click', () => bustCrime(c.id));
+                w.appendChild(div);
+            });
+        }
+        setInterval(() => {
+            crimes.forEach(c => c.timer--);
+            spawnCrime(); renderCrimes();
+        }, 1000);
+        function buy(u) {
+            const co = cost(u); if (credits < co) return;
+            credits -= co; u.own++; buildings++;
+            if (u.rate) cps += u.rate; if (u.pop) pop += u.pop; if (u.crime) policeLevel += Math.abs(u.crime);
+            renderUpgrades(); toast('✅ ' + u.n + ' built!');
+        }
+        function toast(msg) {
+            const t = document.getElementById('toast'); t.textContent = msg; t.style.opacity = 1;
+            clearTimeout(t._t); t._t = setTimeout(() => t.style.opacity = 0, 2200);
+        }
+        function renderUpgrades() {
+            const d = document.getElementById('upgrades'); d.innerHTML = '';
+            UPS.forEach(u => {
+                const co = cost(u), div = document.createElement('div');
+                div.className = 'upg' + (credits < co ? ' locked' : '');
+                div.innerHTML = `<div class="ui">${u.i}</div><div class="inf"><div class="un">${u.n}</div><div class="ud">${u.d}</div><div class="uc">💳 ${fmt(co)}</div><div class="uo">Built: ${u.own}</div></div>`;
+                div.addEventListener('click', () => buy(u));
+                d.appendChild(div);
+            });
+        }
+        let last = 0, lastR = 0;
+        function loop(ts) {
+            if (last) credits += cps * (ts - last) / 1000;
+            last = ts;
+            document.getElementById('counter').textContent = fmt(credits) + ' credits';
+            document.getElementById('cps').textContent = cps.toFixed(1) + '/sec';
+            document.getElementById('pop-ct').textContent = pop;
+            document.getElementById('bld-ct').textContent = buildings;
+            document.getElementById('crime-rate').textContent = policeLevel >= 3 ? 'Low' : policeLevel >= 1 ? 'Medium' : 'High';
+            const happiness = Math.max(0, 100 - crimes.length * 20);
+            document.getElementById('happy').textContent = happiness >= 80 ? '😊' : happiness >= 60 ? '🙂' : happiness >= 40 ? '😐' : '😟';
+            if (ts - lastR > 500) { lastR = ts; renderUpgrades(); }
+            requestAnimationFrame(loop);
+        }
+        renderUpgrades(); renderCrimes(); requestAnimationFrame(loop);
+    </script>
+</body>
+
+</html>

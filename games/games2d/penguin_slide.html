@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Penguin Slide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #000c1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #7dd3fc;
+            font-size: 1.5rem;
+            text-shadow: 0 0 16px #7dd3fc;
+            margin-bottom: 6px
+        }
+
+        canvas {
+            border: 2px solid #7dd3fc;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(125, 211, 252, .4)
+        }
+
+        #ui {
+            display: flex;
+            gap: 20px;
+            color: #7dd3fc;
+            font-size: .85rem;
+            margin-top: 6px
+        }
+
+        #msg {
+            color: #facc15;
+            font-size: .9rem;
+            min-height: 20px;
+            margin-top: 4px
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🐧 Penguin Slide</h1>
+    <div id="ui"><span>Fish: <b id="fi">0</b></span><span>Score: <b id="sc">0</b></span><span>Lives: <b
+                id="li">3</b></span></div>
+    <canvas id="c" width="540" height="380"></canvas>
+    <div id="msg">Arrow keys / WASD to slide! Collect 🐟! Avoid 🧊 cracks!</div>
+    <script>
+        const cv = document.getElementById('c'), cx = cv.getContext('2d');
+        const W = 540, H = 380, TILE = 36;
+        const COLS = 15, ROWS = 10;
+        let grid, player, fish = [], cracks = [], score = 0, fishCount = 0, lives = 3, level = 1, over = false, won = false;
+        let keys = {};
+        document.addEventListener('keydown', e => { keys[e.code] = true; if (e.code.startsWith('Arrow')) e.preventDefault(); });
+        document.addEventListener('keyup', e => keys[e.code] = false);
+        // Penguin sliding: keeps moving until hits wall
+        let moveCD = 0, sliding = false, slideDir = { x: 0, y: 0 }, slideSpeed = 0;
+
+        function initLevel(l) {
+            grid = []; fish = []; cracks = [];
+            for (let r = 0; r < ROWS; r++) { grid[r] = []; for (let c = 0; c < COLS; c++)grid[r][c] = 'ice'; }
+            // Add walls
+            for (let r = 0; r < ROWS; r++)for (let c = 0; c < COLS; c++) { if (r === 0 || r === ROWS - 1 || c === 0 || c === COLS - 1) grid[r][c] = 'wall'; }
+            // Random walls
+            for (let i = 0; i < 8 + l * 2; i++) { const r = 1 + Math.floor(Math.random() * (ROWS - 2)), c = 1 + Math.floor(Math.random() * (COLS - 2)); if (r > 1 || c > 1) grid[r][c] = 'wall'; }
+            // Cracks (dangerous ice)
+            for (let i = 0; i < 4 + l; i++) { const r = 1 + Math.floor(Math.random() * (ROWS - 3)), c = 1 + Math.floor(Math.random() * (COLS - 3)); if (grid[r][c] === 'ice') grid[r][c] = 'crack'; }
+            // Fish
+            const nFish = 5 + l;
+            let placed = 0; while (placed < nFish) { const r = 1 + Math.floor(Math.random() * (ROWS - 2)), c = 1 + Math.floor(Math.random() * (COLS - 2)); if (grid[r][c] === 'ice') { fish.push({ r, c, collected: false }); placed++; } }
+            player = { r: 1, c: 1 }; sliding = false; over = false; won = false;
+        }
+        initLevel(1);
+
+        let slideTimer = 0;
+        function startSlide(dx, dy) { if (sliding) return; sliding = true; slideDir = { x: dx, y: dy }; }
+        function applySlide() {
+            if (!sliding) return;
+            const nr = player.r + slideDir.y, nc = player.c + slideDir.x;
+            if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS || grid[nr][nc] === 'wall') { sliding = false; return; }
+            player.r = nr; player.c = nc;
+            if (grid[nr][nc] === 'crack') { lives--; document.getElementById('li').textContent = lives; grid[nr][nc] = 'void'; if (lives <= 0) { over = true; sliding = false; return; } }
+            // Collect fish
+            fish.forEach(f => { if (!f.collected && f.r === nr && f.c === nc) { f.collected = true; fishCount++; score += 10 * level; document.getElementById('fi').textContent = fishCount; document.getElementById('sc').textContent = score; } });
+            if (fish.every(f => f.collected)) { won = true; sliding = false; }
+        }
+
+        let slideInterval = setInterval(() => { if (sliding && !over && !won) { applySlide(); } }, 120);
+
+        function update() {
+            if (over || won) return;
+            moveCD--;
+            if (moveCD <= 0 && !sliding) {
+                if (keys['ArrowUp'] || keys['KeyW']) { startSlide(0, -1); moveCD = 8; }
+                else if (keys['ArrowDown'] || keys['KeyS']) { startSlide(0, 1); moveCD = 8; }
+                else if (keys['ArrowLeft'] || keys['KeyA']) { startSlide(-1, 0); moveCD = 8; }
+                else if (keys['ArrowRight'] || keys['KeyD']) { startSlide(1, 0); moveCD = 8; }
+            }
+        }
+        function draw() {
+            cx.fillStyle = '#000c1a'; cx.fillRect(0, 0, W, H);
+            for (let r = 0; r < ROWS; r++)for (let c = 0; c < COLS; c++) {
+                const x = c * TILE, y = r * TILE, cell = grid[r][c];
+                if (cell === 'wall') { cx.fillStyle = '#0e3a5a'; cx.fillRect(x, y, TILE, TILE); cx.fillStyle = '#1e5a8a'; cx.fillRect(x + 2, y + 2, TILE - 4, 6); }
+                else if (cell === 'ice') { cx.fillStyle = '#e0f7fe'; cx.fillRect(x, y, TILE, TILE); cx.strokeStyle = 'rgba(125,211,252,.3)'; cx.strokeRect(x, y, TILE, TILE); }
+                else if (cell === 'crack') { cx.fillStyle = '#b2dfee'; cx.fillRect(x, y, TILE, TILE); cx.strokeStyle = '#7dd3fc'; cx.lineWidth = 2; cx.beginPath(); cx.moveTo(x + 6, y + 6); cx.lineTo(x + TILE - 6, y + TILE - 6); cx.moveTo(x + TILE - 6, y + 6); cx.lineTo(x + 6, y + TILE - 6); cx.stroke(); }
+                else if (cell === 'void') { cx.fillStyle = '#000c1a'; cx.fillRect(x, y, TILE, TILE); }
+                // Fish
+                const f = fish.find(f => f.r === r && f.c === c && !f.collected);
+                if (f) { cx.font = '18px monospace'; cx.textAlign = 'center'; cx.fillText('🐟', x + TILE / 2, y + TILE / 2 + 6); }
+            }
+            // Player
+            cx.font = '24px monospace'; cx.textAlign = 'center'; cx.fillText('🐧', player.c * TILE + TILE / 2, player.r * TILE + TILE / 2 + 8);
+            if (over) { cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#f43f5e'; cx.font = 'bold 36px monospace'; cx.textAlign = 'center'; cx.fillText('FELL IN! 💀', W / 2, H / 2 - 18); cx.fillStyle = '#aaa'; cx.font = '16px monospace'; cx.fillText('Fish: ' + fishCount + ' | R restart', W / 2, H / 2 + 16); }
+            if (won) { cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#facc15'; cx.font = 'bold 40px monospace'; cx.textAlign = 'center'; cx.fillText('YOU WIN! 🏆', W / 2, H / 2 - 20); cx.fillStyle = '#7dd3fc'; cx.font = '20px monospace'; cx.fillText('Level ' + level + ' clear!', W / 2, H / 2 + 20); cx.fillStyle = '#aaa'; cx.font = '14px monospace'; cx.fillText('R for level ' + (level + 1), W / 2, H / 2 + 48); }
+        }
+        document.addEventListener('keydown', e => {
+            if (e.code === 'KeyR' && (over || won)) {
+                if (won) { level++; if (level > 5) { level = 1; fishCount = 0; score = 0; lives = 3; document.getElementById('li').textContent = 3; document.getElementById('fi').textContent = 0; document.getElementById('sc').textContent = 0; } }
+                else { lives = 3; score = 0; fishCount = 0; document.getElementById('li').textContent = 3; document.getElementById('fi').textContent = 0; document.getElementById('sc').textContent = 0; }
+                initLevel(level); document.getElementById('sc').textContent = score;
+            }
+        });
+        function loop() { update(); draw(); requestAnimationFrame(loop); } loop();
+    </script>
+
+    <script src="../mobile_controls.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Tower of Hanoi | The Pizza Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #050510;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Outfit', sans-serif;
+            color: #e2e8f0;
+            padding: 20px
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: 3px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #f97316, #fbbf24);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent
+        }
+
+        #hud {
+            display: flex;
+            gap: 30px;
+            font-size: .9rem;
+            color: #94a3b8;
+            margin-bottom: 14px
+        }
+
+        #hud b {
+            color: #fbbf24
+        }
+
+        #canvas-wrap {
+            position: relative
+        }
+
+        canvas {
+            display: block;
+            border-radius: 8px
+        }
+
+        #msg {
+            margin-top: 12px;
+            font-size: 1.1rem;
+            min-height: 1.5em;
+            color: #fff;
+            text-align: center
+        }
+
+        #controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+            justify-content: center
+        }
+
+        button {
+            padding: 9px 22px;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Outfit', sans-serif;
+            font-size: .9rem;
+            font-weight: 700;
+            cursor: pointer
+        }
+
+        .btn-play {
+            background: linear-gradient(135deg, #f97316, #fbbf24);
+            color: #000
+        }
+
+        .btn-diff {
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            border: 1px solid #475569
+        }
+
+        .btn-diff.active {
+            border-color: #f97316;
+            color: #f97316
+        }
+
+        #menuBtn {
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            border: 1px solid #475569;
+            display: none
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(13, 13, 32, 0.9);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>🗼 TOWER OF HANOI</h1>
+    <div id="hud"><span>MOVES: <b id="moves">0</b></span><span>MIN: <b id="minMoves">?</b></span><span>DISKS: <b
+                id="diskCount">3</b></span></div>
+    <div id="canvas-wrap"><canvas id="c" width="560" height="320"></canvas></div>
+    <div id="msg">Click a peg to pick up / place the top disk</div>
+    <div id="controls">
+        <button class="btn-diff active" onclick="setDisks(3,this)">3 Disks</button>
+        <button class="btn-diff" onclick="setDisks(4,this)">4 Disks</button>
+        <button class="btn-diff" onclick="setDisks(5,this)">5 Disks</button>
+        <button class="btn-play" onclick="initGame()">NEW GAME</button>
+        <button id="menuBtn" onclick="window.close()">🏠 Return to Menu</button>
+    </div>
+    <script src="../scripts/scores.js"></script>
+    <script>
+        const C = document.getElementById('c'), ctx = C.getContext('2d');
+        const W = 560, H = 320;
+        const PEG_X = [120, 280, 440];
+        const BASE_Y = 270;
+        const PEG_H = 200;
+        let pegs, moves, numDisks, selected, won;
+
+        const DISK_COLORS = [
+            '#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#6366f1', '#ec4899', '#a855f7'
+        ];
+
+        function setDisks(n, btn) {
+            numDisks = n;
+            document.querySelectorAll('.btn-diff').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('diskCount').textContent = n;
+            initGame();
+        }
+
+        function initGame() {
+            won = false; moves = 0; selected = null;
+            pegs = [[], [], []];
+            for (let i = numDisks; i >= 1; i--)pegs[0].push(i);
+            document.getElementById('moves').textContent = 0;
+            document.getElementById('minMoves').textContent = (Math.pow(2, numDisks) - 1);
+            document.getElementById('msg').textContent = 'Click a peg to pick / place the top disk';
+            document.getElementById('menuBtn').style.display = 'none';
+            draw();
+        }
+
+        function diskW(size) { return 30 + size * 22; }
+        function diskH() { return 22; }
+
+        function draw() {
+            ctx.fillStyle = '#050510'; ctx.fillRect(0, 0, W, H);
+            // Base
+            ctx.fillStyle = '#1e293b'; ctx.fillRect(40, BASE_Y, W - 80, 18); ctx.fillStyle = '#334155'; ctx.fillRect(42, BASE_Y + 2, W - 84, 14);
+            // Pegs
+            PEG_X.forEach((px, pi) => {
+                const sel = selected === pi;
+                ctx.fillStyle = sel ? '#fbbf24' : '#475569';
+                ctx.fillRect(px - 5, BASE_Y - PEG_H, 10, PEG_H + 18);
+                ctx.fillStyle = '#64748b'; ctx.font = 'bold 13px Outfit'; ctx.textAlign = 'center';
+                ctx.fillText(['A', 'B', 'C'][pi], px, BASE_Y + 38);
+            });
+            // Disks
+            pegs.forEach((peg, pi) => {
+                peg.forEach((size, di) => {
+                    const dw = diskW(size), dh = diskH();
+                    const dx = PEG_X[pi] - dw / 2;
+                    const dy = BASE_Y - (di + 1) * dh - di * 2;
+                    const col = DISK_COLORS[size - 1];
+                    ctx.fillStyle = col;
+                    // Rounded rect
+                    const rx = 8; ctx.beginPath();
+                    ctx.moveTo(dx + rx, dy); ctx.lineTo(dx + dw - rx, dy); ctx.quadraticCurveTo(dx + dw, dy, dx + dw, dy + rx);
+                    ctx.lineTo(dx + dw, dy + dh - rx); ctx.quadraticCurveTo(dx + dw, dy + dh, dx + dw - rx, dy + dh);
+                    ctx.lineTo(dx + rx, dy + dh); ctx.quadraticCurveTo(dx, dy + dh, dx, dy + dh - rx);
+                    ctx.lineTo(dx, dy + rx); ctx.quadraticCurveTo(dx, dy, dx + rx, dy); ctx.closePath();
+                    ctx.fill();
+                    // Highlight
+                    ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(dx + 4, dy + 3, dw - 8, 5);
+                    // Number
+                    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.font = 'bold 12px Outfit'; ctx.textAlign = 'center';
+                    ctx.fillText(size, PEG_X[pi], dy + dh - 5);
+                });
+            });
+            // "Holding" disk indicator
+            if (selected !== null) {
+                const topSz = pegs[selected][pegs[selected].length - 1];
+                const dw = diskW(topSz);
+                ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 3;
+                ctx.strokeRect(PEG_X[selected] - dw / 2, BASE_Y - pegs[selected].length * 24 - 20, dw, diskH());
+                ctx.lineWidth = 1;
+            }
+        }
+
+        C.addEventListener('click', e => {
+            if (won) return;
+            const rect = C.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const pi = PEG_X.findIndex(px => Math.abs(mx - px) < 70);
+            if (pi < 0) return;
+            if (selected === null) {
+                if (pegs[pi].length === 0) { document.getElementById('msg').textContent = 'That peg is empty!'; return; }
+                selected = pi;
+                document.getElementById('msg').textContent = `Picked up disk from peg ${['A', 'B', 'C'][pi]} — click destination`;
+            } else {
+                if (pi === selected) { selected = null; document.getElementById('msg').textContent = 'Dropped back. Click to pick up again.'; draw(); return; }
+                const top = pegs[selected][pegs[selected].length - 1];
+                const dest = pegs[pi][pegs[pi].length - 1];
+                if (dest && dest < top) { document.getElementById('msg').textContent = 'Cannot place larger disk on smaller!'; selected = null; draw(); return; }
+                pegs[pi].push(pegs[selected].pop());
+                moves++; document.getElementById('moves').textContent = moves;
+                selected = null;
+                // Win check
+                if (pegs[2].length === numDisks) {
+                    won = true;
+                    const min = Math.pow(2, numDisks) - 1;
+                    const score = Math.max(1, min * 100 - moves * 10 + 1000);
+                    document.getElementById('msg').textContent = `🎉 Solved in ${moves} moves! (min ${min})`;
+                    document.getElementById('menuBtn').style.display = '';
+                    PizzaScores.save('Tower of Hanoi', score, `${moves} moves, ${numDisks} disks`);
+                } else {
+                    document.getElementById('msg').textContent = `Moved to peg ${['A', 'B', 'C'][pi]}`;
+                }
+            }
+            draw();
+        });
+
+        setDisks(3, document.querySelector('.btn-diff'));
+    </script>
+</body>
+
+</html>

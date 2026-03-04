@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Gorillas – The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0a0a1e;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #facc15;
+            font-size: 2rem;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px #facc15
+        }
+
+        canvas {
+            border: 2px solid #facc15;
+            box-shadow: 0 0 30px rgba(250, 204, 21, 0.4)
+        }
+
+        #panel {
+            margin-top: 12px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center
+        }
+
+        input[type=range] {
+            accent-color: #facc15
+        }
+
+        label {
+            color: #aaa;
+            font-size: .85rem
+        }
+
+        #msg {
+            margin-top: 8px;
+            color: #facc15;
+            font-size: 1rem;
+            min-height: 24px
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Gorillas!</h1>
+    <canvas id="c" width="700" height="420"></canvas>
+    <div id="panel">
+        <label>Player 1 Angle: <span id="a1v">45</span>° <input type="range" id="a1" min="0" max="180"
+                value="45"></label>
+        <label>Player 1 Power: <span id="p1v">50</span> <input type="range" id="p1" min="10" max="100"
+                value="50"></label>
+        <label>Player 2 Angle: <span id="a2v">135</span>° <input type="range" id="a2" min="0" max="180"
+                value="135"></label>
+        <label>Player 2 Power: <span id="p2v">50</span> <input type="range" id="p2" min="10" max="100"
+                value="50"></label>
+    </div>
+    <div id="msg">Player 1's turn – adjust angle/power then press Space or click canvas</div>
+    <script>
+        const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+        const W = 700, H = 420;
+        let buildings, gorillas, banana, turn = 0, animating = false, score = [0, 0], over = false;
+        function rand(a, b) { return a + Math.random() * (b - a); }
+        function makeBuildings() {
+            const bs = []; let x = 0;
+            while (x < W) { const w = rand(50, 90), h = rand(80, 220); bs.push({ x, y: H - h, w, h, color: `hsl(${200 + rand(-20, 20)},30%,${rand(25, 40)}%)` }); x += w + 4; }
+            return bs;
+        }
+        function placeGorillas() {
+            const b1 = buildings[1], b2 = buildings[buildings.length - 2];
+            return [{ x: b1.x + b1.w / 2, y: b1.y - 30, alive: true }, { x: b2.x + b2.w / 2, y: b2.y - 30, alive: true }];
+        }
+        function init() {
+            buildings = makeBuildings(); gorillas = placeGorillas(); banana = null; turn = 0; animating = false; over = false;
+            document.getElementById('msg').textContent = "Player 1's turn – adjust angle/power then press Space";
+        }
+        ['a1', 'p1', 'a2', 'p2'].forEach(id => { document.getElementById(id).addEventListener('input', () => { document.getElementById(id + 'v').textContent = document.getElementById(id).value; }); });
+        function shoot() {
+            if (animating || over) return;
+            const a = turn === 0 ? +document.getElementById('a1').value : +document.getElementById('a2').value;
+            const p = turn === 0 ? +document.getElementById('p1').value : +document.getElementById('p2').value;
+            const rad = a * Math.PI / 180;
+            const dir = turn === 0 ? 1 : -1;
+            banana = { x: gorillas[turn].x, y: gorillas[turn].y, vx: dir * Math.cos(rad) * p * 0.12, vy: -Math.sin(rad) * p * 0.12, r: 8, trail: [] };
+            animating = true;
+        }
+        canvas.addEventListener('click', shoot);
+        document.addEventListener('keydown', e => { if (e.key === ' ') { shoot(); e.preventDefault(); } if (e.key === 'r' || e.key === 'R') init(); });
+        function update() {
+            if (!animating || !banana) return;
+            banana.trail.push({ x: banana.x, y: banana.y }); if (banana.trail.length > 20) banana.trail.shift();
+            banana.vy += 0.15; banana.x += banana.vx; banana.y += banana.vy;
+            if (banana.x < 0 || banana.x > W || banana.y > H + 50) { animating = false; banana = null; turn = 1 - turn; document.getElementById('msg').textContent = `Player ${turn + 1}'s turn`; return; }
+            // hit gorilla
+            for (let i = 0; i < 2; i++) {
+                if (i === turn) continue;
+                if (gorillas[i].alive && Math.hypot(banana.x - gorillas[i].x, banana.y - gorillas[i].y) < 30) {
+                    gorillas[i].alive = false; over = true; animating = false; banana = null;
+                    document.getElementById('msg').textContent = `Player ${turn + 1} WINS! Press R to restart.`;
+                    return;
+                }
+            }
+            // hit building
+            for (const b of buildings) {
+                if (banana.x > b.x && banana.x < b.x + b.w && banana.y > b.y && banana.y < b.y + b.h) { animating = false; banana = null; turn = 1 - turn; document.getElementById('msg').textContent = `Player ${turn + 1}'s turn`; return; }
+            }
+        }
+        function draw() {
+            ctx.fillStyle = '#0a0a1e'; ctx.fillRect(0, 0, W, H);
+            // moon and stars
+            for (let i = 0; i < 60; i++) { ctx.fillStyle = 'rgba(255,255,255,' + ((i % 3 + 1) * 0.25) + ')'; ctx.fillRect((i * 137) % W, (i * 53) % H / 2, 1, 1); }
+            ctx.beginPath(); ctx.arc(W - 60, 50, 25, 0, Math.PI * 2); ctx.fillStyle = '#fffde0'; ctx.fill();
+            buildings.forEach(b => { ctx.fillStyle = b.color; ctx.fillRect(b.x, b.y, b.w, b.h); for (let wx = b.x + 8; wx < b.x + b.w - 8; wx += 16)for (let wy = b.y + 10; wy < b.y + b.h - 10; wy += 20) { ctx.fillStyle = Math.random() < 0.4 ? '#facc1555' : 'rgba(0,0,0,0.1)'; ctx.fillRect(wx, wy, 8, 12); } });
+            gorillas.forEach((g, i) => { if (!g.alive) return; ctx.fillStyle = i === 0 ? '#4ade80' : '#ef4444'; ctx.font = 'bold 28px monospace'; ctx.textAlign = 'center'; ctx.fillText('🦍', g.x, g.y + 10); });
+            if (banana) {
+                banana.trail.forEach((t, i) => { ctx.beginPath(); ctx.arc(t.x, t.y, banana.r * (i / banana.trail.length) * 0.7, 0, Math.PI * 2); ctx.fillStyle = `rgba(250,204,21,${i / banana.trail.length * 0.5})`; ctx.fill(); });
+                ctx.fillStyle = '#facc15'; ctx.font = '18px monospace'; ctx.textAlign = 'center'; ctx.fillText('🍌', banana.x, banana.y + 6);
+            }
+        }
+        function loop() { update(); draw(); requestAnimationFrame(loop); }
+        init(); loop();
+    </script>
+</body>
+
+</html>

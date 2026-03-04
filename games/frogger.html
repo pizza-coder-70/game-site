@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Frogger | The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a1a0a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #4ade80;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px #4ade80;
+            letter-spacing: 4px;
+        }
+
+        #hud {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+
+        canvas {
+            border: 2px solid #4ade80;
+            box-shadow: 0 0 30px #4ade8044;
+        }
+
+        #msg {
+            margin-top: 12px;
+            font-size: 1.2rem;
+            min-height: 1.5em;
+            color: #fff;
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 10px 32px;
+            background: linear-gradient(135deg, #4ade80, #16a34a);
+            color: #000;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            letter-spacing: 2px;
+        }
+
+        button:hover {
+            transform: scale(1.07);
+        }
+
+        #menuBtn {
+            background: linear-gradient(135deg, #334155, #1e293b);
+            color: #fff;
+            display: none;
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999;
+        }
+
+        #homeBtn:hover {
+            background: #1e40af;
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>🐸 FROGGER</h1>
+    <div id="hud"><span>SCORE: <b id="score">0</b></span><span>LIVES: <b id="lives">3</b></span><span>TIME: <b
+                id="timer">30</b></span></div>
+    <canvas id="c" width="560" height="560"></canvas>
+    <div id="msg">Use Arrow Keys to hop!</div>
+    <button onclick="startGame()">START</button>
+    <button id="menuBtn" onclick="window.close()">🏠 Return to Menu</button>
+    <script src="../scripts/scores.js"></script>
+    <script>
+        const C = document.getElementById('c'), ctx = C.getContext('2d');
+        const W = 560, H = 560, ROWS = 14, CELL = 40;
+        let frog, cars, logs, score, lives, running, animId, timeLeft, timerInterval, homes;
+
+        const LANE_TYPES = [
+            'home', 'water', 'water', 'water', 'water', 'water', 'safe',
+            'road', 'road', 'road', 'road', 'road', 'safe', 'start'
+        ];
+        const LANE_COLORS = {
+            home: '#1a3a1a', water: '#0d2b6b', safe: '#2d5a2d', road: '#333', start: '#2d5a2d'
+        };
+
+        function makeCars() {
+            const c = [];
+            const roadLanes = [7, 8, 9, 10, 11];
+            const speeds = [2.5, -1.8, 3, -2.2, 1.5];
+            const colors = ['#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'];
+            roadLanes.forEach((row, i) => {
+                for (let j = 0; j < 4; j++) {
+                    c.push({ x: j * 150, y: row * CELL + 6, w: 64, h: 28, speed: speeds[i], color: colors[i] });
+                }
+            });
+            return c;
+        }
+
+        function makeLogs() {
+            const l = [];
+            const waterLanes = [1, 2, 3, 4, 5];
+            const speeds = [-1.5, 2, -2, 1, -1.2];
+            waterLanes.forEach((row, i) => {
+                for (let j = 0; j < 3; j++) {
+                    l.push({ x: j * 200, y: row * CELL + 8, w: 100, h: 24, speed: speeds[i] });
+                }
+            });
+            return l;
+        }
+
+        function startGame() {
+            score = 0; lives = 3; running = true; timeLeft = 30;
+            frog = { x: W / 2 - 20, y: 13 * CELL + 5, w: 30, h: 30, onLog: null };
+            cars = makeCars(); logs = makeLogs();
+            homes = [false, false, false, false, false];
+            document.getElementById('score').textContent = 0;
+            document.getElementById('lives').textContent = 3;
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (!running) return clearInterval(timerInterval);
+                timeLeft--; document.getElementById('timer').textContent = timeLeft;
+                if (timeLeft <= 0) dieLose();
+            }, 1000);
+            document.getElementById('msg').textContent = '';
+            if (animId) cancelAnimationFrame(animId);
+            loop();
+        }
+
+        function dieLose() {
+            lives--; document.getElementById('lives').textContent = lives;
+            if (lives <= 0) { running = false; clearInterval(timerInterval); document.getElementById('msg').textContent = 'GAME OVER! Press Start.'; document.getElementById('menuBtn').style.display = ''; PizzaScores.save('Frogger', score); }
+            else { frog.x = W / 2 - 15; frog.y = 13 * CELL + 5; frog.onLog = null; timeLeft = 30; }
+        }
+
+        document.addEventListener('keydown', e => {
+            if (!running) { if (e.key === ' ') startGame(); return; }
+            const step = CELL;
+            if (e.key === 'ArrowUp') frog.y = Math.max(0, frog.y - step);
+            else if (e.key === 'ArrowDown') frog.y = Math.min(13 * CELL + 5, frog.y + step);
+            else if (e.key === 'ArrowLeft') frog.x = Math.max(0, frog.x - step);
+            else if (e.key === 'ArrowRight') frog.x = Math.min(W - frog.w, frog.x + step);
+            e.preventDefault();
+        });
+
+        function getRow(y) { return Math.floor(y / CELL); }
+
+        function update() {
+            if (!running) return;
+            cars.forEach(c => { c.x += c.speed; if (c.x > W + 10) c.x = -c.w - 10; if (c.x < -c.w - 10) c.x = W + 10; });
+            logs.forEach(l => { l.x += l.speed; if (l.x > W + 10) l.x = -l.w - 10; if (l.x < -l.w - 10) l.x = W + 10; });
+            const row = getRow(frog.y);
+            // On log?
+            frog.onLog = null;
+            if (row >= 1 && row <= 5) {
+                const laneY = row * CELL + 8;
+                logs.forEach(l => {
+                    if (frog.y + frog.h > l.y && frog.y < l.y + l.h && frog.x + frog.w > l.x && frog.x < l.x + l.w) {
+                        frog.onLog = l;
+                    }
+                });
+                if (frog.onLog) frog.x += frog.onLog.speed;
+                else dieLose();
+            }
+            // Car collision
+            if (row >= 7 && row <= 11) {
+                cars.forEach(c => {
+                    if (frog.x + frog.w > c.x && frog.x < c.x + c.w && frog.y + frog.h > c.y && frog.y < c.y + c.h) {
+                        dieLose();
+                    }
+                });
+            }
+            // Out of bounds
+            if (frog.x < 0 || frog.x + frog.w > W) dieLose();
+            // Reached home
+            if (row === 0) {
+                const slot = Math.floor(frog.x / 112);
+                if (slot >= 0 && slot < 5 && !homes[slot]) {
+                    homes[slot] = true; score += 200; timeLeft = 30;
+                    document.getElementById('score').textContent = score;
+                    frog.x = W / 2 - 15; frog.y = 13 * CELL + 5;
+                    if (homes.every(Boolean)) {
+                        document.getElementById('msg').textContent = '🎉 All home! Next round!';
+                        homes = [false, false, false, false, false]; score += 500;
+                        document.getElementById('score').textContent = score;
+                    }
+                } else dieLose();
+            }
+        }
+
+        function draw() {
+            // Background lanes
+            for (let r = 0; r < ROWS; r++) {
+                ctx.fillStyle = LANE_COLORS[LANE_TYPES[r]] || '#222';
+                ctx.fillRect(0, r * CELL, W, CELL);
+                // Lane dividers
+                if (LANE_TYPES[r] === 'road' && r > 0) {
+                    ctx.strokeStyle = 'rgba(255,255,0,0.2)'; ctx.setLineDash([20, 15]);
+                    ctx.beginPath(); ctx.moveTo(0, r * CELL); ctx.lineTo(W, r * CELL); ctx.stroke(); ctx.setLineDash([]);
+                }
+            }
+            // Homes
+            for (let i = 0; i < 5; i++) {
+                ctx.fillStyle = homes[i] ? '#4ade80' : '#0d3a1a';
+                ctx.beginPath(); ctx.roundRect(i * 112 + 8, 6, 96, 28, 8); ctx.fill();
+                if (homes[i]) { ctx.fillStyle = '#fff'; ctx.font = 'bold 16px monospace'; ctx.fillText('🐸', i * 112 + 40, 28); }
+            }
+            // Logs
+            logs.forEach(l => {
+                ctx.fillStyle = '#92400e'; ctx.beginPath(); ctx.roundRect(l.x, l.y, l.w, l.h, 8); ctx.fill();
+                ctx.strokeStyle = '#78350f'; ctx.strokeRect(l.x, l.y, l.w, l.h);
+            });
+            // Cars
+            cars.forEach(c => {
+                ctx.fillStyle = c.color; ctx.beginPath(); ctx.roundRect(c.x, c.y, c.w, c.h, 6); ctx.fill();
+                ctx.fillStyle = 'rgba(255,255,200,0.8)';
+                ctx.fillRect(c.speed > 0 ? c.x + c.w - 12 : c.x + 2, c.y + 4, 10, 8);
+            });
+            // Frog
+            ctx.fillStyle = '#4ade80'; ctx.beginPath(); ctx.ellipse(frog.x + frog.w / 2, frog.y + frog.h / 2, frog.w / 2, frog.h / 2, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(frog.x + 8, frog.y + 8, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(frog.x + frog.w - 8, frog.y + 8, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(frog.x + 8, frog.y + 8, 2, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(frog.x + frog.w - 8, frog.y + 8, 2, 0, Math.PI * 2); ctx.fill();
+        }
+
+        function loop() { update(); draw(); if (running) animId = requestAnimationFrame(loop); }
+        draw();
+    </script>
+</body>
+
+</html>

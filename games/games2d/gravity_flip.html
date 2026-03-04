@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Gravity Flip</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #040020;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #38bdf8;
+            font-size: 1.5rem;
+            text-shadow: 0 0 16px #38bdf8;
+            margin-bottom: 6px
+        }
+
+        canvas {
+            border: 2px solid #38bdf8;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(56, 189, 248, .4);
+            cursor: pointer
+        }
+
+        #ui {
+            display: flex;
+            gap: 20px;
+            color: #38bdf8;
+            font-size: .85rem;
+            margin-top: 6px
+        }
+
+        #msg {
+            color: #facc15;
+            font-size: .9rem;
+            min-height: 20px;
+            margin-top: 4px
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔄 Gravity Flip</h1>
+    <div id="ui"><span>Score: <b id="sc">0</b></span><span>Level: <b id="lv">1</b></span><span>Lives: <b
+                id="li">3</b></span></div>
+    <canvas id="c" width="580" height="320"></canvas>
+    <div id="msg">Click or Space to flip gravity! Avoid the spikes!</div>
+    <script>
+        const cv = document.getElementById('c'), cx = cv.getContext('2d');
+        const W = 580, H = 320;
+        let p = { x: 80, y: H / 2, w: 24, h: 24, vy: 0, grav: 1 };
+        let score = 0, lives = 3, level = 1, over = false, won = false, dist = 0;
+        let obstacles = [], stars = [];
+        let speed = 3;
+
+        function makeObstacle(x) {
+            const top = Math.random() < .5;
+            const h = 40 + Math.random() * 80;
+            return { x, y: top ? 0 : H - h, w: 28, h, top };
+        }
+        function makeStar(x) { return { x, y: 60 + Math.random() * (H - 120), collected: false }; }
+
+        function init(l) {
+            p = { x: 80, y: H / 2, w: 24, h: 24, vy: 0, grav: 1 };
+            obstacles = []; stars = []; dist = 0; over = false; won = false;
+            speed = 3 + l * .5;
+            for (let i = 0; i < 8; i++) {
+                obstacles.push(makeObstacle(400 + i * 200));
+                if (Math.random() < .6) stars.push(makeStar(400 + i * 200 - 80));
+            }
+        }
+        init(1);
+
+        function flip() { if (!over && !won) { p.grav *= -1; p.vy = 0; } }
+        cv.addEventListener('click', flip);
+        document.addEventListener('keydown', e => {
+            if (e.code === 'Space') { e.preventDefault(); flip(); }
+            if (e.code === 'KeyR' && (over || won)) { level = 1; score = 0; lives = 3; init(1); document.getElementById('sc').textContent = 0; document.getElementById('li').textContent = 3; document.getElementById('lv').textContent = 1; }
+        });
+
+        function update() {
+            if (over || won) return;
+            p.vy += p.grav * .6; p.y += p.vy;
+            if (p.y < 0) { p.y = 0; p.vy = 0; }
+            if (p.y + p.h > H) { p.y = H - p.h; p.vy = 0; }
+            dist += speed; score = Math.floor(dist / 10) + stars.filter(s => s.collected).length * 50;
+            document.getElementById('sc').textContent = score;
+            // Move obstacles & stars
+            obstacles.forEach(o => o.x -= speed);
+            stars.forEach(s => s.x -= speed);
+            // Remove off-screen, add new
+            while (obstacles.length && obstacles[0].x < -60) { obstacles.shift(); obstacles.push(makeObstacle(obstacles[obstacles.length - 1].x + 160 + Math.random() * 80)); }
+            while (stars.length && stars[0].x < -30) { stars.shift(); stars.push(makeStar(stars[stars.length - 1].x + 120 + Math.random() * 80)); }
+            // Collect stars
+            stars.forEach(s => { if (!s.collected && p.x + p.w > s.x && p.x < s.x + 16 && p.y + p.h > s.y && p.y < s.y + 16) s.collected = true; });
+            // Hit obstacle
+            obstacles.forEach(o => {
+                if (p.x + p.w > o.x + 4 && p.x < o.x + o.w - 4 && p.y + p.h > o.y + 4 && p.y < o.y + o.h - 4) {
+                    lives--; document.getElementById('li').textContent = lives;
+                    p.x = 80; p.y = H / 2; p.vy = 0; p.grav = 1;
+                    if (lives <= 0) over = true;
+                }
+            });
+            // Level up
+            if (dist > 3000 * level) { level++; document.getElementById('lv').textContent = level; speed += .5; if (level > 5) won = true; }
+        }
+
+        function draw() {
+            cx.fillStyle = '#040020'; cx.fillRect(0, 0, W, H);
+            // Track lines
+            cx.strokeStyle = 'rgba(56,189,248,.1)'; cx.lineWidth = 1;
+            for (let i = 0; i < 10; i++) { cx.beginPath(); cx.moveTo(0, i * 36); cx.lineTo(W, i * 36); cx.stroke(); }
+            // Stars
+            stars.forEach(s => {
+                if (s.collected) return;
+                cx.fillStyle = '#facc15'; cx.font = '14px monospace'; cx.textAlign = 'center'; cx.fillText('★', s.x + 8, s.y + 12);
+            });
+            // Obstacles (spikes)
+            obstacles.forEach(o => {
+                cx.fillStyle = '#f43f5e'; cx.fillRect(o.x, o.y, o.w, o.h);
+                cx.fillStyle = '#ff8ca0'; cx.fillRect(o.x, o.top ? o.h - 4 : o.y, o.w, 4);
+                // spike tips
+                cx.fillStyle = '#fff';
+                for (let i = 0; i < 3; i++) {
+                    const tx = o.x + 5 + i * 10, ty = o.top ? o.h : o.y;
+                    cx.beginPath(); cx.moveTo(tx, ty); cx.lineTo(tx + 5, o.top ? ty + 12 : ty - 12); cx.lineTo(tx + 10, ty); cx.fill();
+                }
+            });
+            // Player
+            const glow = p.grav > 0 ? '#38bdf8' : '#a78bfa';
+            cx.fillStyle = glow; cx.fillRect(p.x, p.y, p.w, p.h);
+            cx.fillStyle = '#fff'; cx.fillRect(p.x + 5, p.y + 6, 6, 6); cx.fillRect(p.x + 13, p.y + 6, 6, 6);
+            // Arrow showing gravity
+            cx.fillStyle = glow; cx.font = '14px monospace'; cx.textAlign = 'center'; cx.fillText(p.grav > 0 ? '▼' : '▲', p.x + p.w / 2, p.grav > 0 ? p.y - 4 : p.y + p.h + 14);
+            if (over) { cx.fillStyle = 'rgba(0,0,0,.8)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#f43f5e'; cx.font = 'bold 40px monospace'; cx.textAlign = 'center'; cx.fillText('GAME OVER', W / 2, H / 2 - 16); cx.fillStyle = '#aaa'; cx.font = '16px monospace'; cx.fillText('Score: ' + score + ' | R to restart', W / 2, H / 2 + 18); }
+            if (won) { cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#facc15'; cx.font = 'bold 44px monospace'; cx.textAlign = 'center'; cx.fillText('YOU WIN! 🏆', W / 2, H / 2 - 20); cx.fillStyle = '#38bdf8'; cx.font = '20px monospace'; cx.fillText('Score: ' + score, W / 2, H / 2 + 20); cx.fillStyle = '#aaa'; cx.font = '14px monospace'; cx.fillText('R to play again', W / 2, H / 2 + 50); }
+        }
+        function loop() { update(); draw(); requestAnimationFrame(loop); } loop();
+    </script>
+
+    <script src="../mobile_controls.js"></script>
+</body>
+
+</html>

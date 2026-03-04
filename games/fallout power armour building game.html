@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power Armor: Fallout 4 Workshop</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Share+Tech+Mono&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --pip-green: #18ff62;
+            --pip-green-bg: rgba(24, 255, 98, 0.05);
+            --pip-green-dim: rgba(24, 255, 98, 0.2);
+            --ui-bg: rgba(5, 15, 5, 0.85);
+            --accent: #ffcc00;
+            /* Fallout 4 Station Yellow */
+            --border: 1px solid var(--pip-green-dim);
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #010101;
+            color: var(--pip-green);
+            font-family: 'Share Tech Mono', monospace;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Fallout 4 CRT Overlay */
+        .crt-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%),
+                linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        .scanlines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1) 1px, transparent 1px, transparent 2px);
+            pointer-events: none;
+            z-index: 51;
+        }
+
+        /* HUD Elements */
+        #hud-left {
+            position: absolute;
+            bottom: 40px;
+            left: 40px;
+            width: 300px;
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        #hud-right {
+            position: absolute;
+            bottom: 40px;
+            right: 40px;
+            width: 300px;
+            z-index: 20;
+            pointer-events: none;
+            text-align: right;
+        }
+
+        .hud-module {
+            background: var(--ui-bg);
+            border-top: 2px solid var(--pip-green);
+            padding: 15px;
+            margin-top: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            position: relative;
+        }
+
+        .hud-module::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: 0;
+            width: 30%;
+            height: 2px;
+            background: var(--pip-green);
+            box-shadow: 0 0 10px var(--pip-green);
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .stat-bar-outer {
+            height: 6px;
+            background: rgba(0, 0, 0, 0.4);
+            overflow: hidden;
+        }
+
+        .stat-bar-inner {
+            height: 100%;
+            background: var(--pip-green);
+            transition: width 0.5s;
+            width: 100%;
+        }
+
+        /* Customizer Sidebar - FO4 Style */
+        #customizer-panel {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 400px;
+            height: 100%;
+            background: rgba(2, 8, 2, 0.95);
+            border-left: 1px solid var(--pip-green-dim);
+            z-index: 30;
+            transform: translateX(0);
+            transition: 0.4s;
+            display: flex;
+            flex-direction: column;
+            pointer-events: auto;
+        }
+
+        #customizer-panel.hidden {
+            transform: translateX(100%);
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--pip-green-dim);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+            color: var(--pip-green-dim);
+        }
+
+        .tab.active {
+            color: var(--pip-green);
+            border-bottom: 2px solid var(--pip-green);
+            background: var(--pip-green-bg);
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .category-header {
+            color: var(--accent);
+            font-family: Orbitron;
+            font-size: 0.75rem;
+            margin: 20px 0 10px;
+            border-bottom: 1px solid rgba(255, 204, 0, 0.2);
+            padding-bottom: 5px;
+        }
+
+        .part-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .part-item {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--pip-green-dim);
+            padding: 10px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .part-item:hover {
+            background: var(--pip-green-bg);
+            border-color: var(--pip-green);
+        }
+
+        .part-item.active {
+            background: var(--pip-green-dim);
+            border-color: var(--pip-green);
+            color: #fff;
+        }
+
+        /* Top Title */
+        #top-header {
+            position: absolute;
+            top: 30px;
+            left: 40px;
+            z-index: 20;
+            display: flex;
+            align-items: baseline;
+            gap: 15px;
+        }
+
+        .sys-title {
+            font-family: Orbitron;
+            font-size: 1.2rem;
+            font-weight: bold;
+            letter-spacing: 4px;
+        }
+
+        .sys-ver {
+            font-size: 0.7rem;
+            opacity: 0.5;
+        }
+
+        /* Loader */
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 1s;
+        }
+
+        .btn {
+            background: rgba(10, 25, 10, 0.8);
+            border: 1px solid var(--pip-green);
+            color: var(--pip-green);
+            padding: 8px 15px;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-family: 'Share Tech Mono';
+            font-size: 0.8rem;
+            margin: 10px;
+            pointer-events: auto;
+        }
+
+        .btn:hover {
+            background: var(--pip-green);
+            color: #000;
+            box-shadow: 0 0 10px var(--pip-green);
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            z-index: 20;
+        }
+
+        ::-webkit-scrollbar {
+            width: 3px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--pip-green-dim);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="loader">
+        <h2 style="font-family:Orbitron; letter-spacing:10px; color:#fff;">SYNCING CHASSIS</h2>
+        <div style="width:400px; height:2px; background:#111; margin:20px 0;">
+            <div id="load-progress"
+                style="width:0%; height:100%; background:var(--pip-green); box-shadow:0 0 20px var(--pip-green);"></div>
+        </div>
+        <p id="load-status" style="font-size:0.7rem; opacity:0.6; text-transform:uppercase;">Authenticating with Diamond
+            City Workshop...</p>
+    </div>
+
+    <div class="crt-overlay"></div>
+    <div class="scanlines"></div>
+
+    <div id="top-header">
+        <div class="sys-title">POWER ARMOR STATION</div>
+        <div class="sys-ver">MODEL IV MODULE [v.111]</div>
+    </div>
+
+    <div id="hud-left">
+        <div class="hud-module">
+            <div class="stat-row"><span>CHASSIS INTEGRITY</span><span id="stat-integrity">100%</span></div>
+            <div class="stat-bar-outer">
+                <div class="stat-bar-inner" id="bar-integrity"></div>
+            </div>
+        </div>
+        <div class="hud-module">
+            <div class="stat-row"><span>FUSION CORE LEVEL</span><span id="stat-power">98.2%</span></div>
+            <div class="stat-bar-outer">
+                <div class="stat-bar-inner" id="bar-power"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="hud-right">
+        <div class="hud-module">
+            <div class="stat-row"><span>WEIGHT LOAD</span><span id="stat-mass">0 KG</span></div>
+            <div class="stat-row"><span>DR PROTECTION</span><span id="stat-dr">0</span></div>
+            <div class="stat-row"><span>ER PROTECTION</span><span id="stat-er">0</span></div>
+        </div>
+    </div>
+
+    <div id="controls">
+        <button class="btn" onclick="toggleCustomizer()">🔧 MODIFICATIONS</button>
+        <button class="btn" onclick="randomizeSuit()">🎲 RANDOMIZE</button>
+        <button class="btn" onclick="resetView()">📷 RESET CAM</button>
+    </div>
+
+    <div id="customizer-panel" class="hidden">
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('armor')">Armor Pieces</div>
+            <div class="tab" onclick="switchTab('paint')">Paint Jobs</div>
+        </div>
+
+        <div id="tab-armor" class="content">
+            <!-- Dynamic Injection -->
+        </div>
+
+        <div id="tab-paint" class="content" style="display:none;">
+            <div class="category-header">CHASSIS FINISH</div>
+            <div class="part-list" id="paint-list">
+                <!-- Paint Injected Here -->
+            </div>
+            <div class="category-header">CUSTOM PIGMENT</div>
+            <input type="color" id="color-p" style="width:100%; height:40px; background:none; border:1px solid #333;"
+                oninput="applyCustomColor(this.value)">
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+
+    <script>
+        // --- CONSTANTS & DATABASE ---
+        const ARMOR_TYPES = ["None", "T-45", "T-51", "T-60", "X-01", "Hellfire", "Raider", "Excavator", "Ultracite"];
+        const SLOTS = ["Helmet", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg"];
+
+        const PAINT_JOBS = [
+            { name: "Factory Standard", color: 0x2a2a2a, m: 0.9, r: 0.35 },
+            { name: "Winterized", color: 0xd0d0d0, m: 0.4, r: 0.6 },
+            { name: "Military", color: 0x485123, m: 0.6, r: 0.7 },
+            { name: "Vault-Tec", color: 0x0047ab, m: 0.5, r: 0.4 },
+            { name: "Hot Rod Shark", color: 0xcc0000, m: 0.8, r: 0.2 },
+            { name: "BOS Sentinel", color: 0x1a1a1a, m: 1.0, r: 0.2 },
+            { name: "Institute White", color: 0xffffff, m: 0.3, r: 0.1 },
+            { name: "Rusted Husk", color: 0x5a2300, m: 0.2, r: 0.9, oil: true }
+        ];
+
+        // --- STATE ---
+        let currentSuit = {
+            Helmet: "T-60", Torso: "T-60", "Left Arm": "T-60", "Right Arm": "T-60", "Left Leg": "T-60", "Right Leg": "T-60"
+        };
+        let currentPaint = PAINT_JOBS[0];
+
+        // --- THREE.JS ---
+        let scene, camera, renderer, controls, clock;
+        let armorGroup = new THREE.Group();
+        let chassisGroup = new THREE.Group();
+        let stationGroup = new THREE.Group();
+        let cubeCamera, cubeRenderTarget;
+
+        init();
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x020202);
+            scene.fog = new THREE.FogExp2(0x020202, 0.1);
+
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(4, 2, 6);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            document.body.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.target.set(0, 1.2, 0);
+            controls.maxDistance = 15;
+            controls.minDistance = 2;
+
+            clock = new THREE.Clock();
+
+            // Reflection Probe
+            cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256, { format: THREE.RGBFormat, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter });
+            cubeCamera = new THREE.CubeCamera(0.1, 10, cubeRenderTarget);
+            scene.add(cubeCamera);
+
+            setupWorkshop();
+            setupChassis();
+            scene.add(armorGroup);
+            updateSuit();
+            buildUI();
+
+            // Loader Logic
+            let p = 0;
+            const iv = setInterval(() => {
+                p += 5;
+                document.getElementById('load-progress').style.width = p + '%';
+                if (p >= 100) {
+                    clearInterval(iv);
+                    setTimeout(() => {
+                        document.getElementById('loader').style.opacity = 0;
+                        setTimeout(() => document.getElementById('loader').style.display = 'none', 1000);
+                    }, 500);
+                }
+            }, 50);
+
+            animate();
+        }
+
+        function setupWorkshop() {
+            // THE ICONIC YELLOW STATION
+            const stationMat = new THREE.MeshStandardMaterial({ color: 0xffcc00, metalness: 0.6, roughness: 0.4 });
+            const darkMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, metalness: 0.8, roughness: 0.3 });
+
+            // Vertical Posts
+            for (let i of [-1, 1]) {
+                const post = new THREE.Mesh(new THREE.BoxGeometry(0.2, 4, 0.2), stationMat);
+                post.position.set(i * 1.5, 2, -1);
+                stationGroup.add(post);
+
+                // Side Arms
+                const arm = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.15, 0.15), stationMat);
+                arm.position.set(i * 0.75, 3, -1);
+                stationGroup.add(arm);
+
+                // Diagonal Braces
+                const brace = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1, 0.1), stationMat);
+                brace.position.set(i * 1.3, 3.5, -1);
+                brace.rotation.z = i * 0.8;
+                stationGroup.add(brace);
+            }
+
+            // Top Beam
+            const topBeam = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.2, 0.25), stationMat);
+            topBeam.position.set(0, 3.9, -1);
+            stationGroup.add(topBeam);
+
+            // Clamps (Mechanical feel)
+            for (let i of [-1, 1]) {
+                const clamp = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.1, 0.1), darkMat);
+                clamp.position.set(i * 0.8, 1.8, -0.8);
+                stationGroup.add(clamp);
+            }
+
+            // Floor (Industrial Concrete)
+            const floorGeo = new THREE.PlaneGeometry(50, 50);
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x080808, roughness: 0.3, metalness: 0.5 });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            stationGroup.add(floor);
+
+            scene.add(stationGroup);
+
+            // LIGHTING (RED ROCKET STYLE)
+            const keyLight = new THREE.SpotLight(0xfff0dd, 5); // Warm Industrial
+            keyLight.position.set(5, 5, 5);
+            keyLight.angle = 0.4;
+            keyLight.penumbra = 0.3;
+            keyLight.castShadow = true;
+            keyLight.shadow.mapSize.set(2048, 2048);
+            scene.add(keyLight);
+
+            const rimLight = new THREE.PointLight(0x18ff62, 5, 5); // Phosphor Green Rim
+            rimLight.position.set(-2, 2, -2);
+            scene.add(rimLight);
+
+            const moonLight = new THREE.DirectionalLight(0x4455aa, 0.5); // Cool Ambient
+            moonLight.position.set(-10, 10, -10);
+            scene.add(moonLight);
+
+            scene.add(new THREE.AmbientLight(0x202020, 0.5));
+
+            // Volumetric Dust
+            const dGeo = new THREE.BufferGeometry();
+            const dPos = new Float32Array(3000 * 3);
+            for (let i = 0; i < 9000; i++) dPos[i] = (Math.random() - 0.5) * 15;
+            dGeo.setAttribute('position', new THREE.BufferAttribute(dPos, 3));
+            const dMat = new THREE.PointsMaterial({ color: 0x18ff62, size: 0.015, transparent: true, opacity: 0.15 });
+            scene.add(new THREE.Points(dGeo, dMat));
+        }
+
+        function setupChassis() {
+            // MECHANICAL SKELETON
+            const cMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9, roughness: 0.2 });
+
+            // Spine
+            const spine = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.5, 8), cMat);
+            spine.position.y = 1;
+            chassisGroup.add(spine);
+
+            // Pelvis
+            const pelvis = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.2, 0.3), cMat);
+            pelvis.position.y = 0.5;
+            chassisGroup.add(pelvis);
+
+            // Servo Blocks (Joints)
+            function addJoint(x, y, z) {
+                const j = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.15), cMat);
+                j.position.set(x, y, z);
+                chassisGroup.add(j);
+                return j;
+            }
+            addJoint(-0.35, 1.6, 0); // Shoulder L
+            addJoint(0.35, 1.6, 0); // Shoulder R
+            addJoint(-0.25, 0.4, 0); // Hip L
+            addJoint(0.25, 0.4, 0); // Hip R
+
+            scene.add(chassisGroup);
+        }
+
+        // --- MATERIAL ENGINE ---
+        function getChromeMaterial(isChassis = false) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+
+            const col = isChassis ? "#111111" : "#" + currentPaint.color.toString(16).padStart(6, '0');
+            ctx.fillStyle = col;
+            ctx.fillRect(0, 0, 512, 512);
+
+            // Heavy Wear & Scratches
+            for (let i = 0; i < 1500; i++) {
+                ctx.strokeStyle = `rgba(255, 255, 255, ${Math.random() * 0.05})`;
+                ctx.lineWidth = Math.random() * 2;
+                ctx.beginPath();
+                const x = Math.random() * 512; const y = Math.random() * 512;
+                ctx.moveTo(x, y); ctx.lineTo(x + Math.random() * 15, y + Math.random() * 3); ctx.stroke();
+            }
+
+            // Oil Leaks (FO4 Style)
+            if (currentPaint.oil || isChassis) {
+                for (let i = 0; i < 30; i++) {
+                    const x = Math.random() * 512; const y = Math.random() * 512;
+                    const grad = ctx.createRadialGradient(x, y, 0, x, y, 40);
+                    grad.addColorStop(0, 'rgba(0,0,0,0.6)');
+                    grad.addColorStop(1, 'rgba(0,0,0,0)');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath(); ctx.arc(x, y, 40, 0, Math.PI * 2); ctx.fill();
+                }
+            }
+
+            const tex = new THREE.CanvasTexture(canvas);
+            return new THREE.MeshStandardMaterial({
+                map: tex,
+                metalness: isChassis ? 0.95 : currentPaint.m,
+                roughness: isChassis ? 0.2 : currentPaint.r,
+                envMap: cubeRenderTarget.texture,
+                envMapIntensity: 1.5,
+                bumpMap: tex,
+                bumpScale: 0.003
+            });
+        }
+
+        // --- GEOMETRY GENERATOR (UNIQUE PER TYPE) ---
+        function createArmorPiece(type, slot) {
+            if (type === "None") return null;
+            const group = new THREE.Group();
+            const mat = getChromeMaterial();
+            const detMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, metalness: 0.9, roughness: 0.3 });
+            const side = slot.includes("Left") ? -1 : 1;
+
+            if (slot === "Helmet") {
+                const s = type === "X-01" ? 1.4 : 1.1;
+                let geo = type === "X-01" ? new THREE.SphereGeometry(0.2, 16, 16) : new THREE.BoxGeometry(0.35, 0.4, 0.45);
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.y = 1.95;
+                if (type === "X-01") mesh.scale.set(1.4, 1.2, 1.6);
+                group.add(mesh);
+
+                // Eyes
+                const vis = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.04, 0.1), new THREE.MeshBasicMaterial({ color: type === "X-01" ? 0xff3300 : 0x18ff62 }));
+                vis.position.set(0, 2.0, 0.25); group.add(vis);
+            } else if (slot === "Torso") {
+                const t = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.2, 0.6), mat);
+                t.position.y = 1.35; group.add(t);
+                if (type === "T-60") {
+                    const extra = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.3, 0.7), detMat);
+                    extra.position.set(0, 1.65, 0); group.add(extra);
+                }
+            } else if (slot.includes("Arm")) {
+                const a = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.1, 0.8), mat);
+                a.position.set(side * 0.7, 1.2, 0); group.add(a);
+                const pad = new THREE.Mesh(new THREE.SphereGeometry(0.25, 12, 12), mat);
+                pad.position.set(side * 0.7, 1.6, 0); pad.scale.set(1.4, 1, 1);
+                group.add(pad);
+                if (type === "Raider") {
+                    const spike = new THREE.Mesh(new THREE.CylinderGeometry(0, 0.05, 0.4), detMat);
+                    spike.position.set(side * 1.0, 1.7, 0); spike.rotation.z = side * 1.2; group.add(spike);
+                }
+            } else if (slot.includes("Leg")) {
+                const l = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.15, 1.0), mat);
+                l.position.set(side * 0.35, 0.5, 0); group.add(l);
+                if (type === "EXCAVATOR") {
+                    const br = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.4), detMat);
+                    br.position.set(side * 0.35, 0.2, 0.2); group.add(br);
+                }
+            }
+
+            return group;
+        }
+
+        function updateSuit() {
+            armorGroup.clear();
+            let mass = 0, dr = 0, er = 0;
+
+            SLOTS.forEach(slot => {
+                const type = currentSuit[slot];
+                const mesh = createArmorPiece(type, slot);
+                if (mesh) armorGroup.add(mesh);
+
+                // Stats Logic
+                if (type !== "None") {
+                    mass += 15; dr += 250; er += 150;
+                }
+            });
+
+            // Update HUD
+            document.getElementById('stat-mass').innerText = mass + " KG";
+            document.getElementById('stat-dr').innerText = dr.toLocaleString();
+            document.getElementById('stat-er').innerText = er.toLocaleString();
+            document.getElementById('bar-integrity').style.width = '100%';
+        }
+
+        // --- UI SYSTEM ---
+        function buildUI() {
+            const container = document.getElementById('tab-armor');
+            container.innerHTML = '';
+            SLOTS.forEach(slot => {
+                const header = document.createElement('div');
+                header.className = 'category-header'; header.innerText = slot.toUpperCase();
+                container.appendChild(header);
+
+                const list = document.createElement('div');
+                list.className = 'part-list';
+                ARMOR_TYPES.forEach(type => {
+                    const item = document.createElement('div');
+                    item.className = 'part-item' + (currentSuit[slot] === type ? ' active' : '');
+                    item.innerText = type;
+                    item.onclick = () => { currentSuit[slot] = type; updateSuit(); buildUI(); };
+                    list.appendChild(item);
+                });
+                container.appendChild(list);
+            });
+
+            // Paints
+            const paintC = document.getElementById('paint-list');
+            paintC.innerHTML = '';
+            PAINT_JOBS.forEach(pj => {
+                const item = document.createElement('div');
+                item.className = 'part-item' + (currentPaint.name === pj.name ? ' active' : '');
+                item.innerText = pj.name;
+                item.onclick = () => { currentPaint = pj; updateSuit(); buildUI(); };
+                paintC.appendChild(item);
+            });
+        }
+
+        function switchTab(t) {
+            document.getElementById('tab-armor').style.display = t === 'armor' ? 'block' : 'none';
+            document.getElementById('tab-paint').style.display = t === 'paint' ? 'block' : 'none';
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function toggleCustomizer() {
+            document.getElementById('customizer-panel').classList.toggle('hidden');
+        }
+
+        function randomizeSuit() {
+            SLOTS.forEach(s => currentSuit[s] = ARMOR_TYPES[Math.floor(Math.random() * ARMOR_TYPES.length)]);
+            currentPaint = PAINT_JOBS[Math.floor(Math.random() * PAINT_JOBS.length)];
+            updateSuit(); buildUI();
+        }
+
+        function resetView() {
+            controls.target.set(0, 1.2, 0);
+            camera.position.set(4, 2, 6);
+        }
+
+        function applyCustomColor(c) {
+            currentPaint = { name: "Custom Pigment", color: parseInt(c.replace('#', ''), 16), m: 0.8, r: 0.3 };
+            updateSuit();
+        }
+
+        // --- LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            const time = clock.getElapsedTime();
+
+            controls.update();
+
+            // Reflection Probe Logic
+            armorGroup.visible = false;
+            chassisGroup.visible = false;
+            cubeCamera.update(renderer, scene);
+            armorGroup.visible = true;
+            chassisGroup.visible = true;
+
+            // Subtle Motion
+            armorGroup.position.y = Math.sin(time) * 0.02;
+            chassisGroup.position.y = Math.sin(time) * 0.02;
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    </script>
+</body>
+
+</html>

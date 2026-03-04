@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Lunar Lander | The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #050510;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #e2e8f0
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            letter-spacing: 3px;
+            background: linear-gradient(135deg, #a78bfa, #38bdf8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent
+        }
+
+        canvas {
+            border: 2px solid #1e1e3f;
+            border-radius: 6px;
+            box-shadow: 0 0 30px rgba(124, 58, 237, 0.3)
+        }
+
+        #hud {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 8px;
+            font-size: .9rem;
+            color: #94a3b8
+        }
+
+        #hud b {
+            color: #a78bfa
+        }
+
+        #msg {
+            margin-top: 12px;
+            font-size: 1.1rem;
+            min-height: 1.5em;
+            color: #fff;
+            text-align: center
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 9px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: .95rem;
+            font-weight: bold;
+            cursor: pointer;
+            letter-spacing: 1px
+        }
+
+        #startBtn {
+            background: linear-gradient(135deg, #7c3aed, #06b6d4);
+            color: #fff
+        }
+
+        #menuBtn {
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            border: 1px solid #475569;
+            display: none
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>🚀 LUNAR LANDER</h1>
+    <div id="hud"><span>FUEL: <b id="fuel">200</b></span><span>V-SPEED: <b id="vspeed">0</b></span><span>SCORE: <b
+                id="score">0</b></span></div>
+    <canvas id="c" width="560" height="480"></canvas>
+    <div id="msg">↑ Thrust &nbsp;|&nbsp; ← → Rotate &nbsp;|&nbsp; Land on the pad!</div>
+    <button id="startBtn" onclick="startGame()">START</button>
+    <button id="menuBtn" onclick="window.close()">🏠 Return to Menu</button>
+    <script src="../scripts/scores.js"></script>
+    <script>
+        const C = document.getElementById('c'), ctx = C.getContext('2d');
+        const W = 560, H = 480;
+        let ship, fuel, score, running, animId;
+        const PAD = { x: 220, w: 80, y: 0 };
+        const GY = 0.04; // gravity
+
+        function makeTerrain() {
+            const pts = [{ x: 0, y: H - 60 }];
+            let x = 0;
+            while (x < W) {
+                x += Math.random() * 60 + 30;
+                pts.push({ x, y: H - 60 - Math.random() * 100 });
+            }
+            pts.push({ x: W, y: H - 60 });
+            // flatten landing pad
+            PAD.y = H - 80;
+            pts.splice(3, 0, { x: PAD.x, y: PAD.y }, { x: PAD.x + PAD.w, y: PAD.y });
+            return pts;
+        }
+
+        let terrain = [];
+
+        function startGame() {
+            fuel = 200; score = 0; running = true;
+            ship = { x: W / 2, y: 60, vx: 0, vy: 0, angle: 0, thrust: false, r: 14 };
+            terrain = makeTerrain();
+            document.getElementById('menuBtn').style.display = 'none';
+            document.getElementById('msg').textContent = '↑ Thrust  |  ← → Rotate';
+            if (animId) cancelAnimationFrame(animId);
+            loop();
+        }
+
+        const keys = {};
+        document.addEventListener('keydown', e => { keys[e.key] = true; e.preventDefault && ['ArrowUp', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key) && e.preventDefault(); if (e.key === ' ' && !running) startGame(); });
+        document.addEventListener('keyup', e => { keys[e.key] = false; });
+
+        function update() {
+            if (!running) return;
+            // Rotate
+            if (keys['ArrowLeft']) ship.angle -= 0.04;
+            if (keys['ArrowRight']) ship.angle += 0.04;
+            // Thrust
+            ship.thrust = (keys['ArrowUp'] || keys[' ']) && fuel > 0;
+            if (ship.thrust) {
+                ship.vx += Math.sin(ship.angle) * 0.12;
+                ship.vy -= Math.cos(ship.angle) * 0.14;
+                fuel = Math.max(0, fuel - 1);
+                document.getElementById('fuel').textContent = fuel;
+            }
+            ship.vy += GY;
+            ship.x += ship.vx;
+            ship.y += ship.vy;
+            // Wrap X
+            if (ship.x < 0) ship.x = W; if (ship.x > W) ship.x = 0;
+            // Check collision with terrain
+            const vspd = Math.round(ship.vy * 100) / 100;
+            document.getElementById('vspeed').textContent = vspd.toFixed(2);
+            for (let i = 0; i < terrain.length - 1; i++) {
+                const a = terrain[i], b = terrain[i + 1];
+                if (ship.x >= a.x && ship.x <= b.x) {
+                    const ty = a.y + (b.y - a.y) * ((ship.x - a.x) / (b.x - a.x));
+                    if (ship.y + ship.r >= ty) {
+                        running = false;
+                        const onPad = ship.x >= PAD.x && ship.x <= PAD.x + PAD.w;
+                        const safe = Math.abs(ship.vy) < 1.2 && Math.abs(ship.vx) < 0.8 && Math.abs(ship.angle) < 0.3;
+                        if (onPad && safe) {
+                            score = Math.round(fuel * 3 + 1000);
+                            document.getElementById('score').textContent = score;
+                            document.getElementById('msg').textContent = `🎉 Perfect Landing! Score: ${score}`;
+                            PizzaScores.save('Lunar Lander', score, `Fuel left: ${fuel}`);
+                        } else if (onPad) {
+                            document.getElementById('msg').textContent = `💥 Too fast! V-speed: ${vspd.toFixed(2)}`;
+                            PizzaScores.save('Lunar Lander', 0, 'Crashed on pad');
+                        } else {
+                            document.getElementById('msg').textContent = '💥 Crashed! Press Start.';
+                            PizzaScores.save('Lunar Lander', 0, 'Crash');
+                        }
+                        document.getElementById('menuBtn').style.display = '';
+                        break;
+                    }
+                }
+            }
+            if (ship.y > H) { running = false; document.getElementById('msg').textContent = 'Lost in space!'; document.getElementById('menuBtn').style.display = ''; }
+        }
+
+        function draw() {
+            ctx.fillStyle = '#050510'; ctx.fillRect(0, 0, W, H);
+            // Stars
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            for (let i = 0; i < 60; i++) { ctx.fillRect((i * 73) % W, (i * 47) % H, 1, 1); }
+            // Terrain
+            ctx.beginPath(); ctx.moveTo(terrain[0].x, terrain[0].y);
+            terrain.forEach(p => ctx.lineTo(p.x, p.y));
+            ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
+            ctx.fillStyle = '#374151'; ctx.fill();
+            ctx.strokeStyle = '#6b7280'; ctx.lineWidth = 2; ctx.stroke();
+            // Landing pad
+            ctx.fillStyle = '#4ade80'; ctx.fillRect(PAD.x, PAD.y - 2, PAD.w, 4);
+            ctx.fillStyle = 'rgba(74,222,128,0.15)'; ctx.fillRect(PAD.x, PAD.y - 4, PAD.w, 6);
+            ctx.fillStyle = '#4ade80'; ctx.font = '10px monospace'; ctx.textAlign = 'center';
+            ctx.fillText('LAND HERE', PAD.x + PAD.w / 2, PAD.y - 8);
+            // Ship
+            ctx.save(); ctx.translate(ship.x, ship.y); ctx.rotate(ship.angle);
+            ctx.fillStyle = '#e2e8f0'; ctx.beginPath();
+            ctx.moveTo(0, -ship.r); ctx.lineTo(ship.r * 0.6, ship.r); ctx.lineTo(-ship.r * 0.6, ship.r); ctx.closePath(); ctx.fill();
+            ctx.fillStyle = '#38bdf8'; ctx.beginPath(); ctx.arc(0, -ship.r * 0.2, ship.r * 0.3, 0, Math.PI * 2); ctx.fill();
+            // Thruster flame
+            if (ship.thrust && running) {
+                ctx.fillStyle = 'rgba(251,146,60,0.9)'; ctx.beginPath();
+                ctx.moveTo(-ship.r * 0.3, ship.r); ctx.lineTo(0, ship.r + 8 + Math.random() * 8); ctx.lineTo(ship.r * 0.3, ship.r); ctx.closePath(); ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        function loop() { update(); draw(); if (running) animId = requestAnimationFrame(loop); }
+        draw();
+    </script>
+</body>
+
+</html>

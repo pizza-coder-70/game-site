@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Number Guessing – The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0a0018;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Outfit', monospace;
+            color: #fff
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
+
+        h1 {
+            color: #a78bfa;
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            text-shadow: 0 0 20px #a78bfa
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(167, 139, 250, 0.3);
+            border-radius: 20px;
+            padding: 40px;
+            width: min(400px, 90vw);
+            text-align: center
+        }
+
+        input[type=number] {
+            width: 120px;
+            padding: 10px;
+            font-size: 1.5rem;
+            text-align: center;
+            border-radius: 10px;
+            border: 2px solid #7c3aed;
+            background: #1e1b4b;
+            color: #fff;
+            outline: none;
+            margin: 16px 0
+        }
+
+        input:focus {
+            border-color: #a78bfa;
+            box-shadow: 0 0 12px rgba(167, 139, 250, 0.3)
+        }
+
+        button {
+            padding: 12px 32px;
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            border: none;
+            color: #fff;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 6px;
+            transition: all .2s
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(124, 58, 237, 0.4)
+        }
+
+        #feedback {
+            font-size: 1.3rem;
+            margin: 16px 0;
+            min-height: 30px;
+            font-weight: 600
+        }
+
+        #history {
+            max-height: 120px;
+            overflow-y: auto;
+            margin-top: 12px;
+            text-align: left
+        }
+
+        #history li {
+            padding: 4px 0;
+            color: #94a3b8;
+            font-size: .85rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05)
+        }
+
+        #meta {
+            color: #64748b;
+            font-size: .9rem;
+            margin-top: 8px
+        }
+
+        select {
+            padding: 8px;
+            background: #1e1b4b;
+            color: #fff;
+            border: 1px solid #7c3aed;
+            border-radius: 8px;
+            font-size: .9rem;
+            margin-bottom: 12px
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🎯 Number Guessing</h1>
+    <div class="card">
+        <select id="diff" onchange="init()">
+            <option value="10">Easy (1–10)</option>
+            <option value="50" selected>Medium (1–50)</option>
+            <option value="100">Hard (1–100)</option>
+            <option value="500">Extreme (1–500)</option>
+        </select>
+        <div id="feedback">Guess the number!</div>
+        <input type="number" id="guess" min="1" placeholder="?" onkeydown="if(event.key==='Enter')check()">
+        <br>
+        <button onclick="check()">Guess!</button>
+        <button onclick="init()">New Game</button>
+        <div id="meta"></div>
+        <ol id="history"></ol>
+    </div>
+    <script>
+        let secret, range, attempts, maxAttempts, over;
+        function init() {
+            range = +document.getElementById('diff').value;
+            maxAttempts = range <= 10 ? 5 : range <= 50 ? 8 : range <= 100 ? 10 : 15;
+            secret = Math.floor(Math.random() * range) + 1;
+            attempts = 0; over = false;
+            document.getElementById('feedback').textContent = 'Guess the number!';
+            document.getElementById('feedback').style.color = '#a78bfa';
+            document.getElementById('meta').textContent = `Range: 1–${range} | Max guesses: ${maxAttempts}`;
+            document.getElementById('history').innerHTML = '';
+            document.getElementById('guess').value = '';
+            document.getElementById('guess').focus();
+        }
+        function check() {
+            if (over) return;
+            const g = +document.getElementById('guess').value;
+            if (!g || g < 1 || g > range) { document.getElementById('feedback').textContent = `Enter a number between 1 and ${range}`; return; }
+            attempts++;
+            const remaining = maxAttempts - attempts;
+            const li = document.createElement('li'); li.textContent = `Guess ${attempts}: ${g}`;
+            const fb = document.getElementById('feedback');
+            if (g === secret) {
+                fb.textContent = `🎉 Correct! You got it in ${attempts} guesses!`; fb.style.color = '#4ade80';
+                li.textContent += ` ✅`; over = true;
+            } else if (attempts >= maxAttempts) {
+                fb.textContent = `💀 Out of guesses! The number was ${secret}`; fb.style.color = '#ef4444';
+                li.textContent += ` ❌`; over = true;
+            } else {
+                const hot = Math.abs(g - secret) < range * 0.05, warm = Math.abs(g - secret) < range * 0.15;
+                const hint = g < secret ? '📈 Too low' : '📉 Too high';
+                const temp = hot ? '🔥 Burning hot!' : warm ? '♨️ Warm!' : '🧊 Cold!';
+                fb.textContent = `${hint} | ${temp} | ${remaining} guesses left`;
+                fb.style.color = hot ? '#f97316' : warm ? '#facc15' : '#38bdf8';
+                li.textContent += g < secret ? ' ↑' : ' ↓';
+            }
+            document.getElementById('history').prepend(li);
+            document.getElementById('guess').value = '';
+            document.getElementById('guess').focus();
+        }
+        init();
+    </script>
+</body>
+
+</html>

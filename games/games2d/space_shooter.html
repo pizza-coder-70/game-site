@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Space Shooter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #000208;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #818cf8;
+            font-size: 1.5rem;
+            text-shadow: 0 0 16px #818cf8;
+            margin-bottom: 6px
+        }
+
+        canvas {
+            border: 2px solid #818cf8;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(129, 140, 248, .4)
+        }
+
+        #ui {
+            display: flex;
+            gap: 20px;
+            color: #818cf8;
+            font-size: .85rem;
+            margin-top: 6px
+        }
+
+        #msg {
+            color: #facc15;
+            font-size: .85rem;
+            min-height: 20px;
+            margin-top: 4px
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🚀 Space Shooter</h1>
+    <div id="ui"><span>Score: <b id="sc">0</b></span><span>Lives: <b id="li">3</b></span><span>Wave: <b
+                id="wv">1</b></span></div>
+    <canvas id="c" width="560" height="420"></canvas>
+    <div id="msg">Mouse to aim | Click to shoot | WASD/Arrows to move</div>
+    <script>
+        const cv = document.getElementById('c'), cx = cv.getContext('2d');
+        const W = 560, H = 420;
+        let ship = { x: W / 2, y: H - 60, w: 28, h: 28, invuln: 0 };
+        let bullets = [], enemies = [], particles = [], stars = [];
+        let score = 0, lives = 3, wave = 1, over = false, won = false, mouse = { x: W / 2, y: 0 };
+        let keys = {};
+        document.addEventListener('keydown', e => { keys[e.code] = true; if (e.code.startsWith('Arrow')) e.preventDefault(); });
+        document.addEventListener('keyup', e => keys[e.code] = false);
+        cv.addEventListener('mousemove', e => { const r = cv.getBoundingClientRect(); mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top; });
+        let shootCD = 0;
+        cv.addEventListener('click', () => shoot());
+        document.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); shoot(); } });
+        // Stars
+        for (let i = 0; i < 120; i++)stars.push({ x: Math.random() * W, y: Math.random() * H, s: Math.random() * 2 + .5, sp: Math.random() * .5 + .2 });
+
+        function shoot() {
+            if (over || won || shootCD > 0) return;
+            const dx = mouse.x - ship.x, dy = mouse.y - ship.y; const len = Math.hypot(dx, dy);
+            bullets.push({ x: ship.x, y: ship.y, vx: dx / len * 12, vy: dy / len * 12, fromPlayer: true });
+            shootCD = 10;
+        }
+
+        function spawnWave(w) {
+            enemies = [];
+            for (let i = 0; i < 4 + w * 2; i++) {
+                const cols = ['#f43f5e', '#f97316', '#facc15', '#4ade80'];
+                enemies.push({ x: 60 + i * (W - 120) / (3 + w * 2), y: 40 + Math.floor(i / (4 + w)) * 40, w: 28, h: 22, hp: 1 + Math.floor(w / 2), maxHp: 1 + Math.floor(w / 2), vx: (i % 2 ? 1 : -1) * (1.5 + w * .3), vy: 0, shootCD: 60 + Math.random() * 80, col: cols[i % 4] });
+            }
+        }
+        spawnWave(1);
+
+        function explode(x, y, col) { for (let i = 0; i < 12; i++) { const a = Math.PI * 2 * i / 12; particles.push({ x, y, vx: Math.cos(a) * (2 + Math.random() * 3), vy: Math.sin(a) * (2 + Math.random() * 3), life: 30, col }); } }
+
+        function update() {
+            if (over || won) return;
+            shootCD--;
+            // Move ship
+            if (keys['ArrowLeft'] || keys['KeyA']) ship.x = Math.max(16, ship.x - 5);
+            if (keys['ArrowRight'] || keys['KeyD']) ship.x = Math.min(W - 16, ship.x + 5);
+            if (keys['ArrowUp'] || keys['KeyW']) ship.y = Math.max(16, ship.y - 5);
+            if (keys['ArrowDown'] || keys['KeyS']) ship.y = Math.min(H - 16, ship.y + 5);
+            if (ship.invuln > 0) ship.invuln--;
+            // Stars scroll
+            stars.forEach(s => { s.y += s.sp; if (s.y > H) s.y = 0; });
+            // Enemy move & shoot
+            enemies.forEach(e => {
+                e.x += e.vx; if (e.x <= e.w / 2 || e.x >= W - e.w / 2) { e.vx *= -1; e.y += 20; }
+                e.shootCD--; if (e.shootCD <= 0) { e.shootCD = 80 + Math.random() * 60; bullets.push({ x: e.x, y: e.y + 14, vx: 0, vy: 3 + wave * .5, fromPlayer: false, col: '#f43f5e' }); }
+            });
+            // Move bullets
+            bullets = bullets.filter(b => { b.x += b.vx; b.y += b.vy; return b.x > -10 && b.x < W + 10 && b.y > -10 && b.y < H + 10; });
+            // Bullet-enemy collisions
+            bullets = bullets.filter(b => {
+                if (!b.fromPlayer) return true;
+                for (let e of enemies) {
+                    if (Math.hypot(b.x - e.x, b.y - e.y) < e.w / 2 + 6) {
+                        e.hp--; score += 10; document.getElementById('sc').textContent = score;
+                        if (e.hp <= 0) { explode(e.x, e.y, e.col); score += 50; document.getElementById('sc').textContent = score; enemies = enemies.filter(x => x !== e); }
+                        return false;
+                    }
+                }
+                return true;
+            });
+            // Enemy bullets hit player
+            bullets = bullets.filter(b => {
+                if (b.fromPlayer) return true;
+                if (ship.invuln <= 0 && Math.hypot(b.x - ship.x, b.y - ship.y) < 18) { lives--; ship.invuln = 90; document.getElementById('li').textContent = lives; explode(ship.x, ship.y, '#818cf8'); if (lives <= 0) over = true; return false; }
+                return true;
+            });
+            // Particles
+            particles = particles.filter(p => { p.x += p.vx; p.y += p.vy; p.life--; return p.life > 0; });
+            // Next wave
+            if (enemies.length === 0) { wave++; document.getElementById('wv').textContent = wave; if (wave > 5) { won = true; return; } spawnWave(wave); }
+        }
+
+        function draw() {
+            cx.fillStyle = '#000208'; cx.fillRect(0, 0, W, H);
+            stars.forEach(s => { cx.fillStyle = `rgba(255,255,255,${s.s / 3})`; cx.fillRect(s.x, s.y, s.s, s.s); });
+            particles.forEach(p => { cx.globalAlpha = p.life / 30; cx.fillStyle = p.col; cx.fillRect(p.x - 2, p.y - 2, 4, 4); }); cx.globalAlpha = 1;
+            // Ship
+            const sa = ship.invuln > 0 && Math.floor(ship.invuln / 8) % 2 === 0 ? .3 : 1;
+            cx.globalAlpha = sa;
+            cx.fillStyle = '#818cf8'; cx.beginPath(); cx.moveTo(ship.x, ship.y - 16); cx.lineTo(ship.x - 12, ship.y + 12); cx.lineTo(ship.x + 12, ship.y + 12); cx.closePath(); cx.fill();
+            cx.fillStyle = '#38bdf8'; cx.fillRect(ship.x - 4, ship.y, 8, 12);
+            cx.globalAlpha = 1;
+            // Enemies
+            enemies.forEach(e => { cx.fillStyle = e.col; cx.beginPath(); cx.moveTo(e.x, e.y + e.h / 2); cx.lineTo(e.x - e.w / 2, e.y - e.h / 2); cx.lineTo(e.x + e.w / 2, e.y - e.h / 2); cx.closePath(); cx.fill(); if (e.hp > 1) { cx.fillStyle = 'rgba(0,0,0,.5)'; cx.fillRect(e.x - 12, e.y - e.h / 2 - 8, 24, 4); cx.fillStyle = '#4ade80'; cx.fillRect(e.x - 12, e.y - e.h / 2 - 8, 24 * e.hp / e.maxHp, 4); } });
+            // Bullets
+            bullets.forEach(b => { cx.fillStyle = b.fromPlayer ? '#22d3ee' : '#f43f5e'; cx.fillRect(b.x - 3, b.y - 7, 6, 14); });
+            // Aim line
+            cx.strokeStyle = 'rgba(255,255,255,.1)'; cx.setLineDash([4, 6]); cx.beginPath(); cx.moveTo(ship.x, ship.y); cx.lineTo(mouse.x, mouse.y); cx.stroke(); cx.setLineDash([]);
+            if (over) { cx.fillStyle = 'rgba(0,0,0,.8)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#f43f5e'; cx.font = 'bold 42px monospace'; cx.textAlign = 'center'; cx.fillText('GAME OVER', W / 2, H / 2 - 20); cx.fillStyle = '#aaa'; cx.font = '18px monospace'; cx.fillText('Score: ' + score + ' | R to restart', W / 2, H / 2 + 20); }
+            if (won) { cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#facc15'; cx.font = 'bold 46px monospace'; cx.textAlign = 'center'; cx.fillText('YOU WIN! 🏆', W / 2, H / 2 - 24); cx.fillStyle = '#818cf8'; cx.font = '22px monospace'; cx.fillText('Score: ' + score, W / 2, H / 2 + 20); }
+        }
+        document.addEventListener('keydown', e => { if (e.code === 'KeyR' && (over || won)) { score = 0; lives = 3; wave = 1; over = false; won = false; ship.x = W / 2; ship.y = H - 60; ship.invuln = 0; bullets = []; particles = []; document.getElementById('sc').textContent = 0; document.getElementById('li').textContent = 3; document.getElementById('wv').textContent = 1; spawnWave(1); } });
+        function loop() { update(); draw(); requestAnimationFrame(loop); } loop();
+    </script>
+
+    <script src="../mobile_controls.js"></script>
+</body>
+
+</html>

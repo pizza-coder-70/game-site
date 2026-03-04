@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Stack Tower – The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0a0a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #a78bfa;
+            font-size: 2rem;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px #a78bfa
+        }
+
+        canvas {
+            border: 2px solid #a78bfa;
+            box-shadow: 0 0 30px rgba(167, 139, 250, 0.4)
+        }
+
+        #hud {
+            margin-top: 10px;
+            color: #a78bfa
+        }
+
+        #ctrl {
+            margin-top: 6px;
+            color: #555;
+            font-size: .8rem
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🏗️ Stack Tower</h1>
+    <canvas id="c" width="400" height="600"></canvas>
+    <div id="hud">Score: <span id="sc">0</span> &nbsp; Best: <span id="bs">0</span></div>
+    <div id="ctrl">Click / Space to drop the block! | Stack perfectly for bonus!</div>
+    <script>
+        const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+        const W = 400, H = 600, BASE_H = 20;
+        let blocks, moving, score, best = 0, over, speed, dir;
+        const COLORS = ['#7c3aed', '#a855f7', '#c084fc', '#e879f9', '#f472b6', '#fb7185', '#f97316', '#fbbf24', '#4ade80', '#22d3ee', '#60a5fa'];
+        function init() {
+            blocks = [{ x: 100, y: H - BASE_H, w: 200, h: BASE_H, color: '#334155' }];
+            moving = { x: -200, y: H - BASE_H * 2, w: 200, h: BASE_H, dir: 1, color: COLORS[0] };
+            score = 0; over = false; speed = 2; dir = 1;
+            document.getElementById('sc').textContent = 0;
+        }
+        function drop() {
+            if (over) return;
+            const prev = blocks[blocks.length - 1];
+            // find overlap
+            const left = Math.max(moving.x, prev.x); const right = Math.min(moving.x + moving.w, prev.x + prev.w);
+            const overlap = right - left;
+            if (overlap <= 0) { over = true; return; }
+            const perfect = Math.abs(overlap - prev.w) < 5;
+            const newBlock = { x: left, y: prev.y - BASE_H, w: overlap, h: BASE_H, color: moving.color };
+            blocks.push(newBlock); score += perfect ? 20 : 10; document.getElementById('sc').textContent = score; if (score > best) { best = score; document.getElementById('bs').textContent = best; }
+            // scroll view
+            if (blocks.length > 20) { const shift = BASE_H; blocks.forEach(b => b.y += shift); }
+            speed = Math.min(6, 2 + blocks.length * 0.1);
+            moving = { x: -overlap - 10, y: newBlock.y - BASE_H, w: overlap, dir: 1, color: COLORS[blocks.length % COLORS.length], h: BASE_H };
+        }
+        document.addEventListener('keydown', e => { if (e.key === ' ') { drop(); e.preventDefault(); } if (e.key === 'r' || e.key === 'R') init(); });
+        canvas.addEventListener('click', drop);
+        function update() {
+            if (over) return;
+            moving.x += speed * moving.dir;
+            if (moving.x + moving.w > W + 50) { moving.dir = -1; }
+            if (moving.x < -50) { moving.dir = 1; }
+        }
+        function draw() {
+            ctx.fillStyle = '#0a0a1a'; ctx.fillRect(0, 0, W, H);
+            // stars
+            for (let i = 0; i < 40; i++) { ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect((i * 137) % W, (i * 53) % H, 1, 1); }
+            // blocks
+            blocks.forEach((b, i) => {
+                ctx.fillStyle = b.color; ctx.fillRect(b.x, b.y, b.w, b.h);
+                ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(b.x, b.y, b.w, 4);
+                ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(b.x, b.y + b.h - 4, b.w, 4);
+            });
+            // moving block
+            if (!over) {
+                ctx.fillStyle = moving.color; ctx.fillRect(moving.x, moving.y, moving.w, moving.h);
+                ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(moving.x, moving.y, moving.w, 4);
+                // guide line
+                const prev = blocks[blocks.length - 1];
+                ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.setLineDash([4, 4]); ctx.strokeRect(prev.x, moving.y, prev.w, BASE_H); ctx.setLineDash([]);
+            }
+            // score
+            ctx.fillStyle = 'rgba(167,139,250,0.8)'; ctx.font = 'bold 24px monospace'; ctx.textAlign = 'center'; ctx.fillText(score, W / 2, 36);
+            if (over) { ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#a78bfa'; ctx.font = 'bold 32px monospace'; ctx.textAlign = 'center'; ctx.fillText('GAME OVER', W / 2, H / 2 - 30); ctx.font = '20px monospace'; ctx.fillText(`Height: ${score}`, W / 2, H / 2 + 10); ctx.font = '16px monospace'; ctx.fillStyle = '#aaa'; ctx.fillText('Press R or click to restart', W / 2, H / 2 + 50); canvas.addEventListener('click', init, { once: true }); }
+        }
+        function loop() { update(); draw(); requestAnimationFrame(loop); }
+        init(); loop();
+    </script>
+</body>
+
+</html>

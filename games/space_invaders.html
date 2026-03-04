@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Space Invaders | The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #0f0;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px #0f0;
+            letter-spacing: 4px;
+        }
+
+        #hud {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+
+        canvas {
+            border: 2px solid #0f0;
+            box-shadow: 0 0 30px #00ff0055;
+        }
+
+        #msg {
+            margin-top: 12px;
+            font-size: 1.2rem;
+            min-height: 1.5em;
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 10px 32px;
+            background: linear-gradient(135deg, #0f0, #080);
+            color: #000;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            letter-spacing: 2px;
+        }
+
+        button:hover {
+            transform: scale(1.07);
+        }
+
+        #menuBtn {
+            background: linear-gradient(135deg, #334155, #1e293b);
+            color: #fff;
+            display: none;
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999;
+        }
+
+        #homeBtn:hover {
+            background: #1e40af;
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>👾 SPACE INVADERS</h1>
+    <div id="hud"><span>SCORE: <b id="score">0</b></span><span>LIVES: <b id="lives">3</b></span><span>LEVEL: <b
+                id="level">1</b></span></div>
+    <canvas id="c" width="600" height="500"></canvas>
+    <div id="msg">Press START or Space!</div>
+    <button onclick="startGame()">START</button>
+    <button id="menuBtn" onclick="window.close()">🏠 Return to Menu</button>
+    <script src="../scripts/scores.js"></script>
+    <script>
+        const C = document.getElementById('c'), ctx = C.getContext('2d');
+        const W = 600, H = 500;
+        let player, bullets, aliens, alienBullets, shields, score, lives, level, running, animId, alienDir, alienDropTimer, alienShootTimer;
+
+        function makeAliens(lvl) {
+            const aliens = [];
+            const rows = 4, cols = 10;
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    aliens.push({ x: 60 + c * 48, y: 50 + r * 36, w: 32, h: 24, alive: true, row: r, col: c });
+                }
+            }
+            return aliens;
+        }
+
+        function makeShields() {
+            const s = [];
+            for (let i = 0; i < 4; i++) {
+                const bx = 80 + i * 130;
+                for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) {
+                    s.push({ x: bx + c * 10, y: 380 + r * 8, w: 8, h: 6, hp: 3 });
+                }
+            }
+            return s;
+        }
+
+        function startGame() {
+            score = 0; lives = 3; level = 1; running = true;
+            player = { x: W / 2, y: H - 40, w: 40, h: 24, speed: 5 };
+            bullets = []; alienBullets = [];
+            aliens = makeAliens(1); shields = makeShields();
+            alienDir = 1; alienDropTimer = 0; alienShootTimer = 60;
+            document.getElementById('score').textContent = 0;
+            document.getElementById('lives').textContent = 3;
+            document.getElementById('level').textContent = 1;
+            document.getElementById('msg').textContent = '';
+            if (animId) cancelAnimationFrame(animId);
+            loop();
+        }
+
+        const keys = {};
+        document.addEventListener('keydown', e => {
+            keys[e.key] = true;
+            if (e.key === ' ' && !running) startGame();
+            if (e.key === ' ') e.preventDefault();
+        });
+        document.addEventListener('keyup', e => keys[e.key] = false);
+
+        let shootCooldown = 0;
+        function update() {
+            if (!running) return;
+            // Move player
+            if ((keys['ArrowLeft'] || keys['a']) && player.x > 0) player.x -= player.speed;
+            if ((keys['ArrowRight'] || keys['d']) && player.x < W - player.w) player.x += player.speed;
+            // Shoot
+            if (shootCooldown > 0) shootCooldown--;
+            if ((keys[' '] || keys['ArrowUp']) && shootCooldown === 0) {
+                bullets.push({ x: player.x + player.w / 2, y: player.y, w: 4, h: 12, speed: 8 });
+                shootCooldown = 20;
+            }
+            // Move bullets
+            bullets = bullets.filter(b => { b.y -= b.speed; return b.y > 0; });
+            // Move aliens
+            const alive = aliens.filter(a => a.alive);
+            if (alive.length === 0) { level++; aliens = makeAliens(level); shields = makeShields(); alienDir = 1; return; }
+            let edge = false;
+            alive.forEach(a => { a.x += alienDir * (1 + level * 0.5); if (a.x + a.w > W || a.x < 0) edge = true; });
+            if (edge) { alienDir *= -1; alive.forEach(a => a.y += 20); }
+            // Alien shoot
+            alienShootTimer--;
+            if (alienShootTimer <= 0) {
+                alienShootTimer = Math.max(20, 60 - level * 5);
+                const bottom = [];
+                for (let c = 0; c < 10; c++) {
+                    const col = alive.filter(a => a.col === c);
+                    if (col.length) { const last = col.sort((a, b) => b.y - a.y)[0]; bottom.push(last); }
+                }
+                if (bottom.length) {
+                    const shooter = bottom[Math.floor(Math.random() * bottom.length)];
+                    alienBullets.push({ x: shooter.x + shooter.w / 2, y: shooter.y + shooter.h, w: 4, h: 10, speed: 4 + level });
+                }
+            }
+            alienBullets = alienBullets.filter(b => { b.y += b.speed; return b.y < H; });
+            // Player-alien bullet collision
+            alienBullets.forEach((b, bi) => {
+                if (b.x < player.x + player.w && b.x + b.w > player.x && b.y < player.y + player.h && b.y + b.h > player.y) {
+                    alienBullets.splice(bi, 1); lives--; document.getElementById('lives').textContent = lives;
+                    if (lives <= 0) { running = false; document.getElementById('msg').textContent = 'GAME OVER! Press Start.'; document.getElementById('menuBtn').style.display = ''; PizzaScores.save('Space Invaders', score); }
+                }
+                shields.forEach(s => { if (s.hp > 0 && b.x < s.x + s.w && b.x + b.w > s.x && b.y < s.y + s.h && b.y + b.h > s.y) { s.hp--; b.y = H; } });
+            });
+            // Bullet-alien collision
+            bullets.forEach((b, bi) => {
+                shields.forEach(s => { if (s.hp > 0 && b.x < s.x + s.w && b.x + b.w > s.x && b.y < s.y + s.h && b.y + b.h > s.y) { s.hp--; b.y = -1; } });
+                alive.forEach(a => {
+                    if (b.x < a.x + a.w && b.x + b.w > a.x && b.y < a.y + a.h && b.y + b.h > a.y) {
+                        a.alive = false; bullets.splice(bi, 1);
+                        score += a.row === 0 ? 30 : a.row === 1 ? 20 : 10;
+                        document.getElementById('score').textContent = score;
+                    }
+                });
+            });
+            // Aliens reach bottom
+            if (alive.some(a => a.y + a.h >= player.y)) { running = false; document.getElementById('msg').textContent = 'INVADED! Press Start.'; document.getElementById('menuBtn').style.display = ''; PizzaScores.save('Space Invaders', score); }
+        }
+
+        function drawAlien(x, y, w, h, row) {
+            const colors = ['#ff4444', '#ff8800', '#ffff00', '#44ff44'];
+            ctx.fillStyle = colors[row % 4];
+            ctx.fillRect(x, y, w, h);
+            ctx.fillStyle = '#000';
+            ctx.fillRect(x + 4, y + 4, 6, 6); ctx.fillRect(x + w - 10, y + 4, 6, 6);
+            ctx.fillRect(x + w / 2 - 4, y + h - 8, 8, 4);
+            ctx.fillStyle = colors[row % 4];
+        }
+
+        function draw() {
+            ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+            // Stars
+            ctx.fillStyle = '#fff';
+            for (let i = 0; i < 50; i++) { ctx.fillRect((i * 137) % W, (i * 97 + Date.now() / 20) % H, 1, 1); }
+            // Shields
+            shields.forEach(s => {
+                if (s.hp > 0) { const a = s.hp / 3; ctx.fillStyle = `rgba(0,255,0,${a})`; ctx.fillRect(s.x, s.y, s.w, s.h); }
+            });
+            // Aliens
+            aliens.filter(a => a.alive).forEach(a => drawAlien(a.x, a.y, a.w, a.h, a.row));
+            // Player ship
+            ctx.fillStyle = '#0f0';
+            ctx.beginPath(); ctx.moveTo(player.x + player.w / 2, player.y);
+            ctx.lineTo(player.x, player.y + player.h); ctx.lineTo(player.x + player.w, player.y + player.h);
+            ctx.closePath(); ctx.fill();
+            ctx.fillRect(player.x + player.w / 2 - 3, player.y - 8, 6, 10);
+            // Bullets
+            ctx.fillStyle = '#0ff';
+            bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
+            // Alien bullets
+            ctx.fillStyle = '#f44';
+            alienBullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
+            // Ground line
+            ctx.fillStyle = '#0f0'; ctx.fillRect(0, H - 8, W, 2);
+        }
+
+        function loop() { update(); draw(); if (running) animId = requestAnimationFrame(loop); }
+        draw();
+    </script>
+</body>
+
+</html>

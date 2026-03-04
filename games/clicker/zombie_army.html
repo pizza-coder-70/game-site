@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Zombie Army – The Pizza Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0a0f0a;
+            min-height: 100vh;
+            font-family: 'Outfit', sans-serif;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px
+        }
+
+        h1 {
+            color: #4ade80;
+            font-size: 2rem;
+            text-shadow: 0 0 20px #4ade80;
+            margin-bottom: 4px
+        }
+
+        #counter {
+            font-size: 1.2rem;
+            color: #86efac;
+            margin-bottom: 4px
+        }
+
+        #cps {
+            font-size: .85rem;
+            color: #374151;
+            margin-bottom: 8px
+        }
+
+        /* Survivor escape event */
+        #escape-wrap {
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+            flex-direction: column;
+            gap: 4px
+        }
+
+        #survivors-row {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 500px
+        }
+
+        .survivor {
+            font-size: 1.6rem;
+            cursor: pointer;
+            user-select: none;
+            transition: transform .1s;
+            filter: drop-shadow(0 0 6px #ef4444)
+        }
+
+        .survivor:hover {
+            transform: scale(1.3)
+        }
+
+        #surv-msg {
+            font-size: .8rem;
+            color: #fca5a5
+        }
+
+        .layout {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            max-width: 900px
+        }
+
+        #click-zone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px
+        }
+
+        #zombie {
+            width: 150px;
+            height: 150px;
+            border-radius: 20px;
+            background: radial-gradient(circle at 35% 30%, #15803d, #052e16, #0a0f0a);
+            border: 3px solid #4ade80;
+            cursor: pointer;
+            font-size: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 30px rgba(74, 222, 128, .4);
+            user-select: none;
+            transition: transform .1s
+        }
+
+        #zombie:active {
+            transform: scale(.92)rotate(5deg)
+        }
+
+        #horde-disp {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2px;
+            width: 160px;
+            max-height: 50px;
+            overflow: hidden;
+            justify-content: center;
+            background: rgba(74, 222, 128, .05);
+            border-radius: 8px;
+            padding: 4px
+        }
+
+        #shop {
+            flex: 1;
+            min-width: 260px;
+            background: rgba(255, 255, 255, .03);
+            border: 1px solid rgba(74, 222, 128, .2);
+            border-radius: 20px;
+            padding: 20px;
+            max-height: 70vh;
+            overflow-y: auto
+        }
+
+        #shop h2 {
+            color: #4ade80;
+            font-size: 1.1rem;
+            margin-bottom: 14px
+        }
+
+        .upg {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(74, 222, 128, .06);
+            border: 1px solid rgba(74, 222, 128, .18);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background .15s
+        }
+
+        .upg:hover {
+            background: rgba(74, 222, 128, .18)
+        }
+
+        .upg.locked {
+            opacity: .4;
+            cursor: not-allowed
+        }
+
+        .ui {
+            font-size: 1.6rem;
+            flex-shrink: 0
+        }
+
+        .inf {
+            flex: 1
+        }
+
+        .un {
+            font-weight: 700;
+            font-size: .9rem
+        }
+
+        .ud {
+            font-size: .72rem;
+            color: #6b7280
+        }
+
+        .uc {
+            font-size: .78rem;
+            color: #86efac;
+            margin-top: 2px
+        }
+
+        .uo {
+            font-size: .72rem;
+            color: #facc15
+        }
+
+        #toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(74, 222, 128, .9);
+            color: #1a2e1a;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-weight: 700;
+            opacity: 0;
+            transition: opacity .3s;
+            pointer-events: none;
+            z-index: 99
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🧟 Zombie Army</h1>
+    <div id="counter">0 brains</div>
+    <div id="cps">0/sec | Horde: <span id="horde-ct">0</span></div>
+    <div id="escape-wrap">
+        <div id="surv-msg">Survivors will try to escape — catch them! 🏃</div>
+        <div id="survivors-row"></div>
+    </div>
+    <div class="layout">
+        <div id="click-zone">
+            <div id="zombie" onclick="moan()">🧟</div>
+            <div id="horde-disp"></div>
+        </div>
+        <div id="shop">
+            <h2>🧠 Recruit</h2>
+            <div id="upgrades"></div>
+        </div>
+    </div>
+    <div id="toast"></div>
+    <script>
+        let brains = 0, bps = 0, cp = 1, horde = 0;
+        let survivors = [], escapedLoss = 0;
+        const UPS = [
+            { n: 'Shambler', i: '🚶', d: '+0.3/s brains', base: 15, own: 0, rate: .3, adds: 1 },
+            { n: 'Crawler', i: '💀', d: '+1/s brains', base: 80, own: 0, rate: 1, adds: 3 },
+            { n: 'Runner', i: '🏃', d: '+4/s brains', base: 400, own: 0, rate: 4, adds: 5 },
+            { n: 'Zombie Dog', i: '🐕', d: '+12/s brains', base: 2000, own: 0, rate: 12, adds: 8 },
+            { n: 'Zombie Tank', i: '🦍', d: '+35/s brains', base: 10000, own: 0, rate: 35, adds: 15 },
+            { n: 'Zombie Horde', i: '👥', d: '+100/s brains', base: 50000, own: 0, rate: 100, adds: 50 },
+        ];
+        const SURV = ['🧑', '👩', '🧔', '👨', '👴', '👵', '🕵️', '🦸'];
+        function fmt(n) { if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B'; if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M'; if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K'; return Math.floor(n) + '' }
+        function cost(u) { return Math.floor(u.base * Math.pow(1.15, u.own)) }
+        function moan() {
+            brains += cp;
+            const el = document.createElement('div');
+            el.textContent = '🧠+' + cp; el.style.cssText = 'position:fixed;color:#86efac;font-weight:700;pointer-events:none;z-index:50';
+            const r = document.getElementById('zombie').getBoundingClientRect();
+            el.style.left = (r.left + r.width / 2 + (Math.random() - .5) * 40) + 'px'; el.style.top = r.top + 'px';
+            el.animate([{ opacity: 1, transform: 'translateY(0)' }, { opacity: 0, transform: 'translateY(-55px)' }], { duration: 750, fill: 'forwards' });
+            document.body.appendChild(el); setTimeout(() => el.remove(), 750);
+        }
+        // Survivors escape: appear, click to catch them
+        function spawnSurvivor() {
+            if (survivors.length >= 5) return;
+            const id = Date.now(); const timer = 8 + Math.random() * 8;
+            const reward = Math.max(5, Math.floor(cp * 10 + bps * 2));
+            survivors.push({ id, timer, reward, emoji: SURV[Math.floor(Math.random() * SURV.length)] });
+            renderSurvivors();
+            setTimeout(() => {
+                const idx = survivors.findIndex(s => s.id === id);
+                if (idx >= 0) {
+                    escapedLoss += survivors[idx].reward;
+                    survivors.splice(idx, 1);
+                    renderSurvivors();
+                }
+            }, timer * 1000);
+        }
+        function catchSurvivor(id) {
+            const idx = survivors.findIndex(s => s.id === id);
+            if (idx < 0) return;
+            const s = survivors[idx];
+            brains += s.reward; survivors.splice(idx, 1);
+            toast('🧟 Caught! +' + fmt(s.reward) + ' brains!');
+            renderSurvivors();
+        }
+        function renderSurvivors() {
+            const row = document.getElementById('survivors-row'); row.innerHTML = '';
+            survivors.forEach(s => {
+                const div = document.createElement('div'); div.className = 'survivor';
+                div.textContent = s.emoji; div.title = 'Catch! +' + fmt(s.reward);
+                div.addEventListener('click', () => catchSurvivor(s.id));
+                row.appendChild(div);
+            });
+        }
+        setInterval(() => { if (Math.random() < .35) spawnSurvivor(); }, 4000);
+        function renderHorde() {
+            const d = document.getElementById('horde-disp'); d.innerHTML = '';
+            for (let i = 0; i < Math.min(horde, 40); i++) { const s = document.createElement('span'); s.textContent = '🧟'; s.style.fontSize = '.7rem'; d.appendChild(s); }
+        }
+        function buy(u) {
+            const co = cost(u); if (brains < co) return;
+            brains -= co; u.own++; bps += u.rate; horde += u.adds;
+            renderUpgrades(); renderHorde(); toast('✅ ' + u.n + ' recruited!');
+        }
+        function toast(msg) {
+            const t = document.getElementById('toast'); t.textContent = msg; t.style.opacity = 1;
+            clearTimeout(t._t); t._t = setTimeout(() => t.style.opacity = 0, 2200);
+        }
+        function renderUpgrades() {
+            const d = document.getElementById('upgrades'); d.innerHTML = '';
+            UPS.forEach(u => {
+                const co = cost(u), div = document.createElement('div');
+                div.className = 'upg' + (brains < co ? ' locked' : '');
+                div.innerHTML = `<div class="ui">${u.i}</div><div class="inf"><div class="un">${u.n}</div><div class="ud">${u.d}</div><div class="uc">🧠 ${fmt(co)}</div><div class="uo">Recruited: ${u.own}</div></div>`;
+                div.addEventListener('click', () => buy(u));
+                d.appendChild(div);
+            });
+        }
+        let last = 0, lastR = 0;
+        function loop(ts) {
+            if (last) brains += bps * (ts - last) / 1000;
+            last = ts;
+            document.getElementById('counter').textContent = fmt(brains) + ' brains';
+            document.getElementById('cps').textContent = bps.toFixed(1) + '/sec | Horde:';
+            document.getElementById('horde-ct').textContent = horde;
+            if (ts - lastR > 500) { lastR = ts; renderUpgrades(); }
+            requestAnimationFrame(loop);
+        }
+        renderUpgrades(); spawnSurvivor(); requestAnimationFrame(loop);
+    </script>
+</body>
+
+</html>

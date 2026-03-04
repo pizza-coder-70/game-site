@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Dungeon Quest</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0a0308;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #f59e0b;
+            font-size: 1.5rem;
+            text-shadow: 0 0 16px #f59e0b;
+            margin-bottom: 6px
+        }
+
+        canvas {
+            border: 2px solid #f59e0b;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(245, 158, 11, .4)
+        }
+
+        #ui {
+            display: flex;
+            gap: 16px;
+            color: #f59e0b;
+            font-size: .82rem;
+            margin-top: 6px
+        }
+
+        #msg {
+            color: #facc15;
+            font-size: .85rem;
+            min-height: 20px;
+            margin-top: 4px
+        }
+    </style>
+</head>
+
+<body>
+    <h1>⚔️ Dungeon Quest</h1>
+    <div id="ui"><span>HP: <b id="hp">❤️❤️❤️</b></span><span>Score: <b id="sc">0</b></span><span>Level: <b
+                id="lv">1</b></span><span>Keys: <b id="ky">0</b></span></div>
+    <canvas id="c" width="560" height="420"></canvas>
+    <div id="msg">WASD/Arrows to move. Collect keys 🔑 then reach the exit 🚪!</div>
+    <script>
+        const cv = document.getElementById('c'), cx = cv.getContext('2d');
+        const CS = 28, COLS = 20, ROWS = 15, W = COLS * CS, H = ROWS * CS;
+        let keys_pressed = {};
+        document.addEventListener('keydown', e => { keys_pressed[e.code] = true; if (e.code.startsWith('Arrow')) e.preventDefault(); });
+        document.addEventListener('keyup', e => keys_pressed[e.code] = false);
+
+        let player, enemies, keyItems, exit, walls, hp, score, level, over, won, keysHeld;
+        function initLevel(l) {
+            walls = new Set(); player = { x: 1, y: 1, invuln: 0, moveTimer: 0 }; enemies = []; keyItems = []; keysHeld = 0;
+            // Generate walls as grid
+            for (let r = 0; r < ROWS; r++)for (let c = 0; c < COLS; c++) {
+                if (r === 0 || r === ROWS - 1 || c === 0 || c === COLS - 1 || (r % 2 === 0 && c % 2 === 0)) walls.add(r + ',' + c);
+                else if (r % 2 === 0 || c % 2 === 0) { if (Math.random() < .45) walls.add(r + ',' + c); }
+            }
+            walls.delete('1,1'); walls.delete('1,2'); walls.delete('2,1');
+            // Keys and exit
+            const needed = 2 + l;
+            for (let i = 0; i < needed; i++) { let x, y; do { x = 1 + Math.floor(Math.random() * (COLS - 2)); y = 1 + Math.floor(Math.random() * (ROWS - 2)); } while (walls.has(y + ',' + x) || x <= 2); keyItems.push({ x, y }); }
+            exit = { x: COLS - 2, y: ROWS - 2 }; walls.delete((ROWS - 2) + ',' + (COLS - 2));
+            // Enemies
+            for (let i = 0; i < l + 2; i++) { let ex, ey; do { ex = 3 + Math.floor(Math.random() * (COLS - 5)); ey = 3 + Math.floor(Math.random() * (ROWS - 5)); } while (walls.has(ey + ',' + ex)); enemies.push({ x: ex, y: ey, timer: 0, dir: Math.floor(Math.random() * 4) }); }
+            over = false; won = false;
+        }
+
+        let hp_max = 3; hp = hp_max; score = 0; level = 1;
+        initLevel(level);
+
+        const DIRS = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+        let moveCD = 0;
+        function update() {
+            if (over || won) return;
+            moveCD--;
+            if (moveCD <= 0) {
+                let dx = 0, dy = 0;
+                if (keys_pressed['ArrowUp'] || keys_pressed['KeyW']) dy = -1;
+                else if (keys_pressed['ArrowDown'] || keys_pressed['KeyS']) dy = 1;
+                else if (keys_pressed['ArrowLeft'] || keys_pressed['KeyA']) dx = -1;
+                else if (keys_pressed['ArrowRight'] || keys_pressed['KeyD']) dx = 1;
+                if (dx || dy) {
+                    const nx = player.x + dx, ny = player.y + dy;
+                    if (!walls.has(ny + ',' + nx) && nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS) { player.x = nx; player.y = ny; }
+                    moveCD = 8;
+                }
+            }
+            // Keys
+            keyItems = keyItems.filter(k => { if (k.x === player.x && k.y === player.y) { keysHeld++; score += 50; document.getElementById('ky').textContent = keysHeld; document.getElementById('sc').textContent = score; return false; } return true; });
+            // Exit
+            if (player.x === exit.x && player.y === exit.y && keysHeld >= keyItems.length + keysHeld) {
+                if (keyItems.length === 0) { level++; score += 200; document.getElementById('lv').textContent = level; if (level > 5) { won = true; return; } initLevel(level); }
+            }
+            // Enemy movement
+            enemies.forEach(e => {
+                e.timer++;
+                if (e.timer % (18 - level * 2) === 0) {
+                    // Random walk
+                    const dirs = DIRS.filter(([dx, dy]) => { const nx = e.x + dx, ny = e.y + dy; return !walls.has(ny + ',' + nx) && nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS; });
+                    if (dirs.length) { const [dx, dy] = dirs[Math.floor(Math.random() * dirs.length)]; e.x += dx; e.y += dy; }
+                }
+                // Hit player
+                if (e.x === player.x && e.y === player.y && player.invuln <= 0) { hp--; player.invuln = 60; document.getElementById('hp').textContent = '❤️'.repeat(Math.max(0, hp)); if (hp <= 0) over = true; }
+            });
+            if (player.invuln > 0) player.invuln--;
+        }
+
+        function draw() {
+            cx.fillStyle = '#0a0308'; cx.fillRect(0, 0, W, H);
+            for (let r = 0; r < ROWS; r++)for (let c = 0; c < COLS; c++) {
+                if (walls.has(r + ',' + c)) { cx.fillStyle = '#1c0d05'; cx.fillRect(c * CS, r * CS, CS, CS); cx.strokeStyle = '#3d1a08'; cx.strokeRect(c * CS, r * CS, CS, CS); }
+                else { cx.fillStyle = '#110608'; cx.fillRect(c * CS, r * CS, CS, CS); }
+            }
+            keyItems.forEach(k => { cx.font = '18px monospace'; cx.textAlign = 'center'; cx.fillText('🔑', k.x * CS + CS / 2, k.y * CS + CS - 4); });
+            cx.font = '18px monospace'; cx.textAlign = 'center'; cx.fillText('🚪', exit.x * CS + CS / 2, exit.y * CS + CS - 4);
+            enemies.forEach(e => { cx.fillStyle = '#f43f5e'; cx.fillRect(e.x * CS + 3, e.y * CS + 3, CS - 6, CS - 6); cx.fillStyle = '#fff'; cx.font = '10px monospace'; cx.textAlign = 'center'; cx.fillText('👾', e.x * CS + CS / 2, e.y * CS + CS / 2 + 4); });
+            const alpha = player.invuln > 0 && Math.floor(player.invuln / 5) % 2 === 0 ? .4 : 1;
+            cx.globalAlpha = alpha; cx.fillStyle = '#f59e0b'; cx.fillRect(player.x * CS + 2, player.y * CS + 2, CS - 4, CS - 4); cx.fillStyle = '#fff'; cx.font = '15px monospace'; cx.textAlign = 'center'; cx.fillText('🧙', player.x * CS + CS / 2, player.y * CS + CS - 3); cx.globalAlpha = 1;
+            if (over) { cx.fillStyle = 'rgba(0,0,0,.8)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#f43f5e'; cx.font = 'bold 38px monospace'; cx.textAlign = 'center'; cx.fillText('GAME OVER', W / 2, H / 2 - 16); cx.fillStyle = '#aaa'; cx.font = '16px monospace'; cx.fillText('Score: ' + score + ' | R to restart', W / 2, H / 2 + 18); }
+            if (won) { cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#facc15'; cx.font = 'bold 44px monospace'; cx.textAlign = 'center'; cx.fillText('YOU WIN! 🏆', W / 2, H / 2 - 20); cx.fillStyle = '#f59e0b'; cx.font = '20px monospace'; cx.fillText('Score: ' + score, W / 2, H / 2 + 20); }
+        }
+        document.addEventListener('keydown', e => { if (e.code === 'KeyR' && (over || won)) { hp = hp_max; score = 0; level = 1; initLevel(level); document.getElementById('sc').textContent = 0; document.getElementById('lv').textContent = 1; document.getElementById('hp').textContent = '❤️'.repeat(hp_max); document.getElementById('ky').textContent = 0; } });
+        function loop() { update(); draw(); requestAnimationFrame(loop); } loop();
+    </script>
+
+    <script src="../mobile_controls.js"></script>
+</body>
+
+</html>

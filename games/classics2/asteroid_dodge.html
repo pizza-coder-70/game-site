@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Asteroid Dodge – The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #60a5fa;
+            font-size: 2rem;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px #60a5fa
+        }
+
+        canvas {
+            border: 2px solid #60a5fa;
+            box-shadow: 0 0 30px rgba(96, 165, 250, 0.4)
+        }
+
+        #hud {
+            margin-top: 10px;
+            color: #60a5fa
+        }
+
+        #ctrl {
+            margin-top: 6px;
+            color: #555;
+            font-size: .8rem
+        }
+    </style>
+</head>
+
+<body>
+    <h1>☄️ Asteroid Dodge</h1>
+    <canvas id="c" width="500" height="600"></canvas>
+    <div id="hud">Score: <span id="sc">0</span> &nbsp; Best: <span id="bs">0</span></div>
+    <div id="ctrl">Mouse / Arrow Keys to dodge | Don't hit the asteroids! | R: restart</div>
+    <script>
+        const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+        const W = 500, H = 600;
+        let ship, asteroids, score, best = 0, over, started, frame = 0;
+        function rand(a, b) { return a + Math.random() * (b - a); }
+        function init() {
+            ship = { x: W / 2, y: H - 80, w: 40, h: 40, inv: 0 };
+            asteroids = []; score = 0; over = false; started = true;
+            document.getElementById('sc').textContent = 0;
+        }
+        canvas.addEventListener('mousemove', e => { const r = canvas.getBoundingClientRect(); ship.x = e.clientX - r.left; });
+        document.addEventListener('keydown', e => { if (e.key === 'ArrowLeft') ship.x -= 15; if (e.key === 'ArrowRight') ship.x += 15; if (e.key === 'r' || e.key === 'R') init(); e.preventDefault(); });
+        function update() {
+            if (!started || over) return;
+            frame++; ship.x = Math.max(20, Math.min(W - 20, ship.x));
+            const spd = 3 + Math.floor(score / 200) * 0.5;
+            if (frame % Math.max(20, 50 - Math.floor(score / 100)) === 0) {
+                const r = rand(10, 30), pts = Array.from({ length: 7 }, () => rand(0.7, 1.3));
+                asteroids.push({ x: rand(20, W - 20), y: -40, r, vy: spd * (0.7 + Math.random() * 0.6), va: rand(-.05, .05), a: 0, pts });
+            }
+            asteroids = asteroids.filter(a => {
+                a.y += a.vy; a.a += a.va; score++; document.getElementById('sc').textContent = Math.floor(score / 10);
+                if (a.y > H + 60) return false;
+                if (Math.hypot(ship.x - a.x, ship.y - a.y) < a.r + 14) { over = true; if (Math.floor(score / 10) > best) { best = Math.floor(score / 10); document.getElementById('bs').textContent = best; } }
+                return true;
+            });
+        }
+        function draw() {
+            ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+            for (let i = 0; i < 80; i++) { ctx.fillStyle = `rgba(255,255,255,${0.1 + Math.random() * 0.1})`; ctx.fillRect((i * 137) % W, (i * 53 + frame) % H, 1, 1); }
+            asteroids.forEach(a => {
+                ctx.save(); ctx.translate(a.x, a.y); ctx.rotate(a.a);
+                ctx.beginPath(); a.pts.forEach((p, i) => { const ang = i / a.pts.length * Math.PI * 2; i === 0 ? ctx.moveTo(Math.cos(ang) * a.r * p, Math.sin(ang) * a.r * p) : ctx.lineTo(Math.cos(ang) * a.r * p, Math.sin(ang) * a.r * p); });
+                ctx.closePath(); ctx.strokeStyle = '#60a5fa'; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = 'rgba(96,165,250,0.1)'; ctx.fill(); ctx.restore();
+            });
+            // ship
+            ctx.save(); ctx.translate(ship.x, ship.y);
+            ctx.fillStyle = '#60a5fa'; ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(16, 14); ctx.lineTo(0, 8); ctx.lineTo(-16, 14); ctx.closePath(); ctx.fill();
+            ctx.fillStyle = 'rgba(96,165,250,0.5)'; ctx.fillRect(-4, 8, 8, 14); ctx.restore();
+            if (over) { ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#60a5fa'; ctx.font = 'bold 32px monospace'; ctx.textAlign = 'center'; ctx.fillText('GAME OVER', W / 2, H / 2 - 20); ctx.font = '20px monospace'; ctx.fillText(`Score: ${Math.floor(score / 10)} | Press R`, W / 2, H / 2 + 25); }
+        }
+        function loop() { update(); draw(); requestAnimationFrame(loop); }
+        init(); loop();
+    </script>
+</body>
+
+</html>

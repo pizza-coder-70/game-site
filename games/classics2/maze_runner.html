@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Maze Runner – The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0a0a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #06b6d4;
+            font-size: 2rem;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px #06b6d4
+        }
+
+        canvas {
+            border: 2px solid #06b6d4;
+            box-shadow: 0 0 30px rgba(6, 182, 212, 0.4)
+        }
+
+        #hud {
+            margin-top: 10px;
+            color: #06b6d4
+        }
+
+        #ctrl {
+            margin-top: 6px;
+            color: #555;
+            font-size: .8rem
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🏃 Maze Runner</h1>
+    <canvas id="c" width="510" height="510"></canvas>
+    <div id="hud">Time: <span id="tm">0</span>s &nbsp; Level: <span id="lv">1</span> &nbsp; Best: <span
+            id="best">–</span>s</div>
+    <div id="ctrl">Arrow Keys / WASD to move | Find the 🚪 | R: restart | N: next level</div>
+    <script>
+        const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+        const CS = 30, COLS = 17, ROWS = 17;
+        let maze, player, goal, level, timer, startT, best = Infinity, won, over;
+        function randInt(n) { return Math.floor(Math.random() * n); }
+        function generateMaze(cols, rows) {
+            const g = Array.from({ length: rows }, () => Array(cols).fill(1));
+            function carve(r, c) {
+                const dirs = [[0, -2], [0, 2], [-2, 0], [2, 0]].sort(() => Math.random() - .5);
+                for (const [dr, dc] of dirs) { const nr = r + dr, nc = c + dc; if (nr > 0 && nr < rows - 1 && nc > 0 && nc < cols - 1 && g[nr][nc] === 1) { g[nr][nc] = 0; g[r + dr / 2][c + dc / 2] = 0; carve(nr, nc); } }
+            }
+            g[1][1] = 0; carve(1, 1);
+            return g;
+        }
+        function init(lvl) {
+            level = lvl || level || 1;
+            maze = generateMaze(COLS, ROWS);
+            player = { row: 1, col: 1 }; goal = { row: ROWS - 2, col: COLS - 2 }; maze[goal.row][goal.col] = 0;
+            startT = Date.now(); won = false; over = false;
+            if (timer) clearInterval(timer);
+            timer = setInterval(() => { if (!won) document.getElementById('tm').textContent = ((Date.now() - startT) / 1000).toFixed(1); }, 100);
+            document.getElementById('lv').textContent = level;
+        }
+        document.addEventListener('keydown', e => {
+            if (e.key === 'r' || e.key === 'R') { clearInterval(timer); init(1); return; }
+            if (e.key === 'n' || e.key === 'N') { clearInterval(timer); init(level + 1); return; }
+            if (won) return;
+            let nr = player.row, nc = player.col;
+            if (e.key === 'ArrowLeft' || e.key === 'a') nc--;
+            else if (e.key === 'ArrowRight' || e.key === 'd') nc++;
+            else if (e.key === 'ArrowUp' || e.key === 'w') nr--;
+            else if (e.key === 'ArrowDown' || e.key === 's') nr++;
+            else return;
+            e.preventDefault();
+            if (maze[nr] && maze[nr][nc] === 0) { player.row = nr; player.col = nc; }
+            if (player.row === goal.row && player.col === goal.col) {
+                won = true; clearInterval(timer);
+                const elapsed = ((Date.now() - startT) / 1000).toFixed(1);
+                if (elapsed < best) best = elapsed;
+                document.getElementById('best').textContent = best + 's';
+                setTimeout(() => { init(level + 1); }, 1500);
+            }
+        });
+        function draw() {
+            ctx.fillStyle = '#0a0a1a'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            const ox = (canvas.width - COLS * CS) / 2, oy = (canvas.height - ROWS * CS) / 2;
+            for (let r = 0; r < ROWS; r++)for (let c = 0; c < COLS; c++) {
+                const x = ox + c * CS, y = oy + r * CS;
+                if (maze[r][c] === 1) { ctx.fillStyle = '#1e3a5f'; ctx.fillRect(x, y, CS, CS); ctx.fillStyle = '#1e40af'; ctx.fillRect(x + 1, y + 1, CS - 2, CS - 2); }
+                else { ctx.fillStyle = '#0f172a'; ctx.fillRect(x, y, CS, CS); }
+                if (r === goal.row && c === goal.col) { ctx.font = `${CS - 4}px monospace`; ctx.textAlign = 'center'; ctx.fillText('🚪', x + CS / 2, y + CS - 2); }
+            }
+            // player
+            const px = ox + player.col * CS, py = oy + player.row * CS;
+            ctx.font = `${CS - 2}px monospace`; ctx.textAlign = 'center'; ctx.fillText('🏃', px + CS / 2, py + CS - 2);
+            if (won) { ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#06b6d4'; ctx.font = 'bold 28px monospace'; ctx.textAlign = 'center'; ctx.fillText('🎉 Level Complete!', canvas.width / 2, canvas.height / 2 - 20); ctx.font = '16px monospace'; ctx.fillStyle = '#aaa'; ctx.fillText('Loading next level...', canvas.width / 2, canvas.height / 2 + 20); }
+        }
+        function loop() { draw(); requestAnimationFrame(loop); }
+        init(1); loop();
+    </script>
+</body>
+
+</html>

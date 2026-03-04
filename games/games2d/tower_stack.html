@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Tower Stack</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0a0010;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #f97316;
+            font-size: 1.5rem;
+            text-shadow: 0 0 16px #f97316;
+            margin-bottom: 6px
+        }
+
+        canvas {
+            border: 2px solid #f97316;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(249, 115, 22, .4);
+            cursor: pointer
+        }
+
+        #ui {
+            display: flex;
+            gap: 20px;
+            color: #f97316;
+            font-size: .85rem;
+            margin-top: 6px
+        }
+
+        #msg {
+            color: #facc15;
+            font-size: .9rem;
+            min-height: 20px;
+            margin-top: 4px
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🏗️ Tower Stack</h1>
+    <div id="ui"><span>Score: <b id="sc">0</b></span><span>Height: <b id="ht">0</b></span><span>Combo: <b
+                id="cb">x1</b></span></div>
+    <canvas id="c" width="320" height="500"></canvas>
+    <div id="msg">Click or Space to drop the block!</div>
+    <script>
+        const cv = document.getElementById('c'), cx = cv.getContext('2d');
+        const W = 320, H = 500;
+        let blocks = [{ x: 80, y: 460, w: 160, h: 24 }];
+        let moving = { x: 0, y: H - 60, w: 160, h: 24, dir: 1, speed: 3 };
+        let score = 0, combo = 1, over = false, won = false, camY = 0, totalH = 0;
+        const COLS = ['#f97316', '#fb923c', '#fdba74', '#fcd34d', '#facc15', '#a78bfa', '#818cf8', '#38bdf8', '#4ade80', '#f43f5e'];
+
+        function drop() {
+            if (over || won) return;
+            const last = blocks[blocks.length - 1];
+            // Overlap
+            const left = Math.max(moving.x, last.x), right = Math.min(moving.x + moving.w, last.x + last.w);
+            const overlap = right - left;
+            if (overlap <= 5) { over = true; return; }
+            const perfect = Math.abs(overlap - last.w) < 6;
+            if (perfect) { combo = Math.min(8, combo + 1); score += 100 * combo; }
+            else { combo = 1; score += Math.floor(overlap); }
+            const newW = overlap, newX = left;
+            blocks.push({ x: newX, y: last.y - 28, w: newW, h: 24 });
+            moving.w = newW; moving.x = newX + (newX === last.x ? -80 : 80);
+            totalH++; document.getElementById('ht').textContent = totalH;
+            document.getElementById('sc').textContent = score;
+            document.getElementById('cb').textContent = 'x' + combo;
+            if (totalH >= 20) won = true;
+            // Scroll camera
+            if (blocks.length > 10) camY += 28;
+        }
+        cv.addEventListener('click', drop);
+        document.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); drop(); } if (e.code === 'KeyR' && (over || won)) { reset(); } });
+        function reset() { blocks = [{ x: 80, y: 460, w: 160, h: 24 }]; moving = { x: 0, y: H - 60, w: 160, h: 24, dir: 1, speed: 3 }; score = 0; combo = 1; over = false; won = false; camY = 0; totalH = 0; document.getElementById('sc').textContent = 0; document.getElementById('ht').textContent = 0; document.getElementById('cb').textContent = 'x1'; }
+
+        let t = 0;
+        function draw() {
+            t += 0.03;
+            cx.fillStyle = '#0a0010'; cx.fillRect(0, 0, W, H);
+            // Moving block
+            if (!over && !won) {
+                moving.x += moving.speed * moving.dir;
+                if (moving.x < 0 || moving.x + moving.w > W) moving.dir *= -1;
+            }
+            cx.save(); cx.translate(0, camY);
+            blocks.forEach((b, i) => {
+                const col = COLS[i % COLS.length];
+                cx.fillStyle = col; cx.fillRect(b.x, b.y, b.w, b.h);
+                cx.fillStyle = 'rgba(255,255,255,.2)'; cx.fillRect(b.x, b.y, b.w, 4);
+            });
+            if (!over && !won) {
+                const col = COLS[blocks.length % COLS.length];
+                cx.fillStyle = col; cx.fillRect(moving.x, moving.y, moving.w, moving.h);
+                // guide line
+                cx.strokeStyle = 'rgba(255,255,255,.15)'; cx.setLineDash([4, 4]); cx.lineWidth = 1;
+                cx.beginPath(); cx.moveTo(moving.x, moving.y); cx.lineTo(moving.x, H); cx.stroke();
+                cx.beginPath(); cx.moveTo(moving.x + moving.w, moving.y); cx.lineTo(moving.x + moving.w, H); cx.stroke();
+                cx.setLineDash([]);
+            }
+            cx.restore();
+            if (over) {
+                cx.fillStyle = 'rgba(0,0,0,.8)'; cx.fillRect(0, 0, W, H);
+                cx.fillStyle = '#f43f5e'; cx.font = 'bold 36px monospace'; cx.textAlign = 'center'; cx.fillText('FELL!', W / 2, H / 2 - 16);
+                cx.fillStyle = '#aaa'; cx.font = '16px monospace'; cx.fillText('Score: ' + score + ' | R to restart', W / 2, H / 2 + 16);
+            }
+            if (won) {
+                cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H);
+                cx.fillStyle = '#facc15'; cx.font = 'bold 36px monospace'; cx.textAlign = 'center'; cx.fillText('YOU WIN! 🏆', W / 2, H / 2 - 20);
+                cx.fillStyle = '#f97316'; cx.font = '18px monospace'; cx.fillText('20 blocks! Score: ' + score, W / 2, H / 2 + 18);
+                cx.fillStyle = '#aaa'; cx.font = '14px monospace'; cx.fillText('R to play again', W / 2, H / 2 + 44);
+            }
+        }
+        function loop() { draw(); requestAnimationFrame(loop); } loop();
+    </script>
+
+    <script src="../mobile_controls.js"></script>
+</body>
+
+</html>

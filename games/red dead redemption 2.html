@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>red dead redemption 2 | Interactive Story</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,400;0,700;1,400&family=Special+Elite&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --paper: #e2d1b0;
+            --ink: #2c2419;
+            --dust: #8c7b63;
+            --iron: #3e3e3e;
+            --blood: #8b0000;
+            --gold: #c5a059;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #0c0b0a;
+            color: var(--ink);
+            font-family: 'Merriweather', serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #game-container {
+            width: 90%;
+            max-width: 900px;
+            height: 85vh;
+            background: var(--paper);
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), inset 0 0 100px rgba(0, 0, 0, 0.1);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            border: 15px solid #222;
+            border-image: linear-gradient(#333, #111) 1;
+        }
+
+        /* Texture Overlays */
+        #game-container::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://www.transparenttextures.com/patterns/aged-paper.png');
+            pointer-events: none;
+            opacity: 0.4;
+            z-index: 1;
+        }
+
+        #honor-bar {
+            width: 150px;
+            height: 8px;
+            background: #ccc;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #honor-fill {
+            height: 100%;
+            width: 50%;
+            background: linear-gradient(90deg, var(--blood), var(--gold));
+            transition: width 0.5s ease;
+        }
+
+        /* Cinematic Letterbox */
+        .letterbox {
+            position: absolute;
+            width: 100%;
+            height: 10%;
+            background: #000;
+            z-index: 10;
+            transition: height 1s ease;
+            pointer-events: none;
+            /* Prevent blocking interaction */
+        }
+
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 5px;
+            border-left: 5px solid var(--blood);
+            z-index: 100;
+            font-family: 'Special Elite', cursive;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.8rem;
+            color: #fff;
+        }
+
+        .stat-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tts-toggle {
+            cursor: pointer;
+            padding: 5px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            font-family: 'Special Elite', cursive;
+            font-size: 0.7rem;
+            transition: all 0.3s;
+            border-radius: 3px;
+        }
+
+        .tts-toggle.active {
+            background: var(--blood);
+            border-color: var(--blood);
+        }
+
+        .tts-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* --- Story Content --- */
+        #story-area {
+            flex: 1;
+            padding: 50px 80px;
+            overflow-y: auto;
+            z-index: 2;
+            scrollbar-width: thin;
+            scrollbar-color: var(--dust) transparent;
+        }
+
+        #story-area::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #story-area::-webkit-scrollbar-thumb {
+            background: var(--dust);
+        }
+
+        .chapter-title {
+            font-family: 'Special Elite', cursive;
+            font-size: 1.5rem;
+            text-align: center;
+            margin-bottom: 40px;
+            color: var(--blood);
+            border-bottom: 1px solid var(--dust);
+            padding-bottom: 10px;
+        }
+
+        .narrative {
+            line-height: 1.8;
+            font-size: 1.15rem;
+            margin-bottom: 30px;
+            white-space: pre-wrap;
+        }
+
+        /* --- Choices --- */
+        #choice-container {
+            padding: 30px 80px 50px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 20;
+            position: relative;
+            /* Ensure z-index works */
+        }
+
+        .choice-btn {
+            background: transparent;
+            border: 2px solid var(--iron);
+            padding: 15px 25px;
+            font-family: 'Special Elite', cursive;
+            font-size: 1.1rem;
+            color: var(--ink);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .choice-btn:hover {
+            background: var(--iron);
+            color: var(--paper);
+            transform: translateX(5px);
+        }
+
+        .choice-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* --- VFX --- */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.8s ease forwards;
+        }
+
+        @keyframes screenShake {
+            0% {
+                transform: translate(0, 0);
+            }
+
+            25% {
+                transform: translate(5px, 5px);
+            }
+
+            50% {
+                transform: translate(-5px, -5px);
+            }
+
+            75% {
+                transform: translate(5px, -5px);
+            }
+
+            100% {
+                transform: translate(0, 0);
+            }
+        }
+
+        .shake {
+            animation: screenShake 0.1s infinite;
+        }
+
+        @keyframes horseGallop {
+            0% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-5px);
+            }
+
+            100% {
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes backgroundScroll {
+            from {
+                background-position: 0 0;
+            }
+
+            to {
+                background-position: -1000px 0;
+            }
+        }
+
+        #horse-mode {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, #87ceeb, #a0522d 70%);
+            display: none;
+            z-index: 40;
+            overflow: hidden;
+        }
+
+        #horse-character {
+            width: 100px;
+            height: 60px;
+            background: #4a2c2a;
+            position: absolute;
+            bottom: 100px;
+            left: 50px;
+            border-radius: 10px;
+            animation: horseGallop 0.4s infinite;
+        }
+
+        #horse-ground {
+            width: 200%;
+            height: 100px;
+            background: #5d4037;
+            position: absolute;
+            bottom: 0;
+            animation: backgroundScroll 2s linear infinite;
+        }
+
+        #horse-distance {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-family: 'Merriweather', serif;
+            font-size: 24px;
+            color: #fff;
+            text-shadow: 2px 2px 4px #000;
+        }
+
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            gap: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 20px;
+            border-radius: 5px;
+            border-left: 5px solid var(--blood);
+            z-index: 30;
+        }
+
+        .tts-toggle {
+            cursor: pointer;
+            padding: 5px 10px;
+            background: var(--paper);
+            color: var(--ink);
+            border: 2px solid var(--blood);
+            font-family: 'Merriweather', serif;
+            font-size: 0.8rem;
+            transition: all 0.3s;
+        }
+
+        .tts-toggle.active {
+            background: var(--blood);
+            color: #fff;
+        }
+
+        #combat-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .blood-flash {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, transparent, var(--blood));
+            opacity: 0;
+            transition: opacity 0.1s;
+            pointer-events: none;
+            /* VERY IMPORTANT: prevent click blocking */
+        }
+
+        #reticle {
+            width: 80px;
+            height: 80px;
+            border: 2px solid var(--blood);
+            border-radius: 50%;
+            position: absolute;
+            display: none;
+            pointer-events: auto;
+            cursor: crosshair;
+            box-shadow: 0 0 15px var(--blood);
+            z-index: 60;
+        }
+
+        #reticle::before,
+        #reticle::after {
+            content: "";
+            position: absolute;
+            background: var(--blood);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        #reticle::before {
+            width: 100%;
+            height: 1px;
+        }
+
+        #reticle::after {
+            height: 100%;
+            width: 1px;
+        }
+
+        .character-portrait {
+            width: 100%;
+            height: 200px;
+            background-color: #000;
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid var(--iron);
+        }
+
+        .portrait-placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-family: 'Special Elite', cursive;
+            opacity: 0.3;
+        }
+
+        /* Cinematic Letterbox */
+        .letterbox {
+            position: absolute;
+            width: 100%;
+            height: 10%;
+            background: #000;
+            z-index: 10;
+            transition: height 1s ease;
+        }
+
+        .top {
+            top: 0;
+        }
+
+        .bottom {
+            bottom: 0;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* --- Dev Menu --- */
+        #dev-menu {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            background: rgba(12, 11, 10, 0.95);
+            border: 3px solid var(--gold);
+            padding: 20px;
+            z-index: 1000;
+            color: var(--paper);
+            font-family: 'Special Elite', cursive;
+            display: none;
+            box-shadow: 0 0 100px rgba(0, 0, 0, 1);
+        }
+
+        #dev-menu h2 {
+            text-align: center;
+            color: var(--gold);
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--gold);
+            padding-bottom: 5px;
+        }
+
+        #dev-menu .dev-section {
+            margin-bottom: 15px;
+        }
+
+        #dev-menu select,
+        #dev-menu button {
+            width: 100%;
+            padding: 8px;
+            background: #222;
+            border: 1px solid var(--gold);
+            color: var(--paper);
+            font-family: 'Special Elite', cursive;
+            margin-bottom: 5px;
+            cursor: pointer;
+        }
+
+        #dev-menu button:hover {
+            background: var(--gold);
+            color: #000;
+        }
+
+        .dev-close {
+            text-align: right;
+            font-size: 0.8rem;
+            opacity: 0.6;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="game-container">
+        <div class="letterbox top"></div>
+        <div class="letterbox bottom"></div>
+
+        <div id="hud">
+            <div class="stat-group">
+                <span>Honor:</span>
+                <div id="honor-bar">
+                    <div id="honor-fill"></div>
+                </div>
+            </div>
+            <div id="date-location">May 1899 | Cumberland Forest</div>
+            <div class="stat-group">
+                <span>Jack Marston</span>
+            </div>
+            <button id="tts-btn" class="tts-toggle" onclick="toggleTTS()">🔊 READ ALOUD: OFF</button>
+            <button id="music-btn" class="tts-toggle" onclick="toggleMusic()">🎶 MUSIC: OFF</button>
+        </div>
+
+        <div id="horse-mode">
+            <div id="horse-ground"></div>
+            <div id="horse-character"></div>
+            <div id="horse-distance">Distance: 0m</div>
+        </div>
+
+        <div id="combat-overlay">
+            <div class="blood-flash" id="blood-flash"></div>
+            <div id="reticle"></div>
+        </div>
+
+        <div id="story-area">
+            <!-- Narrative content injected here -->
+        </div>
+
+        <div id="choice-container">
+            <!-- Choices injected here -->
+        </div>
+
+        <!-- Hidden YouTube Player for American Venom -->
+        <div id="music-player-container" style="display:none;">
+            <div id="yt-player"></div>
+        </div>
+
+        <!-- Dev Menu Overlay -->
+        <div id="dev-menu">
+            <h2>DEVELOPER MENU</h2>
+            <div class="dev-section">
+                <span>Jump to Scene:</span>
+                <select id="jump-select">
+                    <option value="start">Chapter 1</option>
+                    <option value="ch2_start">Chapter 2</option>
+                    <option value="ch3_start">Chapter 3</option>
+                    <option value="ch4_start">Chapter 4</option>
+                    <option value="ch5_start">Chapter 5</option>
+                    <option value="ch6_start">Chapter 6</option>
+                    <option value="ch7_start">Chapter 7</option>
+                    <option value="ch8_start">Chapter 8</option>
+                    <option value="ch9_start">Chapter 9</option>
+                    <option value="ch10_start">Chapter 10</option>
+                    <option value="ch11_start">Chapter 11</option>
+                    <option value="ch12_start">Chapter 12</option>
+                    <option value="ch13_start">Chapter 13</option>
+                    <option value="ch14_start">Chapter 14</option>
+                    <option value="ch15_start">Chapter 15</option>
+                    <option value="ch16_start">Chapter 16</option>
+                    <option value="ch17_start">Chapter 17</option>
+                    <option value="ch18_start">Chapter 18</option>
+                    <option value="ch19_start">Chapter 19 (American Venom)</option>
+                    <option value="ch20_end">Chapter 20</option>
+                </select>
+                <button onclick="devJump()">JUMP</button>
+            </div>
+            <div class="dev-section">
+                <span>Set Honor:</span>
+                <button onclick="setHonor(100)">MAX HONOR</button>
+                <button onclick="setHonor(0)">MIN HONOR</button>
+                <button onclick="setHonor(50)">NEUTRAL HONOR</button>
+            </div>
+            <div class="dev-section">
+                <span>Stats:</span>
+                <button onclick="state.health = 100; updateHUD(); alert('Health Refilled');">REFILL HEALTH</button>
+            </div>
+            <div class="dev-close">Press 'E' to close</div>
+        </div>
+    </div>
+
+    <script>
+        const state = {
+            honor: 50,
+            health: 100,
+            relationships: {
+                dutch: 0,
+                hosea: 0,
+                arthur: 0,
+                john: 0,
+                micah: 0,
+                bill: 0,
+                javier: 0,
+                charles: 0,
+                sean: 0,
+                lenny: 0,
+                abigail: 0,
+                uncle: 0,
+                pearson: 0,
+                strauss: 0,
+                swanson: 0,
+                trelawny: 0,
+                karen: 0,
+                marybeth: 0,
+                tilly: 0,
+                grimshaw: 0,
+                molly: 0
+            },
+            currentChapter: 1,
+            history: [],
+            combatActive: false,
+            horseActive: false,
+            ttsEnabled: false,
+            musicActive: false
+        };
+
+        // YouTube Player Integration
+        let player;
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('yt-player', {
+                height: '0',
+                width: '0',
+                videoId: 'AF22vaGLziM', // American Venom - Woody Jackson (Verified Official)
+                playerVars: {
+                    'autoplay': 0,
+                    'loop': 1,
+                    'playlist': 'AF22vaGLziM'
+                },
+                events: {
+                    'onReady': onPlayerReady
+                }
+            });
+        }
+
+        function onPlayerReady(event) {
+            // Player is ready
+        }
+
+        function toggleMusic() {
+            if (!player || typeof player.playVideo !== 'function') {
+                console.warn("YouTube player not ready yet.");
+                return;
+            }
+            state.musicActive = !state.musicActive;
+            const btn = document.getElementById('music-btn');
+            if (state.musicActive) {
+                player.playVideo();
+                btn.innerText = "🎶 MUSIC: ON";
+                btn.classList.add('active');
+            } else {
+                player.pauseVideo();
+                btn.innerText = "🎶 MUSIC: OFF";
+                btn.classList.remove('active');
+            }
+        }
+
+        function toggleTTS() {
+            state.ttsEnabled = !state.ttsEnabled;
+            const btn = document.getElementById('tts-btn');
+            if (state.ttsEnabled) {
+                btn.innerText = "🔊 READ ALOUD: ON";
+                btn.classList.add('active');
+                // Assuming currentScene is tracked or can be derived from the last rendered scene
+                // For now, we'll speak the text of the current story area if TTS is turned on mid-game
+                const currentText = document.querySelector('#story-area .narrative')?.innerText;
+                if (currentText) {
+                    speak(currentText);
+                }
+            } else {
+                btn.innerText = "🔊 READ ALOUD: OFF";
+                btn.classList.remove('active');
+                window.speechSynthesis.cancel();
+            }
+        }
+
+        function speak(text) {
+            if (!state.ttsEnabled) return;
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 0.9; // Gritty, slower pace
+            utterance.pitch = 0.8; // Lower pitch for gravitas
+            window.speechSynthesis.speak(utterance);
+        }
+
+        const storyData = {
+            scenes: {
+                // CHAPTER 1: THE FOG OF THE FOREST (Expanded)
+                start: {
+                    text: "Chapter 1: The Fog of the Forest\n\nThe wild west air is thick with the scent of pine and damp earth. A heavy, suffocating fog clings to the forest floor, muting the world into shades of grey and deep, bruised green. It feels as if the land itself is mourning the passing of an age.\n\nYou are Jack Marston. You sit by a dying fire, the embers glowing like angry eyes in the mist. A worn copy of 'The Last of the Mohicans' rests in your lap, its spine cracked, but your thoughts are miles away from the fictional frontiers. The nervous energy vibrating through the camp is real, and it's sharp enough to cut.\n\nDutch van der Linde is standing near his tent, a flickering lantern casting long, demonic shadows against the canvas. He's leaning over a map with Hosea Matthews, their voices low and urgent, debating paths that grow narrower with every passing moon.",
+                    choices: [{ text: "Look around the camp...", next: "ch1_intro_p2" }]
+                },
+                ch1_intro_p2: {
+                    text: "Your father, John, sits on a crate across from you, the rhythmic sliding of an oiled cloth over the cold steel of his holster providing a steady, grim heartbeat to the camp. His jaw is set like granite, eyes fixed on the treeline as if he could see the Law coming for them. \n\nAbigail watches him from the shadows of the wagon, her hands wringing her shawl, a mixture of fear and tired irritation etched into her face. She has spent years running, and the weariness is deeper than bone.\n\nIn the distance, the sharp, metallic click of Micah Bell's Bowie knife against a wagon wheel rings out. He's cleaning his nails, a predator waiting for the first sign of blood in the water.",
+                    choices: [
+                        { text: "Talk to Pearson at the chuckwagon.", next: "ch1_pearson", effect: { rel: { pearson: 5 } } },
+                        { text: "Approach Dutch and Hosea's debate.", next: "ch1_dutch_hosea", effect: { rel: { hosea: 5 } } },
+                        { text: "Sit beside your mother, Abigail.", next: "ch1_abigail", effect: { rel: { abigail: 5 } } }
+                    ]
+                },
+                ch1_pearson: {
+                    text: "You walk over to the chuckwagon, where Simon Pearson is aggressively scrubbing a cast-iron pot. The smell of stew—mainly salt pork and desperation—hangs heavy. \n\n\"Barely a drop of coffee left, Jack,\" he grumbled without looking up. \"The supplies are thin, and the nerves are thinner. Arthur and John saw riders on the ridge at sundown. Pinkertons? State militia? At this point, it don't much matter. They're all the same beast.\"\n\nHe stops scrubbing, his eyes weary. \"Dutch says we're just waiting for the right moment. But the moments are starting to look like traps to me.\"",
+                    choices: [
+                        { text: "Help him gather wood to keep the fire alive.", next: "ch1_gather", effect: { honor: 5 } },
+                        { text: "Ask if Uncle is helping.", next: "ch1_uncle", effect: { rel: { uncle: -2 } } }
+                    ]
+                },
+                ch1_uncle: {
+                    text: "Pearson scoffs, a bitter laugh escaping his throat. \"Uncle? That old dog? He's probably found a bottle of tonic and a soft patch of moss by now. Claims his lumbago is acting up again. The only thing that man is good at is avoiding work and finding trouble.\"\n\nYou look towards the back of the camp, where Uncle is indeed snoring softly under a tarp, oblivious to the encroaching shadows.",
+                    choices: [{ text: "Collect wood instead.", next: "ch1_gather", effect: { honor: 5 } }]
+                },
+                ch1_dutch_hosea: {
+                    text: "You approach the table. Hosea is pointing to a trail through the mountains. \"It's too risky, Dutch. The pass will be guarded. We need to split up, fade into the towns.\"\n\nDutch slams a fist onto the table, though his voice remains a calm, terrifying whisper. \"Split up? And become easy prey for Milton's wolves? No, Hosea. We stay together. We move as one. We have a plan, we just need... faith.\"\n\nHe turns to you. \"Jack. My boy. Do you hear them? The machines of the new world? They're grinding closer every day. They want to put us in cages and call it civilization.\"",
+                    choices: [
+                        { text: "\"I trust you, Dutch.\"", next: "ch1_gather", effect: { rel: { dutch: 10 } } },
+                        { text: "\"Hosea's right. The law is everywhere.\"", next: "ch1_gather", effect: { rel: { hosea: 10, dutch: -5 } } }
+                    ]
+                },
+                ch1_abigail: {
+                    text: "You sit on the log beside Abigail. She reaches out and brushes a stray hair from your forehead, her touch surprisingly gentle given her calloused skin.\n\n\"You should be sleeping, Jack. This life... it wasn't meant for a boy like you. Your father and Dutch, they're chasing ghosts, and I'm just trying to make sure you ain't one of 'em.\"\n\nJohn looks over, his face softening for a split second before returning to its stony mask. \"The boy stays ready, Abigail. That's the only way he survives.\"",
+                    choices: [
+                        { text: "\"I'm staying ready, Pa.\"", next: "ch1_gather", effect: { rel: { john: 10 } } },
+                        { text: "\"I just want a home.\"", next: "ch1_gather", effect: { honor: 5, rel: { abigail: 10 } } }
+                    ]
+                },
+                ch1_gather: {
+                    text: "You head into the treeline to gather what wood you can find. Every snap of a twig under your boot sounds like a gunshot in the heavy silence. You feel eyes on you from the darkness—not animals, but the cold, calculating eyes of men with badges.\n\nYou return to camp just as Arthur Morgan whistles the high, sharp signal of the scout. He rides in in a flurry of mud and panic, his horse lathered in sweat. \n\n\"They're here!\" Arthur bellows. \"Milton's boys! They found the trail near the creek. We have maybe ten minutes before they're on us!\"",
+                    choices: [
+                        { text: "[COMBAT] Grab your repeater and protect Dutch.", action: "startCombat", combatType: "ch1_scout", next: "" },
+                        { text: "Help Mary-Beth and Tilly load the supply wagon.", next: "ch2_start", effect: { honor: 10, rel: { marybeth: 5, tilly: 5 } } }
+                    ]
+                },
+                combat_ch1_success: {
+                    text: "The blast of your rifle echoes through the valley. The Pinkerton scout collapses into the thick clover, his hat spinning into the dirt. \n\nDutch steps out from his tent, his revolvers drawn, a look of grim satisfaction on his face. \"A fine shot, Jack! You've got the marrow of our kind in you! Now, MOONLIGHT AND DUST! WE MOVE!\"",
+                    choices: [{ text: "Ride out!", next: "ch2_start" }]
+                },
+                combat_ch1_failure: {
+                    text: "You pull the trigger, but the barrel jerks at the last second. The bullet whines into the trees. The scout fires back, the heat of the lead grazing your shoulder with a searing pain.\n\nArthur finishes the job with two quick shots from his Cattleman. \"Stay down, kid! Dutch! We gotta go now!\"",
+                    choices: [{ text: "Retreat to the wagons!", next: "ch2_start" }]
+                },
+
+                ch2_start: {
+                    text: "Chapter 2: Morning — Forest Camp\n\nThe morning light breaks through the canopy in sharp, cold needles of silver. The fog has lifted slightly, replaced by a biting chill that settles in your lungs. The camp is a whirlwind of hushed activity—wagons being packed, lanterns snuffed, and horses stomping impatiently against the frost-covered ground.\n\nArthur Morgan approaches you, his face a canvas of exhaustion and grim duty. \"They're closer than we thought, Jack. Bill saw a battalion of Milton's men near the Cumberland Pass. They're organized, and they've got blood in their eyes. Dutch thinks we can hit the train and use the chaos to slip north, but the window is closing fast.\"\n\nDutch van der Linde gazes out over the valley, his hands clasped behind his back. \"This is it, Jack. The moment we decide if we're men or just ghosts haunting these mountains. Do we change our stripes, or do we take what the world owes us?\"",
+                    choices: [
+                        { text: "Scout the Cumberland Pass with Arthur.", next: "ch2_scout_expand", effect: { honor: 10, rel: { arthur: 15 } } },
+                        { text: "Help Dutch prepare for the train heist.", next: "ch2_hit_expand", effect: { honor: -10, rel: { dutch: 15 } } },
+                        { text: "Urge John to move the families north immediately.", next: "ch2_move_expand", effect: { rel: { john: 15, abigail: 10 } } }
+                    ]
+                },
+                ch2_scout_expand: {
+                    text: "You and Arthur ride out to a jagged ridge overlooking the pass. The wind howls through the pines, carrying the distant, rhythmic chug of a steam engine. Through the binoculars, you don't just see a train; you see a fortress on wheels. Gatling guns sweep the treeline from the rear car.\n\n\"It's a trap, kid,\" Arthur spits, lowering his glass. \"Milton's baiting us with payroll while his dogs wait in the scrub. We need to alert the others, but there's a scout party closing in on our position!\"",
+                    choices: [
+                        { text: "[HORSE RIDE] Outrun the scouts back to camp!", action: "startHorse", next: "ch2_escape_success" },
+                        { text: "[COMBAT] Take them out from the ridge.", action: "startCombat", combatType: "ch2_stealth", next: "" }
+                    ]
+                },
+                ch2_hit_expand: {
+                    text: "You help Dutch and Bill prepare the dynamite near the trestle. The air is thick with the smell of sulfur and wet earth. Dutch is humming a low tune, his eyes bright with a dangerous, manic energy. \n\n\"Civilization is a lie, Jack! And tonight, we're the truth that breaks it!\" Just as the wires are set, a flare goes up from the ridge—the Pinkertons have found you!",
+                    choices: [
+                        { text: "[HORSE RIDE] Escape the ambush on horseback!", action: "startHorse", next: "ch2_escape_success" },
+                        { text: "[COMBAT] Defend the explosive site!", action: "startCombat", combatType: "ch2_ambush", next: "" }
+                    ]
+                },
+                ch2_move_expand: {
+                    text: "John nods, his jaw tight. \"The boy's right. The money ain't worth the kin we'd lose tonight.\" He signals the wagons to turn, but the sound of heavy hooves thundering on the road echoes through the forest. The law is already here.",
+                    choices: [
+                        { text: "[HORSE RIDE] Lead the pursuit away from the wagons!", action: "startHorse", next: "ch2_escape_success" }
+                    ]
+                },
+                ch2_escape_success: {
+                    text: "The Cumberland Forest blurs past in a streak of green and brown. The wind whips your hair and the fire of the chase burns in your chest. You reach the rendezvous point just as the sun dips below the horizon, the echoes of your pursuers fading into the dusk.\n\nArthur pulls up beside you, his horse lathered and gasping. \"Good riding, Jack. You've got your father's hands on those reins. Now, the real fight begins.\"",
+                    choices: [{ text: "Chapter 3: The Train at Dusk", next: "ch3_start" }]
+                },
+                combat_ch2_success: {
+                    text: "Your shots ring true. The scouts fall silently into the brush. Arthur nods, a rare shadow of a smile on his face. \"Clean. Quiet. Just how we like it. Now, let's get back before Dutch starts seeing shadows as armies.\"",
+                    choices: [{ text: "Proceed", next: "ch3_start" }]
+                },
+                combat_ch2_failure: {
+                    text: "The hammer clicks on a dud, or maybe your hand just shakes. A cry goes up. \"THEY'RE ON THE RIDGE!\" Chaos erupts as bullets shred the pines around you. You're forced into a desperate retreat.",
+                    choices: [{ text: "Proceed", next: "ch3_start" }]
+                },
+
+                // CHAPTER 3-20 (Narrative Expansion)
+                ch3_start: {
+                    text: "Chapter 3: The Train at Dusk\n\nThe sky over Cumberland Pass is the color of a fresh bruise—purples and deep oranges bleeding into the oncoming night. The air is cold and carries the sharp, metallic iron-scent of the tracks below. You crouch on a rocky overhang, your heart drumming against your ribs like a caged bird.\n\nBeside you, John Marston checks his Winchester, the sound of the lever clicking loud in the stillness. \"The law thinks we're done for, Jack. They think we're just dogs barking at the moon. Tonight, we show 'em we still got teeth.\"\n\nIn the distance, a low, mournful moan echoes through the valley. The train is coming. A giant of iron and steam, belching black smoke that stains the twilight sky. It's carrying the payroll for the state militia—enough gold to buy a thousand miles of freedom, or a thousand graves.",
+                    choices: [
+                        { text: "Leap onto the engine as it passes.", next: "ch3_engine", effect: { honor: -5, rel: { arthur: 10 } } },
+                        { text: "Provide cover fire from the ridge.", next: "ch3_ridge", effect: { rel: { john: 10 } } },
+                        { text: "Wait for Dutch's signal from the trestle.", next: "ch3_dutch", effect: { rel: { dutch: 10 } } }
+                    ]
+                },
+                ch3_engine: {
+                    text: "The jump is a blur of wind and the terrifying roar of the engine. You land hard on the coal car, the heat from the furnace hitting you like a physical blow. Arthur is already there, his face soot-stained and mask tied tight. \n\n\"Keep your head down, kid! The guards in the next car are already waking up!\" The train groans as it hits the incline, its iron wheels screaming against the tracks.",
+                    choices: [{ text: "Move to Chapter 4: Smoke and Gunpowder", next: "ch4_start" }]
+                },
+                ch3_ridge: {
+                    text: "You stay back with John, your repeater resting on a cold ledge of granite. As the train enters the cut, the gang's ambush erupts below. muzzle flashes light up the dusk like fireflies. You see guards leaning out of the windows, their brass buttons glinting. You take a breath, smelling the gunpowder and the pine.",
+                    choices: [{ text: "Move to Chapter 4: Smoke and Gunpowder", next: "ch4_start" }]
+                },
+                ch3_dutch: {
+                    text: "You wait. Dutch is standing on the tracks, his arms wide as if he could stop the iron beast with his sheer will. The dynamite is set. The tension is a wire pulled too tight. Then, the world turns white. The explosion ripples through the valley, the trestle groaning as the engine's wheels lose their grip.",
+                    choices: [{ text: "Move to Chapter 4: Smoke and Gunpowder", next: "ch4_start" }]
+                },
+                ch4_start: {
+                    text: "Chapter 4: Smoke and Gunpowder\n\nThe air inside the train cars is a thick, choking mix of coal dust and blue smoke. Every breath is a struggle. Guards are shouting, their voices drowned out by the rhythmic 'clack-clack' of the wheels and the whistle's scream. \n\nIn the payroll car, the safe sits bolted to the floor—a block of cold iron holding the gang's future. Micah Bell is there, his double-action revolvers barking as he laughs a high, jagged laugh. \"Open it up, Jack! Let's see the color of their greed!\"\n\nOutside, the sky has turned pitch black, the only light coming from the sparks flying off the brakes and the fire of the gunfight.",
+                    choices: [
+                        { text: "[COMBAT] Shoot the safe lock.", action: "startCombat", combatType: "ch4_safe", next: "" },
+                        { text: "Hold the door against the militia.", next: "ch4_door", effect: { honor: 10, rel: { john: 10 } } },
+                        { text: "Help Arthur carry the wounded Bill away.", next: "ch5_start", effect: { honor: 20, rel: { arthur: 10, bill: 10 } } }
+                    ]
+                },
+                ch4_door: {
+                    text: "You brace your shoulder against the heavy sliding door, feeling the lead of the militia's rifles thudding into the wood on the other side. Splinters fly. You fire back blindly into the night, the kick of your weapon the only thing tethering you to the world. Arthur shouts for a retreat—the bridge won't hold much longer.",
+                    choices: [{ text: "Leap off the moving train!", next: "ch5_start" }]
+                },
+                combat_ch4_success: {
+                    text: "The lock shatters. The door swings wide to reveal stacks of gold certificates and bags of heavy coin. Micah grins, his teeth yellow in the lantern light. \"We're rich, boy! We're gods!\" You grab what you can as the train begins to tilt over the shattered trestle.",
+                    choices: [{ text: "Proceed", next: "ch5_start" }]
+                },
+                combat_ch4_failure: {
+                    text: "Your shot ricochets. The militia bursts through the side door, pinning you down. John has to drag you out by the collar as the car begins to derail. The money is lost to the flames.",
+                    choices: [{ text: "Proceed", next: "ch5_start" }]
+                },
+                ch5_start: {
+                    text: "Chapter 5: Aftermath\n\nThe silence that follows the heist is more deafening than the gunfire. You're back at a temporary camp in the lowlands, the smell of damp grass and woodsmoke replacing the sulfur of the train. \n\nThree of the boys are laid out on bedrolls, their bandages blooming red in the moonlight. Mary-Beth sits by the fire, her book forgotten. She looks at you, and for a moment, you see the reflection of a monster in her eyes.\n\n\"Was it worth it, Jack?\" she asks, her voice a hollow whisper. \"Look at them. Look at your father. We're trading lives for paper, and the paper's burning up as fast as we can spend it.\"",
+                    choices: [
+                        { text: "\"The world left us no choice.\"", next: "ch6_start", effect: { rel: { dutch: 15, marybeth: -10 } } },
+                        { text: "\"I don't know anymore, Mary.\"", next: "ch6_start", effect: { honor: 10, rel: { marybeth: 15 } } },
+                        { text: "Walk away in silence.", next: "ch6_start", effect: { rel: { john: 5 } } }
+                    ]
+                },
+                ch6_start: {
+                    text: "Chapter 6: Bounty Posters\n\nYou ride into a small, dusty town at dawn to collect supplies. In the center of the square, nailed to the gallows, is a fresh sheet of paper. \n\n'WANTED: JACK MARSTON. DEAD OR ALIVE.'\n\nThe drawing isn't perfect, but the eyes are yours—cold and old for a boy of sixteen. The bounty is five hundred dollars. A king's ransom in this dying country. \n\nJohn stands beside you, his hat pulled low. \"They've given you a name, Jack. And a price. From here on out, every man with a gun is a potential executioner. You ready to live with that shadow?\"",
+                    choices: [
+                        { text: "Tear the poster down and burn it.", next: "ch7_start", effect: { honor: -5, rel: { micah: 10 } } },
+                        { text: "Leave it. Let them come.", next: "ch7_start", effect: { rel: { john: 10 } } },
+                        { text: "Hide your face and ride out.", next: "ch7_start", effect: { honor: 5, rel: { hosea: 10 } } }
+                    ]
+                },
+                ch7_start: {
+                    text: "Chapter 7: Campfire Cracks\n\nThe air at camp is colder than the mountain wind, chilled by a silence that no fire can warm. Dutch and Hosea are standing by the map table, their shadows long and jagged against the trees. They aren't debating anymore; they're fighting for the soul of the gang.\n\n\"We hit the ferry in Blackwater!\" Dutch's voice is a whip-crack of authority. \"It's the only way to get the capital we need to disappear!\"\n\nHosea shakes his head, his voice tired and heavy with wisdom. \"It's a suicide mission, Dutch. The Pinkertons want us to hit that ferry. They're baiting the hook, and you're ready to swallow it whole. We should move north, buy a ranch, fade away.\"\n\nArthur stands between them, his hand resting on his belt, looking like a man forced to choose between two fathers.",
+                    choices: [
+                        { text: "Support Dutch's vision of 'One Last Score'.", next: "ch7_dutch", effect: { rel: { dutch: 15, arthur: -5, hosea: -10 } } },
+                        { text: "Back Hosea's plan for a quiet life.", next: "ch7_hosea", effect: { honor: 10, rel: { hosea: 15, dutch: -10 } } },
+                        { text: "Keep to yourself and talk to Lenny.", next: "ch7_lenny", effect: { rel: { lenny: 10 } } }
+                    ]
+                },
+                ch7_dutch: {
+                    text: "Dutch turns to you, a manic light in his eyes. \"See, Hosea? The boy has faith! He knows we weren't meant to die in a muddy field!\" He claps you on the shoulder. \"Prepare yourself, Jack. We're going to make them remember our names.\"",
+                    choices: [{ text: "Chapter 8: The Swamp Hideout", next: "ch8_start" }]
+                },
+                ch7_hosea: {
+                    text: "Hosea gives you a sad, knowing smile. \"You've got a good head on your shoulders, Jack. Don't let him fill it with dreams that only lead to the gallows.\" Dutch scoffs and turns away, his silence heavier than any shout.",
+                    choices: [{ text: "Chapter 8: The Swamp Hideout", next: "ch8_start" }]
+                },
+                ch7_lenny: {
+                    text: "You find Lenny by the supply wagon, sharpening his knife. \"They're tearing each other apart, Jack. And we're the ones who'll be caught in the middle when the roof falls in. I don't like the look of things.\"",
+                    choices: [{ text: "Chapter 8: The Swamp Hideout", next: "ch8_start" }]
+                },
+                ch8_start: {
+                    text: "Chapter 8: The Swamp Hideout\n\nLakay. The air is so thick with humidity it feels like breathing through a wet cloth. The swamp is a graveyard of cypress trees and Spanish moss, the water a stagnant, tea-colored mirror for the moonlight. \n\nEvery splash in the dark—a gator, a turtle, or something worse—sets the camp on edge. The smell of rot and old wood is constant. You're hiding in the ruins of an old fishing village, the floorboards groaning under every step. \n\nIn the distance, the low, rhythmic thrum of drums from a hidden ritual in the glades echoes through the night, a reminder that you're in a land that doesn't want you here.",
+                    choices: [
+                        { text: "Investigate a strange light in the mangroves.", next: "ch8_light", effect: { honor: 5 } },
+                        { text: "Go on a night hunt with Charles.", next: "ch8_charles", effect: { rel: { charles: 15 } } },
+                        { text: "Stay by the fire with Reverend Swanson.", next: "ch8_swanson", effect: { rel: { swanson: 10 } } }
+                    ]
+                },
+                ch8_light: {
+                    text: "You wade through the shallow, murky water, the mud sucking at your boots. The light turns out to be a flickering lantern on a sunken boat. Inside, you find a cache of medicine—tonic and herbs. You bring them back to camp, earning a rare nod of approval from Susan Grimshaw.",
+                    choices: [{ text: "Chapter 9: Betrayal Signs", next: "ch9_start" }]
+                },
+                ch8_charles: {
+                    text: "Charles moves through the swamp like a shadow. He points to a massive bull gator near a log. \"The world is changing, Jack. Even here. They're draining the swamps, building the cities. There's nowhere left for us to go but into the sea.\"",
+                    choices: [{ text: "Chapter 9: Betrayal Signs", next: "ch9_start" }]
+                },
+                ch8_swanson: {
+                    text: "The Reverend is more sober than usual, his eyes bloodshot. \"The wolves are at the door, Jack. I can hear them sniffing at the cracks. Dutch thinks he's a shepherd, but I fear he's just the one leading us to the slaughter.\"",
+                    choices: [{ text: "Chapter 9: Betrayal Signs", next: "ch9_start" }]
+                },
+                ch9_start: {
+                    text: "Chapter 9: Betrayal Signs\n\nYou wake to the sound of a struggle near the lockbox. The stash—the thousands they've bled and died for—is missing a significant portion. Pearson is standing there, trembling, his hands empty. \n\n\"I swear, Dutch! I didn't touch it! I just came to check the ledger!\"\n\nMicah Bell steps out of the shadows, his double-action revolvers glinting. \"Maybe the cook's been dipping into the pot, Dutch. Or maybe we got a rat in the parlor.\" He looks directly at you, his lip curling into a sneer.",
+                    choices: [
+                        { text: "Accuse Micah of stealing it himself.", next: "ch9_micah", effect: { rel: { micah: -20, arthur: 15 } } },
+                        { text: "Suggest someone from town might have found them.", next: "ch9_town", effect: { rel: { john: 10 } } },
+                        { text: "Ask Bill and Javier to help track the thief.", next: "ch9_track", effect: { rel: { bill: 10, javier: 10 } } }
+                    ]
+                },
+                ch9_micah: {
+                    text: "Micah's hand twitches towards his gun. \"Careful, boy. Accusations are cheap, but bullets are expensive.\" Dutch steps between you, his face a mask of cold fury. \"Enough! We stay together, or we die alone!\"",
+                    choices: [{ text: "Chapter 10: The Pinkertons Arrive", next: "ch10_start" }]
+                },
+                ch9_town: {
+                    text: "You mention that a local from town was asking too many questions at the general store yesterday. Dutch's eyes narrow. \"Then we're already late. We shouldn't have stayed in this mud-hole this long. Hosea, pack the maps! We're moving by nightfall.\"",
+                    choices: [{ text: "Chapter 10: The Pinkertons Arrive", next: "ch10_start" }]
+                },
+                ch9_track: {
+                    text: "You, Bill, and Javier scour the woods for tracks. You find a set of deep prints leading towards the road, but they're washed out by the rain. Bill spits in the mud. \"If it was Micah, he's too smart to leave a clear trail. If it was Pearson... well, he's too scared to run far.\"",
+                    choices: [{ text: "Chapter 10: The Pinkertons Arrive", next: "ch10_start" }]
+                },
+                ch10_start: {
+                    text: "Chapter 10: The Pinkertons Arrive\n\nThe drums in the swamp are replaced by the rhythmic 'whump-whump' of heavy hooves. Suddenly, the treeline is alive with blue uniforms and the glint of sun on brass. Agent Andrew Milton stands at the edge of the clearing, his bowler hat formal against the grime of the swamp.\n\n\"Mr. van der Linde!\" he bellows. \"I have fifty men and three Gatling guns pointed at your dinner table. Give us the boy and the money, and maybe I'll let the women walk!\"\n\nDutch draws his Schofields, his voice low and dangerous. \"Jack isn't for sale, Milton. And neither is our freedom.\"",
+                    choices: [
+                        { text: "[COMBAT] Ambush the Pinkerton front line.", action: "startCombat", combatType: "ch10_ambush", next: "" },
+                        { text: "Help Abigail and the others escape through the rear.", next: "ch10_escape", effect: { honor: 15, rel: { abigail: 15, john: 10 } } },
+                        { text: "Surrender yourself to save the gang.", next: "ch10_surrender", effect: { honor: 50, rel: { dutch: -20, john: 20 } } }
+                    ]
+                },
+                ch10_surrender: {
+                    text: "You step forward, your hands raised high in the humid air. \"Milton! Take me! Let them go!\" \n\nMilton sneers, his bowler hat casting a shadow over his eyes. \"A noble sentiment, boy. But we're not here for just one head.\" Before he can say more, Dutch grabs your collar and pulls you back behind a wagon. \"THEY DON'T WANT DEALS, JACK! THEY WANT BLOOD!\" The forest erupts in gunfire anyway.",
+                    choices: [{ text: "Join the fight!", next: "ch10_escape" }] // Redirecting to escape flow for continuity
+                },
+                ch10_escape: {
+                    text: "You lead the wagons through the narrowest part of the mangroves, the water splashing as the horses struggle. Behind you, the swamp erupts in the thunder of Gunfire. You look back to see Arthur and John standing their ground, holding the line as the sun sets over Lakay.",
+                    choices: [{ text: "Chapter 11: Crossroads Town", next: "ch11_start" }]
+                },
+                ch11_start: {
+                    text: "Chapter 11: Crossroads Town\n\nYou've made it to the outskirts of Valentine, a town built on mud and livestock. The air smells of manure and cheap whiskey. You're staying in a cramped room above the saloon, the floorboards vibrating with the sound of piano music and laughter from below. \n\nMary-Beth sits by the window, watching the rain wash the dust from the street. \"Jack... Arthur's getting worse. The cough, the way he looks at the horizon... he knows it's ending. Do you?\"",
+                    choices: [
+                        { text: "\"We can still find a way out.\"", next: "ch11_hope", effect: { honor: 10, rel: { marybeth: 15 } } },
+                        { text: "\"Outlaws don't get happy endings.\"", next: "ch11_grim", effect: { rel: { arthur: 10 } } },
+                        { text: "Change the subject to the next job.", next: "ch11_job", effect: { rel: { dutch: 10 } } }
+                    ]
+                },
+                ch11_hope: {
+                    text: "Mary-Beth smiles, a flicker of genuine light in her eyes. \"I hope you're right, Jack. I've been writing stories about far-off places for so long, I've started to forget they actually exist. Maybe we can find our own story, away from all of this.\"",
+                    choices: [{ text: "Find Arthur in the morning.", next: "ch12_start" }]
+                },
+                ch11_grim: {
+                    text: "She sighs, looking back at the rain. \"I suppose the books don't mention the smell of wet wool and the constant fear. We're just relics, aren't we? Pieces of a world that's being paved over.\"",
+                    choices: [{ text: "Find Arthur in the morning.", next: "ch12_start" }]
+                },
+                ch11_job: {
+                    text: "You head down to the saloon to ask about work. The bartender looks at your youth and your weary eyes. \"Only work for a boy like you is cleaning the stables or carrying messages for the Law. And I'd steer clear of the Law if I were you; they're looking for boys with that particular look of trouble.\"",
+                    choices: [{ text: "Return to the room and wait for morning.", next: "ch12_start" }]
+                },
+                ch12_start: {
+                    text: "Chapter 12: Arthur's Warning\n\nYou find Arthur sitting on a bench behind the stables, the dawn light revealing the grey, hollowed-out look of his face. He coughs into a bloody rag, his hand trembling. \n\n\"Listen to me, Jack,\" he gasps, his voice a dry rasp. \"Dutch... he's lost in the music. He's chasing a dream that's turned into a nightmare. He'll hang us all just to prove he was right. When the time comes, don't look back. You and John... you get out. You hear me?\"",
+                    choices: [
+                        { text: "Promise him you'll look after John and Abigail.", next: "ch12_promise", effect: { honor: 15, rel: { arthur: 20, john: 10 } } },
+                        { text: "Ask him to come with you.", next: "ch12_come", effect: { rel: { arthur: 10 } } },
+                        { text: "Defend Dutch one last time.", next: "ch12_defend", effect: { rel: { dutch: 15, arthur: -10 } } }
+                    ]
+                },
+                ch12_come: {
+                    text: "Arthur coughs, a deep, rattling sound. \"My riding days are numbered, Jack. My time for 'getting out' passed a long time ago. But you and your father... you still have a chance. Don't waste it on an old man's mistakes.\"",
+                    choices: [{ text: "Promise to look after them.", next: "ch12_promise" }]
+                },
+                ch12_defend: {
+                    text: "Arthur's eyes flash with a moment of anger. \"Faith won't cure this cough, and it won't stop the Pinkertons. Dutch is high on the smell of gunpowder and his own speeches. You see the cliff, Jack. Don't be the one he pushes off first.\"",
+                    choices: [{ text: "Listen to his warning.", next: "ch12_promise" }]
+                },
+                ch12_promise: {
+                    text: "Arthur nods, a heavy weight seemingly lifting from his shoulders. \"Good. You're a better man than I was at your age. Now, go. Dutch has a 'plan' for the Saint Denis bank. And God help us, we're going to make them remember our names.\"",
+                    choices: [{ text: "Chapter 13: The Big Score", next: "ch13_start" }]
+                },
+                combat_ch10_success: {
+                    text: "Your rifle cracks in the humid air. Three Pinkertons fall into the swamp. The Gatling gun jam's under your fire. Dutch roars with laughter. \"THAT'S MY BOY! MOONLIGHT AND MUD, WE GO!\"",
+                    choices: [{ text: "Proceed", next: "ch11_start" }]
+                },
+                combat_ch10_failure: {
+                    text: "The Pinkertons return fire, the lead shredding the cypress roots around you. You're pinned. John throws a stick of dynamite to create a gap, but you're forced to leave the heavy supplies behind.",
+                    choices: [{ text: "Proceed", next: "ch11_start" }]
+                },
+                ch13_start: {
+                    text: "Chapter 13: The Big Score\n\nSaint Denis. The city of the future, and for you, a city of cages. The air is thick with coal smoke, the smell of salted fish, and the constant, rhythmic clang of the trolley bells. The streets are paved with hard stone that makes your boots sound like gunshots with every step.\n\nDutch stands on a balcony overlooking the bank, his suit sharp, his eyes obsessive. \"This is it, Jack. The score that pays for the dream. We hit the vault, we head for the docks, and we leave this dying country behind for the warm sun of Tahiti.\"\n\nArthur checks his watch, his face pale. \"The law's everywhere, Dutch. Milton's boys are on every corner. If we do this, we're kicking a hornet's nest while our hands are tied.\"\n\nDutch just grins, a terrifying, empty expression. \"Have some faith, Arthur! The world belongs to the bold!\"",
+                    choices: [
+                        { text: "Take point on the roof with Lenny.", next: "ch13_roof", effect: { rel: { lenny: 15 } } },
+                        { text: "Infiltrate the lobby with Dutch.", next: "ch13_lobby", effect: { rel: { dutch: 15 } } },
+                        { text: "Guard the horses with John and Charles.", next: "ch13_horses", effect: { rel: { john: 10, charles: 10 } } }
+                    ]
+                },
+                ch13_roof: {
+                    text: "You and Lenny crawl across the slate tiles, the heat from the chimneys making the air shimmer. You see the law below, moving like ants. \"Jack,\" Lenny whispers, his rifle held tight. \"If things go sideways... you just keep running. Don't look back for nobody.\" Suddenly, a whistle blows. The ambush has begun.",
+                    choices: [{ text: "Chapter 14: Things Fall Apart", next: "ch14_start" }]
+                },
+                ch13_lobby: {
+                    text: "You stand beside Dutch as he kicks open the heavy mahogany doors. The bank is a temple of marble and brass. \"Nobody move, and nobody dies!\" Dutch bellows. But as the vault door groans open, you hear the sound of a dozen boots thundering on the pavement outside. Milton was waiting.",
+                    choices: [{ text: "Chapter 14: Things Fall Apart", next: "ch14_start" }]
+                },
+                ch13_horses: {
+                    text: "You wait in the alley, the smell of horse sweat and wet brick clogging your nose. John is pacing, his hand on his holster. \"It's too quiet, Jack. Something's wrong.\" Then, the first explosion ripples through the city, followed by the high, sharp scream of a police whistle.",
+                    choices: [{ text: "Chapter 14: Things Fall Apart", next: "ch14_start" }]
+                },
+                ch14_start: {
+                    text: "Chapter 14: Things Fall Apart\n\nThe heist is a bloodbath. Hosea Matthew's, the heart of the gang, lies still on the cobblestones of Saint Denis, his blood mixing with the rain. Lenny is gone. The gold certificates are scraps of paper blowing in the wind of the gunfight.\n\nYou're pinned behind a fountain, the marble chipping away under a hail of Pinkerton lead. Arthur is shouting for a retreat towards the docks, his voice barely audible over the roar of the Gatling guns. \"THE SHIP! WE HAVE TO REACH THE SHIP!\"\n\nYou see a bag of gold sitting in the middle of the street, and a wounded wagon driver crying for help near the alley.",
+                    choices: [
+                        { text: "Risk the fire to save the wounded driver.", next: "ch14_save", effect: { honor: 30, rel: { arthur: 15 } } },
+                        { text: "Grab the bag of gold and run for the docks.", next: "ch14_gold", effect: { honor: -30, rel: { micah: 20 } } },
+                        { text: "Cover Dutch's retreat to the alley.", next: "ch14_cover", effect: { rel: { dutch: 15 } } }
+                    ]
+                },
+                ch14_save: {
+                    text: "You dash through the lead, the heat of the bullets grazing your coat. You drag the driver into the shadows just as a wagon explodes. Arthur catches your eye and gives a single, grim nod. You've lost the money, but you've kept your soul.",
+                    choices: [{ text: "Chapter 15: Divided Lines", next: "ch15_start" }]
+                },
+                ch14_gold: {
+                    text: "You dive for the bag, the coins heavy and cold. Micah Bell cheers as you scramble back. \"There's my boy! You got the itch, Jack!\" You reach the boat just as the docks are overrun, the gold the only thing you have left of your fallen friends.",
+                    choices: [{ text: "Chapter 15: Divided Lines", next: "ch15_start" }]
+                },
+                ch14_cover: {
+                    text: "You lay down suppressing fire, your repeater spitting lead into the advancing Pinkerton line. Dutch scrambles into the alley, his face a mask of rage and fear. \"They'll pay for this, Jack! They'll all pay!\" You follow him, leaving the gold and the wounded behind.",
+                    choices: [{ text: "Chapter 15: Divided Lines", next: "ch15_start" }]
+                },
+                ch15_start: {
+                    text: "Chapter 15: Divided Lines\n\nThe gang has retreated to a cave in the foothills, the firelight revealing the fractures that now run through them like canyon walls. Dutch sits on one side, Micah whispering in his ear like a devil in a suit. Arthur and John sit on the other, their faces hard and eyes weary.\n\n\"The Pinkertons are everywhere!\" Dutch shouts, his voice cracking. \"Someone gave us up in Saint Denis! Someone in this camp is a snake in the grass!\"\n\nMicah points a long, skeletal finger at Arthur. \"Maybe it's the man who's too sick to fight, Dutch. Or the boy who cares more about cowards than the cause.\"",
+                    choices: [
+                        { text: "Stand between them and demand peace.", next: "ch15_peace", effect: { rel: { arthur: 10, john: 10 } } },
+                        { text: "Side with Arthur and John.", next: "ch15_arthur", effect: { rel: { arthur: 20, john: 20, dutch: -15 } } },
+                        { text: "Side with Dutch and Micah.", next: "ch15_dutch", effect: { rel: { dutch: 20, micah: 15, arthur: -20 } } }
+                    ]
+                },
+                ch15_peace: {
+                    text: "You step forward, your voice surprisingly steady. \"Enough! We're tearing ourselves apart! We need to stick together, or we're all dead!\" Dutch glares, Micah sneers, but Arthur gives you a look of weary respect. The argument dies down, but the tension remains.",
+                    choices: [{ text: "Chapter 16: Snow in the Mountains", next: "ch16_start" }]
+                },
+                ch15_arthur: {
+                    text: "You walk over and stand beside Arthur, your hand resting on your gun. John nods at you. Dutch's face hardens, and Micah lets out a low chuckle. \"Looks like the rats are leaving the sinking ship, Dutch.\"",
+                    choices: [{ text: "Chapter 16: Snow in the Mountains", next: "ch16_start" }]
+                },
+                ch15_dutch: {
+                    text: "You move to Dutch's side, your eyes meeting Micah's in a silent understanding. Arthur shakes his head, a look of profound disappointment on his face. \"You're a fool, Jack. A damn fool.\"",
+                    choices: [{ text: "Chapter 16: Snow in the Mountains", next: "ch16_start" }]
+                },
+                ch16_start: {
+                    text: "Chapter 16: Snow in the Mountains\n\nThe gang is back where it started—the freezing, unforgiving peaks of the Grizzlies. The snow is waste-deep, a white shroud for a dying era. There is no food, no warmth, and no hope. \n\nMolly O'Shea is weeping in the corner of a ruined cabin, her mind breaking under the weight of Dutch's neglect. Uncle is delirious with fever. You're out in the blizzard, your fingers so cold you can barely feel the trigger of your rifle.\n\n\"We need a miracle, Jack,\" Charles says, his breath a cloud in the frozen air. \"Or we need to start making our own way out of this graveyard.\"",
+                    choices: [
+                        { text: "Risk a supply run to the nearest town.", next: "ch16_raid", effect: { honor: 10, rel: { bill: 10 } } },
+                        { text: "Help Charles hunt for anything that moves.", next: "ch16_hunt", effect: { rel: { charles: 15 } } },
+                        { text: "Stay and comfort the families.", next: "ch16_comfort", effect: { honor: 15, rel: { abigail: 10, marybeth: 10 } } }
+                    ]
+                },
+                ch16_raid: {
+                    text: "You and Bill ride through the blizzard, your faces raw from the wind. You find a small trapper's cabin, empty. You take what you can—some dried meat, a few blankets, and a bottle of whiskey. It's not much, but it's something. Bill claps you on the back. \"Good work, kid. You got grit.\"",
+                    choices: [{ text: "Chapter 17: Loyalty Tested", next: "ch17_start" }]
+                },
+                ch16_hunt: {
+                    text: "You and Charles find a lone elk in the whiteout. The meat is tough and gamey, but it's enough to keep the camp alive for another night. You sit by the fire later, watching the stars—cold, distant eyes that don't care about the schemes of men.",
+                    choices: [{ text: "Chapter 17: Loyalty Tested", next: "ch17_start" }]
+                },
+                ch16_comfort: {
+                    text: "You spend the night listening to Abigail's stories of better days. Around you, the gang is a collection of shivering ghosts. You realize then that the money Dutch is chasing won't buy a single soul back from this cold.",
+                    choices: [{ text: "Chapter 17: Loyalty Tested", next: "ch17_start" }]
+                },
+                ch17_start: {
+                    text: "Chapter 17: Loyalty Tested\n\nYou and John are cornered in a narrow, rocky pass near the Cumberland Forest boundaries. The rain has turned to ice, and the wind sounds like a choir of banshees. A dozen Pinkerton badges glint in the dim light of the dawn. \n\n\"HANDS UP, MARSTONS!\" Milton's voice echoes through the pass. \"WE HAVE THE BOY! JUST GIVE US THE GANG, AND YOU WALK!\"\n\nJohn grips his repeater, his eyes fixed on the treeline. \"They ain't getting you, Jack. Not today. Not ever.\" He looks at you, his face a map of regret and love. \"When I say run... you run. Don't look back. Don't think about me. You just get to Abigail.\"",
+                    choices: [
+                        { text: "Stand your ground and cover John's escape.", next: "ch17_stand", effect: { honor: 40, rel: { john: 30 } } },
+                        { text: "Escape together through the side pass.", next: "ch17_escape", effect: { rel: { john: 15 } } },
+                        { text: "[COMBAT] Engage the Pinkerton front line!", action: "startCombat", combatType: "ch17_standoff", next: "" }
+                    ]
+                },
+                ch17_stand: {
+                    text: "You push John towards the ridge. \"Go, Pa! Get to Ma! I'll hold them off!\" John hesitates for a split second, then nods, a single tear cutting a path through the grime on his face. You open fire, the muzzle flashes the only warmth in the freezing pass. You're hit in the leg, but you don't stop. You can't.",
+                    choices: [{ text: "Chapter 18: Dutch's Last Speech", next: "ch18_start" }]
+                },
+                ch17_escape: {
+                    text: "You and John scramble over the jagged rocks, the bullets shredding the pines above you. You find a narrow crevice and disappear into the mist. You reach the gang rendezvous point just as the sun breaks through the clouds, but you're empty-handed and hunted.",
+                    choices: [{ text: "Chapter 18: Dutch's Last Speech", next: "ch18_start" }]
+                },
+                combat_ch17_success: {
+                    text: "Your fire is steady, your aim true. Three Pinkertons fall. The line breaks for a moment, giving you and John the chance to slip away into the deeper forest. \"Good boy, Jack!\" John gasps. \"Real good.\"",
+                    choices: [{ text: "Proceed", next: "ch18_start" }]
+                },
+                combat_ch17_failure: {
+                    text: "The sheer volume of fire is too much. You're pinned. A bullet grazes your ear, another hits your shoulder. John has to drag you through the mud, both of you bleeding and desperate.",
+                    choices: [{ text: "Proceed", next: "ch18_start" }]
+                },
+                ch18_start: {
+                    text: "Chapter 18: Dutch's Last Speech\n\nThe camp—or what's left of it—is gathered around a dying fire in the shadow of Mount Hagen. Dutch stands on a rock, his hair wild, his eyes staring at something no one else can see. \n\n\"Tahiti!\" he cries, his voice a dry rasp. \"A land with no law, no cages, no civilization! We just need one more train! One more score! The state bonds in Saint Denis... they're waiting for us!\"\n\nArthur Morgan steps forward, leaning on his rifle. \"Hosea is dead, Dutch. Lenny is dead. Sean is dead. How many more? How many more before you're satisfied?\"\n\nDutch points a trembling finger at Arthur. \"You have no faith! You've become a ghost, Arthur! A shadow of the man I loved!\" He looks at you. \"What about you, Jack? Do you still see the paradise at the end of the road?\"",
+                    choices: [
+                        { text: "\"I follow you to the end, Dutch.\"", next: "ch18_dutch", effect: { rel: { dutch: 30, arthur: -20, john: -20 } } },
+                        { text: "\"Arthur's right. It's over.\"", next: "ch18_arthur", effect: { rel: { arthur: 30, john: 20, dutch: -30 } } },
+                        { text: "Walk away without a word.", next: "ch18_silent", effect: { honor: 10 } }
+                    ]
+                },
+                ch18_dutch: {
+                    text: "Dutch smiles, but it's the smile of a nightmare. \"There he is! The future of the Van der Linde gang! We move tonight! To the end!\"",
+                    choices: [{ text: "Chapter 19: Final Reckoning", next: "ch19_start" }]
+                },
+                ch18_arthur: {
+                    text: "Arthur gives you a single, sad nod. \"Then we go our own way. John... get the boy. We're leaving.\" Dutch draws his gun, but for once, his hand is shaking too much to fire.",
+                    choices: [{ text: "Chapter 19: Final Reckoning", next: "ch19_start" }]
+                },
+                ch18_silent: {
+                    text: "You walk past them both, towards the horses. The argument continues behind you, but the voices sound like dry leaves in the wind. You realize that no matter who wins, the gang is already dead.",
+                    choices: [{ text: "Chapter 19: Final Reckoning", next: "ch19_start" }]
+                },
+                ch19_start: {
+                    text: "Chapter 19: Final Reckoning\n\nMount Hagen. The world is a slab of cold rock and blinding snow. The wind is a physical force, pushing you towards the edge of the abyss. The showdown is inevitable.\n\nOn the summit, Micah Bell stands with Dutch, the two of them looking like the last survivors of a shipwreck. Arthur lies in the snow, his breath a thin, rattling whistle. John is pinned behind a rock, his ammo nearly gone.\n\nEverything has come to this. The years of running, the blood on the trail, the dreams of paradise. It all ends on this frozen peak. Micah grins, his double-action revolvers aimed at your father's heart. \"Come on then, Jack! Let's see if the apple fell far from the tree!\"",
+                    choices: [
+                        { text: "[COMBAT] Shoot Micah before he fires!", action: "startCombat", combatType: "ch19_micah", next: "" },
+                        { text: "Stand in front of John to protect him.", next: "ch19_protect", effect: { honor: 50, rel: { john: 50 } } },
+                        { text: "Call out to Dutch: \"Is this what you wanted?!\"", next: "ch19_dutch", effect: { rel: { dutch: 50 } } }
+                    ]
+                },
+                ch19_protect: {
+                    text: "You step out into the open, your arms wide. \"No more!\" you scream. Micah hesitates, surprise flickering in his cold eyes. Dutch lowers his weapon, a look of profound sorrow crossing his face. For a moment, the world is silent. Then, a single shot rings out from the valley below. Milton's boys have arrived.",
+                    choices: [{ text: "Chapter 20: The Silent Horizon", next: "ch20_end" }]
+                },
+                ch19_dutch: {
+                    text: "Dutch looks at you, then at Arthur, then at the gold bags at his feet. He laughs—a long, hollow sound that echoes through the mountains. \"It was never about the money, Jack. It was about... freedom. But I think I forgot what that meant.\" He turns and walks into the blizzard, leaving Micah standing alone.",
+                    choices: [{ text: "Chapter 20: The Silent Horizon", next: "ch20_end" }]
+                },
+                combat_ch19_success: {
+                    text: "Your bullet hits Micah square in the chest. He stumbles back, a look of shock on his face, before disappearing over the cliff side. The threat is gone, but the victory is hollow. Arthur takes one last, rattling breath and grows still.",
+                    choices: [{ text: "Proceed", next: "ch20_end" }]
+                },
+                combat_ch19_failure: {
+                    text: "Micah fires first. The lead hits you in the side, spinning you into the snow. John roars and charges, but the Pinkertons choose that moment to crest the ridge. Chaos erupts in the whiteout.",
+                    choices: [{ text: "Proceed", next: "ch20_end" }]
+                },
+                ch20_end: {
+                    text: "Chapter 20: The Silent Horizon\n\nThe guns have finally stopped. The snow has settled into a pristine, white blanket that covers the blood and the bodies. You stand on the edge of the mountain, looking out over a country that has outgrown you. \n\nThe age of outlaws is over. The frontier is closed. You are the last of the Van der Linde gang, a ghost in a world of machines and badges. \n\nYou reach into your pocket and find your father's worn cattleman revolver, its iron cold against your skin. The only thing left to do is determine what kind of man Jack Marston will be in this new world.",
+                    choices: [{ text: "Determine My Fate", action: "endGame" }]
+                },
+            }
+        };
+
+        function updateHUD() {
+            document.getElementById('honor-fill').style.width = state.honor + '%';
+        }
+
+        function startCombat(type) {
+            state.combatActive = true;
+            const reticle = document.getElementById('reticle');
+            const container = document.getElementById('game-container');
+            const flash = document.getElementById('blood-flash');
+
+            reticle.style.display = 'block';
+            container.classList.add('shake');
+
+            let hits = 0;
+            let targetHits = type === 'ch1_scout' ? 1 : 1;
+            let timeLimit = type === 'ch1_scout' ? 3000 : 2000;
+
+            // Randomly position reticle
+            function moveReticle() {
+                const x = 10 + Math.random() * 80;
+                const y = 20 + Math.random() * 60;
+                reticle.style.left = x + '%';
+                reticle.style.top = y + '%';
+            }
+
+            moveReticle();
+
+            const timer = setTimeout(() => {
+                endCombat(false, type);
+            }, timeLimit);
+
+            reticle.onclick = (e) => {
+                e.stopPropagation();
+                hits++;
+                flash.style.opacity = '1';
+                setTimeout(() => flash.style.opacity = '0', 50);
+
+                if (hits >= targetHits) {
+                    clearTimeout(timer);
+                    endCombat(true, type);
+                } else {
+                    moveReticle();
+                }
+            };
+        }
+
+        function endCombat(success, type) {
+            state.combatActive = false;
+            const reticle = document.getElementById('reticle');
+            const container = document.getElementById('game-container');
+
+            reticle.style.display = 'none';
+            container.classList.remove('shake');
+
+            if (!success) state.health -= 25;
+
+            let nextScene = '';
+            if (type === 'ch1_scout') nextScene = success ? 'combat_ch1_success' : 'combat_ch1_failure';
+            if (type === 'ch2_stealth') nextScene = success ? 'combat_ch2_success' : 'combat_ch2_failure';
+            if (type === 'ch4_safe') nextScene = success ? 'combat_ch4_success' : 'combat_ch4_failure';
+            if (type === 'ch10_ambush') nextScene = success ? 'combat_ch10_success' : 'combat_ch10_failure';
+            if (type === 'ch17_standoff') nextScene = success ? 'combat_ch17_success' : 'combat_ch17_failure';
+            if (type === 'ch19_micah') nextScene = success ? 'combat_ch19_success' : 'combat_ch19_failure';
+
+
+            renderScene(nextScene);
+        }
+
+        function calculateEnding() {
+            let ending = "";
+            let description = "";
+            let imageAlt = "";
+
+            if (state.honor >= 75) {
+                ending = "🌅 REDEMPTION";
+                description = "You left the outlaw life behind. You found a ranch, started a family, and lived a life of quiet peace. The ghosts of the Van der Linde gang are just memories now.";
+            } else if (state.honor < 25) {
+                ending = "💀 OUTLAW LEGEND";
+                description = "Your name is whispered in every saloon from Blackwater to Saint Denis. You lived by the gun and carved your name in blood, but you walk a lonely road.";
+            } else if (state.relationships.john > 50 && state.relationships.dutch < 0) {
+                ending = "🩸 THE BROTHERHOOD";
+                description = "You stood with your blood when it mattered most. You and John escaped the chaos together, loyal to each other even when the world burned.";
+            } else {
+                ending = "🏞️ THE LONE WANDERER";
+                description = "You didn't choose a side. You simply kept moving. You're a shadow on the frontier, beholden to no man and no gang.";
+            }
+
+            // The USER's specific request: Standoff with Ross
+            const confrontationHtml = `
+                <div class="character-portrait" style="height: 400px; border: 5px solid var(--blood); background: linear-gradient(rgba(0,0,0,0.5), rgba(139, 0, 0, 0.4)), url('https://w0.peakpx.com/wallpaper/559/134/HD-wallpaper-red-dead-redemption-2-jack-marston-portrait.jpg') center/cover;">
+                    <div style="position: absolute; bottom: 30px; left: 30px; color: white; font-weight: bold; text-shadow: 3px 3px #000; font-family: 'Special Elite'; font-size: 1.5rem;">JACK MARSTON</div>
+                    <div style="position: absolute; top: 30px; right: 30px; color: var(--blood); font-weight: bold; text-shadow: 3px 3px #000; font-family: 'Special Elite'; font-size: 1.5rem;">AGENT EDGAR ROSS</div>
+                    <div style="position: absolute; top: 50%; left: 0; width: 100%; height: 4px; background: var(--blood); box-shadow: 0 0 20px var(--blood);"></div>
+                    <div style="position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.8); padding: 10px; color: #fff; text-align: center; font-style: italic; font-size: 0.9rem;">
+                        [1914: The Final Standoff at the River]
+                    </div>
+                </div>
+            `;
+
+            return { ending, description, confrontationHtml };
+        }
+
+        function endGame() {
+            const { ending, description, confrontationHtml } = calculateEnding();
+            const storyArea = document.getElementById('story-area');
+            const choiceContainer = document.getElementById('choice-container');
+
+            storyArea.innerHTML = `
+                ${confrontationHtml}
+                <div class="chapter-title fade-in">${ending}</div>
+                <div class="narrative fade-in">${description}\n\n**THE END**</div>
+            `;
+            choiceContainer.innerHTML = `<button class="choice-btn fade-in" onclick="location.reload()">RESTART JOURNEY</button>`;
+            speak(ending + ". " + description + ". The End.");
+        }
+
+        function startHorseMode(nextScene) {
+            state.horseActive = true;
+            const horseDiv = document.getElementById('horse-mode');
+            const distanceDiv = document.getElementById('horse-distance');
+            horseDiv.style.display = 'block';
+
+            let distance = 0;
+            const targetDistance = 200;
+
+            const horseInterval = setInterval(() => {
+                distance += 2;
+                distanceDiv.innerText = `Distance: ${distance}m`;
+
+                if (distance >= targetDistance) {
+                    clearInterval(horseInterval);
+                    state.horseActive = false;
+                    horseDiv.style.display = 'none';
+                    renderScene(nextScene);
+                }
+            }, 50);
+
+            // Simple jump logic
+            const jumpHandler = (e) => {
+                if (e.code === 'Space' && state.horseActive) {
+                    const char = document.getElementById('horse-character');
+                    char.style.transform = 'translateY(-50px)';
+                    setTimeout(() => {
+                        char.style.transform = 'translateY(0)';
+                    }, 300);
+                }
+            };
+            window.addEventListener('keydown', jumpHandler);
+
+            // Store handler to remove it later if needed, though state.horseActive handles it
+        }
+
+        function renderScene(sceneId) {
+            const scene = storyData.scenes[sceneId];
+            if (!scene) return;
+
+            const storyArea = document.getElementById('story-area');
+            const choiceContainer = document.getElementById('choice-container');
+
+            storyArea.innerHTML = '';
+            choiceContainer.innerHTML = '';
+
+            const p = document.createElement('div');
+            p.className = 'narrative fade-in';
+            storyArea.appendChild(p);
+            p.innerText = scene.text;
+
+            scene.choices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = 'choice-btn fade-in';
+                btn.innerText = choice.text;
+                btn.onclick = () => {
+                    if (choice.action === 'startCombat') {
+                        startCombat(choice.combatType);
+                    } else if (choice.action === 'startHorse') {
+                        startHorseMode(choice.next);
+                    } else if (choice.action === 'endGame') {
+                        endGame();
+                    } else {
+                        handleChoice(choice);
+                    }
+                };
+                choiceContainer.appendChild(btn);
+            });
+
+            updateHUD();
+            speak(scene.text);
+
+            // Auto-trigger "American Venom" for Chapter 19
+            if (sceneId === 'ch19_start' && !state.musicActive) {
+                toggleMusic();
+            }
+        }
+
+        function handleChoice(choice) {
+            // Apply effects
+            if (choice.effect) {
+                if (choice.effect.honor) state.honor = Math.max(0, Math.min(100, state.honor + choice.effect.honor));
+                if (choice.effect.rel) {
+                    for (let char in choice.effect.rel) {
+                        state.relationships[char] += choice.effect.rel[char];
+                    }
+                }
+            }
+
+            state.history.push(choice);
+            renderScene(choice.next);
+        }
+
+        // Dev Menu Functionality
+        function toggleDevMenu() {
+            const menu = document.getElementById('dev-menu');
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function devJump() {
+            const sceneId = document.getElementById('jump-select').value;
+            renderScene(sceneId);
+            toggleDevMenu();
+        }
+
+        function setHonor(value) {
+            state.honor = value;
+            updateHUD();
+            alert(`Honor set to ${value}%`);
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'e') {
+                toggleDevMenu();
+            }
+        });
+
+        // Initialize
+        window.onload = () => {
+            renderScene('start');
+            setTimeout(() => {
+                document.querySelectorAll('.letterbox').forEach(l => l.style.height = '5%');
+            }, 500);
+        };
+
+        // Load YouTube API
+        const tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    </script>
+</body>
+
+</html>

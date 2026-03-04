@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROBCO INDUSTRIES UNIFIED OPERATING SYSTEM</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="crt-overlay"></div>
+    <div class="terminal">
+        <header>
+            <p>ROBCO INDUSTRIES (TM) TERMLINK PROTOCOL</p>
+            <p>ENTER PASSWORD NOW</p>
+        </header>
+
+        <div class="game-container">
+            <div class="sidebar">
+                <p>ATTEMPTS LEFT: <span id="attempts">4</span> <span class="attempt-blocks">■ ■ ■ ■</span></p>
+            </div>
+
+            <div class="main-display">
+                <div class="memory-dump" id="memoryDump">
+                    <!-- Memory dump with words will be generated here -->
+                </div>
+
+                <div class="log" id="log">
+                    <p>> SETTING UP...</p>
+                    <p>> SYSTEM READY.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="input-line">
+            <span class="cursor">></span>
+            <span id="currentSelection"></span>
+        </div>
+    </div>
+
+    <div class="game-over-overlay" id="gameOver">
+        <div class="message">
+            <h1 id="statusTitle">TERMINAL LOCKED</h1>
+            <p id="statusDesc">PLEASE CONTACT AN ADMINISTRATOR</p>
+            <button onclick="location.reload()">REBOOT SYSTEM</button>
+            <button onclick="window.location.href='../../index.html'">EXIT TO WASTELAND</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Bubble Shooter | The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #050510;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #e2e8f0
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            letter-spacing: 3px;
+            background: linear-gradient(135deg, #06b6d4, #8b5cf6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800
+        }
+
+        canvas {
+            border: 2px solid #1e1e3f;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(6, 182, 212, 0.2);
+            cursor: crosshair
+        }
+
+        #hud {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 8px;
+            font-size: .9rem;
+            color: #94a3b8
+        }
+
+        #hud b {
+            color: #06b6d4
+        }
+
+        #msg {
+            margin-top: 10px;
+            font-size: 1rem;
+            min-height: 1.4em;
+            color: #fff;
+            text-align: center
+        }
+
+        button {
+            margin-top: 8px;
+            padding: 9px 26px;
+            border: none;
+            border-radius: 8px;
+            font-size: .95rem;
+            font-weight: bold;
+            cursor: pointer;
+            letter-spacing: 1px
+        }
+
+        #startBtn {
+            background: linear-gradient(135deg, #06b6d4, #8b5cf6);
+            color: #fff
+        }
+
+        #menuBtn {
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            border: 1px solid #475569;
+            display: none;
+            margin-left: 8px
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(13, 13, 32, 0.9);
+            color: #fff;
+            font-size: .85rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>🫧 BUBBLE SHOOTER</h1>
+    <div id="hud"><span>SCORE: <b id="score">0</b></span><span>BUBBLES: <b id="bcount">0</b></span></div>
+    <canvas id="c" width="400" height="500"></canvas>
+    <div id="msg">Click to aim and shoot!</div>
+    <div>
+        <button id="startBtn" onclick="startGame()">START</button>
+        <button id="menuBtn" onclick="window.close()">🏠 Return to Menu</button>
+    </div>
+    <script src="../scripts/scores.js"></script>
+    <script>
+        const C = document.getElementById('c'), ctx = C.getContext('2d');
+        const W = 400, H = 500, R = 20, COLS = 10;
+        const COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#a855f7', '#ec4899'];
+        let grid, shooter, bullet, score, running, animId;
+
+        function makeGrid() {
+            grid = [];
+            for (let row = 0; row < 6; row++) {
+                const r = [];
+                for (let col = 0; col < (row % 2 === 0 ? COLS : COLS - 1); col++) {
+                    r.push(Math.floor(Math.random() * COLORS.length));
+                }
+                grid.push(r);
+            }
+        }
+
+        function cell(row, col, rowArr) {
+            const offX = rowArr.length < COLS ? R : 0;
+            return { x: offX + R + col * (R * 2) + R, y: R * 2 + row * (R * 1.8 + 2) };
+        }
+
+        function startGame() {
+            score = 0; running = true;
+            makeGrid();
+            shooter = { x: W / 2, y: H - 30, angle: -Math.PI / 2, color: randColor() };
+            bullet = null;
+            document.getElementById('score').textContent = 0;
+            document.getElementById('msg').textContent = 'Click or move mouse to aim & shoot!';
+            document.getElementById('menuBtn').style.display = 'none';
+            if (animId) cancelAnimationFrame(animId); loop();
+        }
+
+        function randColor() { return Math.floor(Math.random() * COLORS.length); }
+
+        C.addEventListener('mousemove', e => {
+            if (!running) return;
+            const rect = C.getBoundingClientRect();
+            const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+            const dx = mx - shooter.x, dy = my - shooter.y;
+            shooter.angle = Math.atan2(dy, dx);
+        });
+
+        C.addEventListener('click', e => {
+            if (!running || bullet) return;
+            const spd = 8;
+            bullet = { x: shooter.x, y: shooter.y, vx: Math.cos(shooter.angle) * spd, vy: Math.sin(shooter.angle) * spd, color: shooter.color };
+            shooter.color = randColor();
+        });
+
+        function update() {
+            if (!bullet) return;
+            bullet.x += bullet.vx; bullet.y += bullet.vy;
+            if (bullet.x < R || bullet.x > W - R) bullet.vx *= -1;
+            if (bullet.y < R) { bullet.y = R; snapBullet(); }
+            // Check collision with grid bubbles
+            for (let row = 0; row < grid.length; row++) {
+                for (let col = 0; col < grid[row].length; col++) {
+                    const pos = cell(row, col, grid[row]);
+                    if (Math.hypot(bullet.x - pos.x, bullet.y - pos.y) < R * 1.8) {
+                        snapBullet(); return;
+                    }
+                }
+            }
+            if (bullet.y > H) { bullet = null; }
+        }
+
+        function snapBullet() {
+            // Add to nearest row top
+            if (!bullet) return;
+            const targetRow = Math.max(0, Math.round((bullet.y - R * 2) / (R * 1.8 + 2)));
+            if (!grid[targetRow]) grid[targetRow] = [];
+            grid[targetRow].push(bullet.color);
+            bullet = null;
+            popMatches();
+            // Win/Lose check
+            const remaining = grid.reduce((s, r) => s + r.length, 0);
+            document.getElementById('bcount').textContent = remaining;
+            if (remaining === 0) {
+                running = false;
+                document.getElementById('msg').textContent = `🎉 Cleared! Score: ${score}`;
+                document.getElementById('menuBtn').style.display = '';
+                PizzaScores.save('Bubble Shooter', score, 'Board cleared');
+            } else if (grid.length > 12) {
+                running = false;
+                document.getElementById('msg').textContent = `💥 Bubbles reached bottom!`;
+                document.getElementById('menuBtn').style.display = '';
+                PizzaScores.save('Bubble Shooter', score, '');
+            }
+        }
+
+        function popMatches() {
+            // Simple flood-fill pop
+            for (let row = 0; row < grid.length; row++) {
+                const newRow = grid[row].filter((_, ci) => {
+                    const pos = cell(row, ci, grid[row]);
+                    // Count neighbors of same color
+                    let sameCount = 0;
+                    for (let r2 = 0; r2 < grid.length; r2++) {
+                        for (let c2 = 0; c2 < grid[r2].length; c2++) {
+                            if (r2 === row && c2 === ci) continue;
+                            if (grid[r2][c2] !== grid[row][ci]) continue;
+                            const p2 = cell(r2, c2, grid[r2]);
+                            if (Math.hypot(pos.x - p2.x, pos.y - p2.y) < R * 2.5) sameCount++;
+                        }
+                    }
+                    if (sameCount >= 2) { score += 10; return false; }
+                    return true;
+                });
+                grid[row] = newRow;
+            }
+            // Remove empty rows at end
+            while (grid.length > 0 && grid[grid.length - 1].length === 0) grid.pop();
+            document.getElementById('score').textContent = score;
+        }
+
+        function draw() {
+            ctx.fillStyle = '#050510'; ctx.fillRect(0, 0, W, H);
+            // Grid bubbles
+            for (let row = 0; row < grid.length; row++) {
+                for (let col = 0; col < grid[row].length; col++) {
+                    const pos = cell(row, col, grid[row]);
+                    const col_ = grid[row][col];
+                    ctx.fillStyle = COLORS[col_];
+                    ctx.beginPath(); ctx.arc(pos.x, pos.y, R - 1, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.beginPath(); ctx.arc(pos.x - R * 0.3, pos.y - R * 0.3, R * 0.3, 0, Math.PI * 2); ctx.fill();
+                }
+            }
+            // Bullet
+            if (bullet) {
+                ctx.fillStyle = COLORS[bullet.color];
+                ctx.beginPath(); ctx.arc(bullet.x, bullet.y, R - 1, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.beginPath(); ctx.arc(bullet.x - R * 0.3, bullet.y - R * 0.3, R * 0.3, 0, Math.PI * 2); ctx.fill();
+            }
+            // Shooter
+            const sx = shooter.x, sy = shooter.y;
+            ctx.fillStyle = COLORS[shooter.color];
+            ctx.beginPath(); ctx.arc(sx, sy, R, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.beginPath(); ctx.arc(sx - R * 0.3, sy - R * 0.3, R * 0.3, 0, Math.PI * 2); ctx.fill();
+            // Aim line
+            ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.setLineDash([5, 8]); ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(sx, sy);
+            ctx.lineTo(sx + Math.cos(shooter.angle) * 100, sy + Math.sin(shooter.angle) * 100); ctx.stroke(); ctx.setLineDash([]);
+        }
+
+        function loop() { update(); draw(); if (running) animId = requestAnimationFrame(loop); }
+        // Initial draw
+        ctx.fillStyle = '#050510'; ctx.fillRect(0, 0, W, H);
+    </script>
+</body>
+
+</html>

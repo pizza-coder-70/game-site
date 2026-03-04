@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Red vs Blue 3D | The Pizza Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Outfit', 'Courier New', sans-serif;
+            background-color: #87CEEB;
+            /* Sky blue */
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: #fff;
+            text-decoration: none;
+            font-weight: 800;
+            font-size: 16px;
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 2px solid #fff;
+            z-index: 100;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            transition: transform 0.2s;
+            pointer-events: auto;
+            text-transform: uppercase;
+        }
+
+        .back-btn:hover {
+            transform: scale(1.05);
+        }
+
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #FFF;
+            text-shadow: 2px 2px 4px #000;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        #ui h2 {
+            margin-top: 0;
+            font-size: 28px;
+            color: #ffbf00;
+        }
+
+        .hud-text {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        #killfeed {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #FFF;
+            text-align: right;
+            text-shadow: 1px 1px 2px #000;
+            font-size: 16px;
+            z-index: 10;
+        }
+
+        #announcer {
+            position: absolute;
+            top: 30%;
+            width: 100%;
+            text-align: center;
+            color: #ffaa00;
+            font-size: 48px;
+            font-weight: 800;
+            text-shadow: 0 0 10px #ff0000;
+            pointer-events: none;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 10;
+            display: none;
+        }
+
+        #crosshair::before,
+        #crosshair::after {
+            content: '';
+            position: absolute;
+            background: #00ffcc;
+            box-shadow: 0 0 4px #00ffcc;
+        }
+
+        #crosshair::before {
+            top: 9px;
+            left: 0;
+            width: 20px;
+            height: 2px;
+        }
+
+        #crosshair::after {
+            top: 0;
+            left: 9px;
+            width: 2px;
+            height: 20px;
+        }
+
+        #blocker {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 20;
+        }
+
+        #instructions {
+            text-align: center;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 30px;
+            background: rgba(40, 0, 0, 0.8);
+            border: 4px solid #e74c3c;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(231, 76, 60, 0.6);
+        }
+
+        .controls-list {
+            margin-top: 20px;
+            font-size: 16px;
+            text-align: left;
+            line-height: 1.5;
+            color: #ffcccc;
+        }
+    </style>
+</head>
+
+<body>
+    <a href="../index.html" class="back-btn">← Back to The Pizza Edition</a>
+
+    <div id="ui">
+        <h2>Red vs Blue | <span style="color:#e74c3c;">Pizza Edition</span></h2>
+        <div id="status" class="hud-text">Rank: Bronze | Score: 0</div>
+        <div id="health" class="hud-text">Health: ♥ 100 | Jetpack: 100%</div>
+        <div id="weapon" class="hud-text">Weapon: Assault Rifle (Main 1)</div>
+    </div>
+
+    <div id="killfeed"></div>
+    <div id="announcer">DOUBLE KILL!</div>
+
+    <div id="crosshair"></div>
+
+    <div id="blocker">
+        <div id="instructions">
+            <strong style="font-size: 36px; color: #e74c3c; text-transform: uppercase;">Click to Play 🍕</strong>
+            <div class="controls-list">
+                [WASD] Move | [Mouse] Look | [Left Click] Shoot<br>
+                [1,2,3] Main Weapons | [4,5,6] Secondary Weapons<br>
+                [E] Use Vehicle | [G] Throw Grenade<br>
+                [Shift] Sprint | [C] Slide | [Hold Space] Jetpack<br>
+                [K] Save Game | [L] Load Game | [ESC] Pause
+            </div>
+            <p style="color: #ff5555; margin-top: 15px; font-size: 14px; font-weight: bold;">Warning: Extreme Sandstorm
+                Conditions!</p>
+        </div>
+    </div>
+
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
+
+    <script>
+        // --- GAME STATE ---
+        const GAME_STATE = {
+            inVehicle: false,
+            currentVehicle: null,
+            currentWeapon: 0,
+            health: 100,
+            score: 0,
+            weapons: [
+                // Main Slots
+                { name: 'Assault Rifle', color: 0xffff00, damage: 15, fireRate: 120, type: 'hitscan' },
+                { name: 'Shotgun', color: 0xff0000, damage: 30, fireRate: 800, type: 'spread' },
+                { name: 'Sniper', color: 0x00ffff, damage: 100, fireRate: 1500, type: 'hitscan' },
+                // Secondary Slots
+                { name: 'Plasma Rifle', color: 0xaa00ff, damage: 25, fireRate: 200, type: 'projectile', speed: 150 },
+                { name: 'SMG', color: 0xffaa00, damage: 8, fireRate: 70, type: 'hitscan' },
+                { name: 'Rocket Launcher', color: 0xffaa00, damage: 150, fireRate: 2000, type: 'projectile', speed: 80 }
+            ]
+        };
+
+        // --- AUDIO SYSTEM ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playTone(freq, type, duration, vol = 0.1) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+        const sfx = {
+            shoot: () => playTone(300, 'square', 0.1, 0.05),
+            plasma: () => playTone(800, 'sine', 0.15, 0.05),
+            explosion: () => { playTone(100, 'sawtooth', 0.5, 0.1); playTone(50, 'square', 0.8, 0.2); },
+            jump: () => playTone(300, 'sine', 0.2, 0.05),
+            hit: () => playTone(1200, 'triangle', 0.1, 0.05),
+            jetpack: () => playTone(150 + Math.random() * 50, 'sawtooth', 0.1, 0.02)
+        };
+
+        function getGroundHeight(x, z) {
+            let y = 0;
+            const distFromCenter = Math.sqrt(x * x + z * z);
+            if (distFromCenter > 1600) {
+                // Approximate canyon walls smoothly
+                y += (distFromCenter - 1600) * 0.5 + 20;
+            }
+            if (Math.abs(x) < 50) {
+                y -= 30; // underground trench
+            }
+            return y;
+        }
+
+        // --- THREE.JS GLOBALS ---
+        let camera, scene, renderer, controls;
+        let lastTime = performance.now();
+        let raycaster = new THREE.Raycaster();
+
+        // Physics / Movement
+        const velocity = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+        let canJump = false;
+        let isSprint = false;
+        let isSliding = false;
+        let isJetpacking = false;
+        let jetpackFuel = 100;
+
+        // Engine Objects arrays
+        const objects = [];      // Standard collision geometry
+        const vehicles = [];     // Rideables
+        const bullets = [];      // Active projectiles
+        const grenades = [];     // Physics grenades
+        const enemies = [];      // AI Bots
+        const jumpPads = [];     // Bouncy platforms
+        const energyShields = []; // Moving/Shoots through shields
+        const destructibles = []; // Cover that breaks
+
+        // Weather
+        let particleSystem;
+        let timeOfDay = 0; // 0 to Math.PI * 2
+        let sunLight, hemiLight;
+
+        // UI references
+        const statusEl = document.getElementById('status');
+        const healthEl = document.getElementById('health');
+        const weaponEl = document.getElementById('weapon');
+
+        init();
+        animate();
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xd2a679); // Desert sky
+            scene.fog = new THREE.Fog(0xd2a679, 100, 1500);
+
+            // Lighting
+            hemiLight = new THREE.HemisphereLight(0xffddaa, 0x443333, 0.6);
+            hemiLight.position.set(0, 500, 0);
+            scene.add(hemiLight);
+
+            sunLight = new THREE.DirectionalLight(0xffeedd, 1.0);
+            sunLight.position.set(500, 500, -500);
+            sunLight.castShadow = true;
+            sunLight.shadow.camera.top = 500;
+            sunLight.shadow.camera.bottom = -500;
+            sunLight.shadow.camera.left = -500;
+            sunLight.shadow.camera.right = 500;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            scene.add(sunLight);
+
+            // Floor - Desert Canyon Terrain
+            const floorGeo = new THREE.PlaneGeometry(20000, 20000, 400, 400);
+            floorGeo.rotateX(-Math.PI / 2);
+            const positions = floorGeo.attributes.position.array;
+
+            // Build canyon topology
+            for (let i = 0; i < positions.length; i += 3) {
+                const x = positions[i];
+                const z = positions[i + 2];
+
+                // Base noise
+                let y = Math.random() * 5 - 2.5;
+
+                // Create massive canyon walls at the edges
+                const distFromCenter = Math.sqrt(x * x + z * z);
+                if (distFromCenter > 1600) {
+                    y += (distFromCenter - 1600) * 0.5 + Math.random() * 40;
+                }
+
+                // Create a giant trench in the middle
+                if (Math.abs(x) < 50) {
+                    y -= 30; // underground trench
+                }
+
+                positions[i + 1] = y;
+            }
+            floorGeo.computeVertexNormals();
+
+            const floorMat = new THREE.MeshLambertMaterial({ color: 0xc2b280, wireframe: false });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // Setup Camera & Controls
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.set(0, 10, 200);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.body.appendChild(renderer.domElement);
+
+            controls = new THREE.PointerLockControls(camera, document.body);
+
+            // UI Overlays
+            const blocker = document.getElementById('blocker');
+            const instructions = document.getElementById('instructions');
+            const crosshair = document.getElementById('crosshair');
+
+            instructions.addEventListener('click', function () {
+                controls.lock();
+            });
+
+            controls.addEventListener('lock', function () {
+                blocker.style.display = 'none';
+                crosshair.style.display = 'block';
+                announce("MATCH STARTED");
+            });
+
+            controls.addEventListener('unlock', function () {
+                blocker.style.display = 'flex';
+                crosshair.style.display = 'none';
+            });
+
+            scene.add(controls.getObject());
+
+            // Key Events
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+            document.addEventListener('mousedown', onMouseDown);
+
+            // Build Map Features
+            buildMultiLevelBase(0xFF3333, new THREE.Vector3(-400, 0, 0), "RED");
+            buildMultiLevelBase(0x3333FF, new THREE.Vector3(400, 0, 0), "BLUE");
+
+            createEnergyShield(new THREE.Vector3(0, 15, 0), 100);
+            createEnergyShield(new THREE.Vector3(0, 15, 200), 40);
+            createEnergyShield(new THREE.Vector3(0, 15, -200), 40);
+
+            createJumpPad(new THREE.Vector3(-150, 5, 0));
+            createJumpPad(new THREE.Vector3(150, 5, 0));
+            createJumpPad(new THREE.Vector3(0, -25, 0)); // To escape trench
+
+            buildDestructibleCover();
+
+            // Sandstorm Particles
+            const pGeo = new THREE.BufferGeometry();
+            const pCount = 3000;
+            const pPos = new Float32Array(pCount * 3);
+            for (let i = 0; i < pCount * 3; i += 3) {
+                pPos[i] = Math.random() * 2000 - 1000;
+                pPos[i + 1] = Math.random() * 200;
+                pPos[i + 2] = Math.random() * 2000 - 1000;
+            }
+            pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+            const pMat = new THREE.PointsMaterial({ color: 0xc2b280, size: 2.5, transparent: true, opacity: 0.6 });
+            particleSystem = new THREE.Points(pGeo, pMat);
+            scene.add(particleSystem);
+
+            // Spawn Vehicles with explosive weapons
+            createVehicle('Warthog (Jeep)', 0x556b2f, new THREE.Vector3(-300, 2, -100), { speed: 1000, turn: 2, fly: false, weapon: { name: 'Jeep Gun', color: 0xffaa00, damage: 40, fireRate: 150, type: 'projectile', speed: 300, explosive: true, aoe: 30 } });
+            createVehicle('Scorpion (Tank)', 0x3e4a36, new THREE.Vector3(300, 4, 100), { speed: 400, turn: 1, fly: false, weapon: { name: 'Tank Cannon', color: 0xff3300, damage: 300, fireRate: 1500, type: 'projectile', speed: 500, explosive: true, aoe: 100 } });
+            createVehicle('Hornet (Heli)', 0x333333, new THREE.Vector3(-300, 5, 100), { speed: 1500, turn: 3, fly: true, jump: 400, weapon: { name: 'Heli Rockets', color: 0xff0000, damage: 150, fireRate: 500, type: 'projectile', speed: 200, explosive: true, aoe: 50 } });
+            createVehicle('Mantis (Mech)', 0x888888, new THREE.Vector3(300, 6, -100), { speed: 500, turn: 1.5, fly: false, jump: 500, weapon: { name: 'Mech Plasma', color: 0xaa00ff, damage: 200, fireRate: 800, type: 'projectile', speed: 150, explosive: true, aoe: 60 } });
+            createVehicle('Ghost (Hover)', 0x0000ff, new THREE.Vector3(0, 3, 300), { speed: 900, turn: 3.5, fly: false, hover: true, weapon: { name: 'Double Plasma', color: 0x00ffff, damage: 50, fireRate: 200, type: 'projectile', speed: 250, explosive: true, aoe: 30 } });
+
+            // Move player to Blue Base to start
+            controls.getObject().position.set(400, 20, 0);
+
+            window.addEventListener('resize', onWindowResize);
+            setInterval(spawnEnemy, 2500);
+        }
+
+        // --- MAP BUILDERS ---
+        function buildMultiLevelBase(colorHex, position, teamName) {
+            const mat = new THREE.MeshLambertMaterial({ color: colorHex });
+            const darkMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
+
+            const baseGroup = new THREE.Group();
+            baseGroup.position.copy(position);
+
+            // Ground Floor Building
+            const groundGeo = new THREE.BoxGeometry(80, 20, 80);
+            const ground = new THREE.Mesh(groundGeo, mat);
+            ground.position.y = 10;
+            ground.castShadow = true;
+            ground.receiveShadow = true;
+            baseGroup.add(ground);
+
+            // Second Floor Deck
+            const deckGeo = new THREE.BoxGeometry(60, 5, 60);
+            const deck = new THREE.Mesh(deckGeo, darkMat);
+            deck.position.y = 22.5;
+            baseGroup.add(deck);
+
+            // Sniper Tower
+            const towerGeo = new THREE.BoxGeometry(20, 60, 20);
+            const tower = new THREE.Mesh(towerGeo, mat);
+            tower.position.set(-20, 30, -20);
+            tower.castShadow = true;
+            baseGroup.add(tower);
+
+            // Tower nest
+            const nestGeo = new THREE.BoxGeometry(30, 5, 30);
+            const nest = new THREE.Mesh(nestGeo, darkMat);
+            nest.position.set(-20, 62.5, -20);
+            baseGroup.add(nest);
+
+            // Ramps up
+            const rampGeo = new THREE.BoxGeometry(20, 2, 60);
+            const ramp1 = new THREE.Mesh(rampGeo, mat);
+            ramp1.position.set(50, 10, 0);
+            ramp1.rotation.z = Math.PI / 4;
+            baseGroup.add(ramp1);
+
+            // Flag pole & Flag
+            const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 40), new THREE.MeshLambertMaterial({ color: 0xdddddd }));
+            pole.position.set(0, 45, 0);
+            baseGroup.add(pole);
+
+            const flag = new THREE.Mesh(new THREE.PlaneGeometry(15, 10), new THREE.MeshBasicMaterial({ color: colorHex, side: THREE.DoubleSide }));
+            flag.position.set(7.5, 60, 0);
+            baseGroup.add(flag);
+
+            // Emitting Team Light
+            const teamLight = new THREE.PointLight(colorHex, 2, 200);
+            teamLight.position.set(0, 30, 0);
+            baseGroup.add(teamLight);
+
+            scene.add(baseGroup);
+            objects.push(ground, deck, tower, nest, ramp1);
+        }
+
+        function createEnergyShield(pos, width) {
+            const geo = new THREE.BoxGeometry(width, 30, 2);
+            const mat = new THREE.MeshPhongMaterial({
+                color: 0x00ffff,
+                transparent: true,
+                opacity: 0.3,
+                emissive: 0x0088ff,
+                shininess: 100
+            });
+            const shield = new THREE.Mesh(geo, mat);
+            shield.position.copy(pos);
+            scene.add(shield);
+
+            // Shields specifically block physical movement but later logic allows lasers to pierce them
+            objects.push(shield);
+            shield.userData.isShield = true;
+            energyShields.push(shield);
+        }
+
+        function createJumpPad(pos) {
+            const geo = new THREE.CylinderGeometry(5, 6, 2, 16);
+            const mat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+            const pad = new THREE.Mesh(geo, mat);
+            pad.position.copy(pos);
+            scene.add(pad);
+            objects.push(pad);
+            jumpPads.push(pad);
+
+            // Halo glow
+            const light = new THREE.PointLight(0x00ff00, 1, 50);
+            light.position.copy(pos);
+            light.position.y += 5;
+            scene.add(light);
+        }
+
+        function buildDestructibleCover() {
+            // Add some breakable boxes around the middle
+            const boxGeo = new THREE.BoxGeometry(10, 10, 10);
+            const boxMat = new THREE.MeshLambertMaterial({ color: 0x8b5a2b });
+
+            for (let i = 0; i < 20; i++) {
+                const box = new THREE.Mesh(boxGeo, boxMat.clone());
+                box.position.set(
+                    Math.random() * 400 - 200,
+                    5,
+                    Math.random() * 400 - 200
+                );
+                box.userData.isDestructible = true;
+                box.userData.health = 40;
+                scene.add(box);
+                objects.push(box);
+                destructibles.push(box);
+            }
+        }
+
+        function createVehicle(name, color, position, specs) {
+            const group = new THREE.Group();
+            group.position.copy(position);
+            const mat = new THREE.MeshLambertMaterial({ color: color });
+            let geo;
+
+            if (name.includes('Jeep')) {
+                geo = new THREE.BoxGeometry(10, 6, 20);
+            } else if (name.includes('Tank')) {
+                geo = new THREE.BoxGeometry(15, 8, 25);
+                const turret = new THREE.Mesh(new THREE.BoxGeometry(8, 6, 12), mat);
+                turret.position.y = 7;
+                const barrel = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 16), new THREE.MeshLambertMaterial({ color: 0x111111 }));
+                barrel.rotation.x = Math.PI / 2;
+                barrel.position.set(0, 7, -14);
+                group.add(turret);
+                group.add(barrel);
+            } else if (name.includes('Heli')) {
+                geo = new THREE.BoxGeometry(8, 8, 24);
+                const rotor = new THREE.Mesh(new THREE.CylinderGeometry(25, 25, 0.2, 16), new THREE.MeshLambertMaterial({ color: 0x111111 }));
+                rotor.position.y = 5;
+                group.userData.rotor = rotor;
+                group.add(rotor);
+            } else if (name.includes('Mech')) {
+                geo = new THREE.BoxGeometry(12, 16, 10);
+                const arm1 = new THREE.Mesh(new THREE.BoxGeometry(4, 14, 4), mat);
+                arm1.position.set(8, 0, 0);
+                group.add(arm1);
+            } else {
+                geo = new THREE.CylinderGeometry(10, 12, 6, 8); // Hover Ghost
+            }
+
+            const body = new THREE.Mesh(geo, mat);
+            body.castShadow = true;
+            body.receiveShadow = true;
+            group.add(body);
+
+            const boundingBox = new THREE.Box3().setFromObject(group);
+            group.userData = {
+                name: name,
+                specs: specs,
+                weapon: specs.weapon,
+                box: boundingBox,
+                velocity: new THREE.Vector3(),
+                ...group.userData
+            };
+
+            scene.add(group);
+            vehicles.push(group);
+            objects.push(group);
+        }
+
+        // --- ENEMY SYSTEM ---
+        function spawnEnemy() {
+            if (enemies.length >= 40) return; // Allow more units for teams
+
+            const isRed = Math.random() > 0.4; // 60% chance for a Red enemy, 40% for Blue teammate
+            const isBoss = isRed && Math.random() < 0.1; // 10% chance for a red boss
+            const bossScale = isBoss ? 3 : 1;
+
+            const mat = new THREE.MeshLambertMaterial({ color: isRed ? 0xff0000 : 0x0000ff });
+            const geo = new THREE.BoxGeometry(6 * bossScale, 14 * bossScale, 6 * bossScale);
+            const enemy = new THREE.Mesh(geo, mat);
+
+            if (isRed) {
+                // Spawn further out on larger map near red side
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 800 + Math.random() * 400;
+                enemy.position.set(Math.cos(angle) * dist, 100, Math.sin(angle) * dist);
+            } else {
+                // Spawn blue teammates near the blue base
+                enemy.position.set(400 + (Math.random() - 0.5) * 100, 100, (Math.random() - 0.5) * 100);
+            }
+
+            enemy.userData = {
+                health: isBoss ? 800 : 100,
+                speed: isBoss ? 30 : 60 + Math.random() * 40,
+                team: isRed ? 'Red' : 'Blue',
+                isBoss: isBoss,
+                fireTimer: Math.random() * 2 // staggered shooting
+            };
+
+            if (isBoss) announce("WARNING: HEAVY RED UNIT DETECTED");
+
+            enemy.castShadow = true;
+            scene.add(enemy);
+            enemies.push(enemy);
+            objects.push(enemy);
+        }
+
+        // --- INPUT HANDLING ---
+        function onKeyDown(event) {
+            switch (event.code) {
+                case 'ArrowUp': case 'KeyW': moveForward = true; break;
+                case 'ArrowLeft': case 'KeyA': moveLeft = true; break;
+                case 'ArrowDown': case 'KeyS': moveBackward = true; break;
+                case 'ArrowRight': case 'KeyD': moveRight = true; break;
+                case 'Space':
+                    isJetpacking = true;
+                    if (canJump || (GAME_STATE.inVehicle && GAME_STATE.currentVehicle.userData.specs.fly)) {
+                        velocity.y += GAME_STATE.inVehicle && GAME_STATE.currentVehicle.userData.specs.jump ? GAME_STATE.currentVehicle.userData.specs.jump : 150;
+                        if (!GAME_STATE.inVehicle) sfx.jump();
+                    }
+                    canJump = false;
+                    break;
+                case 'ShiftLeft': isSprint = true; break;
+                case 'KeyC': if (isSprint && !isSliding) isSliding = true; break;
+                case 'Digit1': switchWeapon(0); break;
+                case 'Digit2': switchWeapon(1); break;
+                case 'Digit3': switchWeapon(2); break;
+                case 'Digit4': switchWeapon(3); break;
+                case 'Digit5': switchWeapon(4); break;
+                case 'Digit6': switchWeapon(5); break;
+                case 'KeyE': toggleVehicle(); break;
+                case 'KeyG': throwGrenade(); break;
+                case 'KeyK': saveGame(); break;
+                case 'KeyL': loadGame(); break;
+            }
+        }
+
+        function onKeyUp(event) {
+            switch (event.code) {
+                case 'ArrowUp': case 'KeyW': moveForward = false; break;
+                case 'ArrowLeft': case 'KeyA': moveLeft = false; break;
+                case 'ArrowDown': case 'KeyS': moveBackward = false; break;
+                case 'ArrowRight': case 'KeyD': moveRight = false; break;
+                case 'ShiftLeft': isSprint = false; isSliding = false; break;
+                case 'Space': isJetpacking = false; break;
+                case 'KeyC': isSliding = false; break;
+            }
+        }
+
+        let lastFireTime = 0;
+        function onMouseDown(event) {
+            if (!controls.isLocked) return;
+            if (event.button !== 0) return;
+
+            let wp;
+            if (GAME_STATE.inVehicle && GAME_STATE.currentVehicle.userData.weapon) {
+                wp = GAME_STATE.currentVehicle.userData.weapon;
+            } else if (!GAME_STATE.inVehicle) {
+                wp = GAME_STATE.weapons[GAME_STATE.currentWeapon];
+                // Plasma Overheat check
+                if (wp.name.includes("Plasma")) {
+                    if (plasmaOverheated) return; // Cannot shoot
+                    plasmaHeat += 25;
+                    if (plasmaHeat >= 100) {
+                        plasmaOverheated = true;
+                        announce("WEAPON OVERHEATED");
+                    }
+                }
+            } else {
+                return;
+            }
+
+            const now = performance.now();
+            if (now - lastFireTime < wp.fireRate) return;
+            lastFireTime = now;
+            fireWeapon(wp);
+
+            // Audio trigger
+            if (wp.name.includes("Plasma")) sfx.plasma();
+            else if (wp.type === 'projectile') sfx.explosion();
+            else sfx.shoot();
+        }
+
+        function switchWeapon(index) {
+            if (GAME_STATE.inVehicle) return;
+            GAME_STATE.currentWeapon = index;
+            const wp = GAME_STATE.weapons[index];
+            const slot = index < 3 ? 'Main' : 'Secondary';
+            const num = (index % 3) + 1;
+            weaponEl.innerText = `Weapon: ${wp.name} (${slot} ${num})`;
+        }
+
+        // --- COMBAT ACTIONS ---
+        function throwGrenade() {
+            if (GAME_STATE.inVehicle) return;
+
+            const geo = new THREE.SphereGeometry(2, 16, 16);
+            const mat = new THREE.MeshPhongMaterial({ color: 0x333333, shininess: 100 });
+            const grenade = new THREE.Mesh(geo, mat);
+
+            const camDir = new THREE.Vector3();
+            camera.getWorldDirection(camDir);
+
+            grenade.position.copy(controls.getObject().position);
+            scene.add(grenade);
+
+            grenades.push({
+                mesh: grenade,
+                vel: camDir.multiplyScalar(300).add(new THREE.Vector3(0, 150, 0)), // arc
+                life: 2.0 // 2 sec fuse
+            });
+            sfx.shoot();
+        }
+
+        function fireWeapon(wp) {
+            const camDir = new THREE.Vector3();
+            camera.getWorldDirection(camDir);
+            const startPos = controls.getObject().position.clone();
+            startPos.y -= 2;
+
+            if (wp.type === 'projectile') {
+                const geo = wp.name === 'Plasma Rifle' ? new THREE.SphereGeometry(1, 8, 8) : new THREE.BoxGeometry(1, 1, 4);
+                const mat = new THREE.MeshBasicMaterial({ color: wp.color });
+                const proj = new THREE.Mesh(geo, mat);
+                proj.position.copy(startPos);
+                proj.quaternion.copy(camera.quaternion);
+
+                scene.add(proj);
+                bullets.push({ mesh: proj, dir: camDir, speed: wp.speed * 10, weapon: wp, life: 3.0, shooterTeam: 'Blue' });
+            } else {
+                // Hitscan
+                raycaster.set(startPos, camDir);
+                // Hitscan can shoot *through* shields intentionally, and ignore blue teammates
+                const hittable = objects.filter(o => !o.userData.isShield && (!enemies.includes(o) || o.userData.team === 'Red'));
+                const intersects = raycaster.intersectObjects(hittable, true);
+
+                let endPos = startPos.clone().add(camDir.clone().multiplyScalar(500));
+
+                if (intersects.length > 0) {
+                    endPos = intersects[0].point;
+                    const hitObj = intersects[0].object;
+                    createImpactSpark(endPos, wp.color);
+                    processDamage(hitObj, wp.damage, 'Blue');
+                }
+
+                if (wp.type === 'spread') {
+                    for (let i = 0; i < 6; i++) {
+                        const spreadEnd = endPos.clone().add(new THREE.Vector3((Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20));
+                        addLine(startPos, spreadEnd, wp.color);
+                    }
+                } else {
+                    addLine(startPos, endPos, wp.color);
+                }
+            }
+        }
+        function processDamage(obj, amt, shooterTeam) {
+            if (enemies.includes(obj)) {
+                obj.userData.health -= amt;
+                obj.material.color.setHex(0xffffff);
+                setTimeout(() => { if (obj.material) obj.material.color.setHex(obj.userData.team === 'Red' ? 0xff0000 : 0x0000ff); }, 100);
+                sfx.hit();
+
+                if (obj.userData.health <= 0) {
+                    scene.remove(obj);
+                    enemies.splice(enemies.indexOf(obj), 1);
+                    objects.splice(objects.indexOf(obj), 1);
+
+                    // Only score if Blue team got the kill
+                    if (!shooterTeam || shooterTeam === 'Blue') {
+                        GAME_STATE.score += 100;
+
+                        let rank = "Bronze";
+                        if (GAME_STATE.score > 2000) rank = "Silver";
+                        else if (GAME_STATE.score > 1000) rank = "Bronze II";
+
+                        statusEl.innerText = `Rank: ${rank} | Score: ${GAME_STATE.score}`;
+
+                        if (GAME_STATE.score % 500 === 0) announce("DOMINATING");
+                        if (GAME_STATE.score % 1000 === 0) announce("UNSTOPPABLE");
+                    }
+                }
+            } else if (destructibles.includes(obj)) {
+                obj.userData.health -= amt;
+                if (obj.userData.health <= 0) {
+                    scene.remove(obj);
+                    destructibles.splice(destructibles.indexOf(obj), 1);
+                    objects.splice(objects.indexOf(obj), 1);
+                    createExplosion(obj.position, 0x8b5a2b, 10);
+                    sfx.explosion();
+                }
+            }
+        }
+
+        // --- VISUAL FX ---
+        function createImpactSpark(pos, color) {
+            const spark = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1.5), new THREE.MeshBasicMaterial({ color: color }));
+            spark.position.copy(pos);
+            scene.add(spark);
+            setTimeout(() => scene.remove(spark), 100);
+        }
+
+        function addLine(start, end, colorHex) {
+            const material = new THREE.LineBasicMaterial({ color: colorHex, linewidth: 3 });
+            const geometry = new THREE.BufferGeometry().setFromPoints([start, end]);
+            const line = new THREE.Line(geometry, material);
+            scene.add(line);
+            setTimeout(() => { scene.remove(line); geometry.dispose(); material.dispose(); }, 100);
+        }
+
+        function createExplosion(pos, color, particleCount) {
+            // Visual only simple explosion
+            for (let i = 0; i < particleCount; i++) {
+                const mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshBasicMaterial({ color: color }));
+                mesh.position.copy(pos);
+                scene.add(mesh);
+
+                const dir = new THREE.Vector3(Math.random() - 0.5, Math.random(), Math.random() - 0.5).normalize();
+
+                let frame = 0;
+                const anim = setInterval(() => {
+                    mesh.position.add(dir.clone().multiplyScalar(5));
+                    frame++;
+                    if (frame > 10) {
+                        scene.remove(mesh);
+                        clearInterval(anim);
+                    }
+                }, 30);
+            }
+        }
+
+        function announce(text) {
+            const el = document.getElementById('announcer');
+            el.innerText = text;
+            el.style.opacity = 1;
+
+            // TTS
+            if ('speechSynthesis' in window) {
+                const utter = new SpeechSynthesisUtterance(text);
+                utter.rate = 1.2;
+                speechSynthesis.speak(utter);
+            }
+
+            setTimeout(() => el.style.opacity = 0, 2000);
+        }
+
+        // --- PHYSICS AND RENDER LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = performance.now();
+            let delta = (time - lastTime) / 1000;
+            if (delta > 0.1) delta = 0.1;
+
+            updateDayNightCycle(delta);
+            updateProjectiles(delta);
+            updateGrenades(delta);
+
+            if (controls.isLocked) {
+                updatePlayer(delta);
+                updateAI(delta);
+            }
+
+            // Passive animation for UI / environment
+            if (particleSystem) {
+                const posA = particleSystem.geometry.attributes.position.array;
+                for (let i = 0; i < posA.length; i += 3) {
+                    posA[i] += 40 * delta; // blowing wind
+                    if (posA[i] > 1000) posA[i] = -1000;
+                }
+                particleSystem.geometry.attributes.position.needsUpdate = true;
+            }
+
+            energyShields.forEach(s => {
+                s.material.opacity = 0.3 + Math.sin(time / 200) * 0.1;
+            });
+            vehicles.forEach(v => {
+                if (v.userData.rotor && v !== GAME_STATE.currentVehicle) v.userData.rotor.rotation.y += 2 * delta;
+            });
+
+            renderer.render(scene, camera);
+            lastTime = time;
+        }
+
+        function updateDayNightCycle(delta) {
+            timeOfDay += delta * 0.05; // speed of day passing
+            const dayFactor = (Math.sin(timeOfDay) + 1) / 2; // 0 to 1
+
+            // Desert gets cold/dark at night
+            const r = Math.floor(135 * dayFactor + 20);
+            const g = Math.floor(206 * dayFactor + 20);
+            const b = Math.floor(235 * dayFactor + 40);
+            const color = new THREE.Color(`rgb(${r},${g},${b})`);
+
+            scene.background = color;
+            scene.fog.color = color;
+
+            sunLight.intensity = Math.max(0.1, dayFactor * 1.5);
+            sunLight.position.x = Math.cos(timeOfDay) * 1000;
+            sunLight.position.y = Math.sin(timeOfDay) * 1000;
+        }
+
+        function updateProjectiles(delta) {
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const b = bullets[i];
+                b.mesh.position.add(b.dir.clone().multiplyScalar(b.speed * delta));
+                b.life -= delta;
+
+                let hitAnything = false;
+
+                // Bullet hit Player? (if shot by Red)
+                if (b.shooterTeam === 'Red' && b.mesh.position.distanceTo(controls.getObject().position) < 10) {
+                    GAME_STATE.health -= b.weapon.damage;
+                    healthEl.innerText = `Health: ♥ ${Math.max(0, Math.floor(GAME_STATE.health))} | Jetpack: ${Math.floor(jetpackFuel)}%`;
+                    healthEl.style.color = GAME_STATE.health < 30 ? '#ff0000' : '#ffffff';
+                    hitAnything = true;
+                    sfx.hit();
+                    if (GAME_STATE.health <= 0) {
+                        announce("YOU DIED");
+                        GAME_STATE.health = 100;
+                        GAME_STATE.score = Math.max(0, GAME_STATE.score - 50);
+                        controls.getObject().position.set(400, 20, 0); // respawn at blue base
+                        if (GAME_STATE.inVehicle) toggleVehicle();
+                    }
+                }
+
+                // Projectile hit enemy test
+                if (!hitAnything) {
+                    for (let e of enemies) {
+                        if (b.shooterTeam === e.userData.team) continue; // no friendly fire
+
+                        if (b.mesh.position.distanceTo(e.position) < Math.max(8, (e.userData.isBoss ? 15 : 8))) {
+                            if (!b.weapon.explosive) processDamage(e, b.weapon.damage, b.shooterTeam);
+                            hitAnything = true;
+                            createImpactSpark(b.mesh.position, b.weapon.color);
+                            break;
+                        }
+                    }
+                }
+
+                // Explosive floor collision
+                const floorY = getGroundHeight(b.mesh.position.x, b.mesh.position.z);
+                if (b.mesh.position.y < floorY + 1) {
+                    hitAnything = true;
+                    b.mesh.position.y = floorY + 1;
+                }
+
+                if (b.life <= 0 || hitAnything) {
+                    if (b.weapon.explosive) {
+                        createExplosion(b.mesh.position, b.weapon.color, 15);
+                        sfx.explosion();
+
+                        // Explosive hits player?
+                        if (b.shooterTeam === 'Red') {
+                            if (controls.getObject().position.distanceTo(b.mesh.position) < (b.weapon.aoe || 30)) {
+                                GAME_STATE.health -= b.weapon.damage;
+                                sfx.hit();
+                                if (GAME_STATE.health <= 0) {
+                                    announce("YOU DIED");
+                                    GAME_STATE.health = 100;
+                                    GAME_STATE.score = Math.max(0, GAME_STATE.score - 50);
+                                    controls.getObject().position.set(400, 20, 0);
+                                    if (GAME_STATE.inVehicle) toggleVehicle();
+                                }
+                            }
+                        }
+
+                        // Explosive hits enemies
+                        enemies.forEach(e => {
+                            if (b.shooterTeam !== e.userData.team) {
+                                if (e.position.distanceTo(b.mesh.position) < (b.weapon.aoe || 30)) {
+                                    processDamage(e, b.weapon.damage, b.shooterTeam);
+                                }
+                            }
+                        });
+                    }
+                    scene.remove(b.mesh);
+                    bullets.splice(i, 1);
+                }
+            }
+        }
+
+        function updateGrenades(delta) {
+            for (let i = grenades.length - 1; i >= 0; i--) {
+                const g = grenades[i];
+                g.vel.y -= 300 * delta; // Gravity
+                g.mesh.position.add(g.vel.clone().multiplyScalar(delta));
+
+                // Floor bounce
+                const floorY = getGroundHeight(g.mesh.position.x, g.mesh.position.z);
+                if (g.mesh.position.y < floorY + 1) {
+                    g.mesh.position.y = floorY + 1;
+                    g.vel.y *= -0.5; // bounce
+                    g.vel.x *= 0.8;  // friction
+                    g.vel.z *= 0.8;
+                }
+
+                g.life -= delta;
+                if (g.life <= 0) {
+                    // Explode!
+                    createExplosion(g.mesh.position, 0xff5500, 30);
+                    sfx.explosion();
+                    announce("KABOOM");
+
+                    // Area damage
+                    enemies.forEach(e => {
+                        if (e.position.distanceTo(g.mesh.position) < 80) {
+                            processDamage(e, 200); // Massive damage
+                        }
+                    });
+
+                    scene.remove(g.mesh);
+                    grenades.splice(i, 1);
+                }
+            }
+        }
+
+        function updatePlayer(delta) {
+            if (GAME_STATE.inVehicle) {
+                const v = GAME_STATE.currentVehicle;
+                const spd = v.userData.specs.speed * (isSprint ? 1.5 : 1.0);
+
+                v.userData.velocity.x -= v.userData.velocity.x * 3.0 * delta;
+                v.userData.velocity.z -= v.userData.velocity.z * 3.0 * delta;
+
+                direction.z = Number(moveForward) - Number(moveBackward);
+                direction.x = Number(moveRight) - Number(moveLeft);
+                direction.normalize();
+
+                const camDir = new THREE.Vector3();
+                camera.getWorldDirection(camDir);
+                camDir.y = 0; camDir.normalize();
+
+                if (moveForward || moveBackward) {
+                    v.userData.velocity.x -= camDir.x * direction.z * spd * delta;
+                    v.userData.velocity.z -= camDir.z * direction.z * spd * delta;
+                }
+
+                if (moveForward || moveBackward || moveLeft || moveRight) {
+                    v.rotation.y = Math.atan2(camDir.x, camDir.z);
+                }
+
+                if (v.userData.specs.fly) {
+                    if (canJump) v.userData.velocity.y += 200 * delta;
+                    if (isSprint) v.userData.velocity.y -= 200 * delta;
+                    if (v.userData.rotor) v.userData.rotor.rotation.y += 20 * delta;
+                } else if (v.userData.specs.jump && canJump && v.position.y <= 10) {
+                    v.userData.velocity.y = v.userData.specs.jump;
+                }
+
+                if (!v.userData.specs.fly && !v.userData.specs.hover) {
+                    v.userData.velocity.y -= 9.8 * 80.0 * delta; // falling
+                } else if (v.userData.specs.hover) {
+                    v.userData.velocity.y += (6 - v.position.y) * 10 * delta;
+                }
+
+                v.position.x += v.userData.velocity.x * delta;
+                v.position.y += v.userData.velocity.y * delta;
+                v.position.z += v.userData.velocity.z * delta;
+
+                // Simple floor clip prevent
+                const floorY = getGroundHeight(v.position.x, v.position.z);
+                if (v.position.y < floorY + 3) { v.position.y = floorY + 3; v.userData.velocity.y = 0; }
+
+                controls.getObject().position.copy(v.position);
+                controls.getObject().position.y += 12; // Camera height in car
+                canJump = false;
+
+            } else {
+                // Foot Movement
+                const friction = isSliding ? 2.0 : 8.0;
+                velocity.x -= velocity.x * friction * delta;
+                velocity.z -= velocity.z * friction * delta;
+
+                // Jetpack Physics
+                if (isJetpacking && jetpackFuel > 0 && !canJump) {
+                    velocity.y += 300 * delta; // thrust
+                    jetpackFuel -= 40 * delta;
+                    sfx.jetpack();
+                } else {
+                    velocity.y -= 9.8 * 120.0 * delta; // Gravity
+                    if (jetpackFuel < 100) jetpackFuel += 20 * delta;
+                }
+
+                let rank = "Bronze";
+                if (GAME_STATE.score > 2000) rank = "Silver";
+                else if (GAME_STATE.score > 1000) rank = "Bronze II";
+                healthEl.innerText = `Health: ♥ ${Math.max(0, Math.floor(GAME_STATE.health))} | Jetpack: ${Math.floor(jetpackFuel)}%`;
+
+                direction.z = Number(moveForward) - Number(moveBackward);
+                direction.x = Number(moveRight) - Number(moveLeft);
+                direction.normalize();
+
+                const currentSpeed = isSprint ? (isSliding ? 1500.0 : 1000.0) : 500.0;
+
+                // Lower camera on slide
+                if (isSliding) controls.getObject().position.y = Math.max(5, controls.getObject().position.y - 100 * delta);
+
+                if (moveForward || moveBackward) velocity.z -= direction.z * currentSpeed * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * currentSpeed * delta;
+
+                controls.moveRight(-velocity.x * delta);
+                controls.moveForward(-velocity.z * delta);
+                controls.getObject().position.y += (velocity.y * delta);
+
+                // Jump Pads Interaction
+                for (let pad of jumpPads) {
+                    if (controls.getObject().position.distanceTo(pad.position) < 15 && controls.getObject().position.y < pad.position.y + 10) {
+                        velocity.y = 800; // Launch!
+                        sfx.jump();
+                        announce("JUMP");
+                        break;
+                    }
+                }
+
+                const currFloor = getGroundHeight(controls.getObject().position.x, controls.getObject().position.z);
+                if (controls.getObject().position.y < currFloor + 10 && !isSliding) {
+                    velocity.y = 0;
+                    controls.getObject().position.y = currFloor + 10;
+                    canJump = true;
+                } else if (controls.getObject().position.y < currFloor + 5 && isSliding) {
+                    velocity.y = 0;
+                    controls.getObject().position.y = currFloor + 5;
+                    canJump = true;
+                }
+            }
+        }
+
+        function updateAI(delta) {
+            const playerPos = controls.getObject().position.clone();
+
+            enemies.forEach(enemy => {
+                // Ground gravity so they don't float
+                enemy.position.y -= 150 * delta;
+
+                const currFloor = getGroundHeight(enemy.position.x, enemy.position.z);
+                const minHeight = enemy.userData.isBoss ? 21 : 7;
+
+                if (enemy.position.y < currFloor + minHeight) enemy.position.y = currFloor + minHeight; // stand on floor
+
+                // Pick Target
+                let targetPos = null;
+                let targetDist = Infinity;
+
+                if (enemy.userData.team === 'Red') {
+                    // Target player or Blue Flag or Blue Bots
+                    targetPos = new THREE.Vector3(400, 5, 0); // Blue flag base
+                    const distToPlayer = enemy.position.distanceTo(playerPos);
+
+                    if (distToPlayer < 250) {
+                        targetPos = playerPos;
+                        targetDist = distToPlayer;
+                    }
+
+                    enemies.forEach(other => {
+                        if (other.userData.team === 'Blue') {
+                            const d = enemy.position.distanceTo(other.position);
+                            if (d < 250 && d < targetDist) {
+                                targetDist = d;
+                                targetPos = other.position;
+                            }
+                        }
+                    });
+                } else {
+                    // Blue bots target Red Flag or Red Bots
+                    targetPos = new THREE.Vector3(-400, 5, 0); // Red flag base
+                    enemies.forEach(other => {
+                        if (other.userData.team === 'Red') {
+                            const d = enemy.position.distanceTo(other.position);
+                            if (d < 300 && d < targetDist) {
+                                targetDist = d;
+                                targetPos = other.position;
+                            }
+                        }
+                    });
+                }
+
+                // Move logic
+                const dist = enemy.position.distanceTo(targetPos);
+                const dirToTarget = new THREE.Vector3().subVectors(targetPos, enemy.position).normalize();
+                dirToTarget.y = 0;
+
+                if (dist > (enemy.userData.isBoss ? 50 : 30)) {
+                    enemy.position.add(dirToTarget.multiplyScalar(enemy.userData.speed * delta));
+                }
+                enemy.lookAt(targetPos.x, enemy.position.y, targetPos.z);
+
+                // Attack logic (Shooting projectiles)
+                enemy.userData.fireTimer += delta;
+                if (dist < 300 && enemy.userData.fireTimer > (enemy.userData.isBoss ? 1.5 : 1.0)) {
+                    enemy.userData.fireTimer = 0;
+
+                    const aimTarget = targetPos.clone().add(new THREE.Vector3(0, 5, 0)); // Aim at chest
+                    const bGeo = new THREE.BoxGeometry(1, 1, 4);
+                    const bMat = new THREE.MeshBasicMaterial({ color: enemy.userData.team === 'Red' ? 0xff0000 : 0x0000ff });
+                    const proj = new THREE.Mesh(bGeo, bMat);
+
+                    proj.position.copy(enemy.position);
+                    proj.position.y += (enemy.userData.isBoss ? 8 : 4); // shoot from chest height
+
+                    // add spread
+                    const spreadTarget = aimTarget.clone().add(new THREE.Vector3((Math.random() - 0.5) * 20, (Math.random() - 0.5) * 10, (Math.random() - 0.5) * 20));
+                    proj.lookAt(spreadTarget);
+                    const aimDir = new THREE.Vector3().subVectors(spreadTarget, proj.position).normalize();
+
+                    scene.add(proj);
+                    bullets.push({
+                        mesh: proj,
+                        dir: aimDir,
+                        speed: 300,
+                        weapon: { damage: enemy.userData.isBoss ? 20 : 10, color: bMat.color.getHex(), explosive: false },
+                        life: 3.0,
+                        shooterTeam: enemy.userData.team
+                    });
+                    sfx.shoot();
+                }
+            });
+        }
+
+        // --- UTILS ---
+        function toggleVehicle() {
+            if (GAME_STATE.inVehicle) {
+                const v = GAME_STATE.currentVehicle;
+                GAME_STATE.inVehicle = false;
+                GAME_STATE.currentVehicle = null;
+                controls.getObject().position.copy(v.position);
+                controls.getObject().position.x += 20;
+                controls.getObject().position.y = 15;
+                statusEl.innerText = `Status: On Foot | Score: ${GAME_STATE.score}`;
+                weaponEl.style.display = 'block';
+                objects.push(v);
+            } else {
+                const playerPos = controls.getObject().position;
+                let nearest = null, minDist = 40;
+                for (let v of vehicles) {
+                    const dist = playerPos.distanceTo(v.position);
+                    if (dist < minDist) { minDist = dist; nearest = v; }
+                }
+                if (nearest) {
+                    GAME_STATE.inVehicle = true;
+                    GAME_STATE.currentVehicle = nearest;
+                    statusEl.innerText = `Status: Driving ${nearest.userData.name} | Score: ${GAME_STATE.score}`;
+                    weaponEl.style.display = 'none';
+                    const idx = objects.indexOf(nearest);
+                    if (idx > -1) objects.splice(idx, 1);
+                    announce("VEHICLE ACQUIRED");
+                }
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Extremely simple Save/Load for coordinates
+        function saveGame() {
+            const pos = controls.getObject().position;
+            localStorage.setItem('desert_arena_save', JSON.stringify({ x: pos.x, y: pos.y, z: pos.z, score: GAME_STATE.score }));
+            announce("GAME SAVED");
+        }
+
+        function loadGame() {
+            const raw = localStorage.getItem('desert_arena_save');
+            if (raw) {
+                const data = JSON.parse(raw);
+                controls.getObject().position.set(data.x, data.y, data.z);
+                GAME_STATE.score = data.score;
+                statusEl.innerText = `Status: On Foot | Score: ${GAME_STATE.score}`;
+                announce("GAME LOADED");
+            }
+        }
+    </script>
+</body>
+
+</html>

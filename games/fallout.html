@@ -1,0 +1,2436 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fallout - Classic 3D</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Share Tech Mono', monospace;
+            user-select: none;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #error-console {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 50%;
+            background: rgba(0, 0, 0, 0.9);
+            color: rgb(255, 0, 0);
+            font-family: monospace;
+            z-index: 10000;
+            padding: 20px;
+            display: none;
+            white-space: pre-wrap;
+            overflow-y: auto;
+        }
+
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #ffcc00;
+        }
+
+        #loading-screen h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+            letter-spacing: 6px;
+        }
+
+        #loading-screen p {
+            font-size: 16px;
+            margin-bottom: 30px;
+            opacity: 0.6;
+        }
+
+        #loading-bar {
+            width: 50%;
+            height: 4px;
+            background: #222;
+            position: relative;
+        }
+
+        #loading-progress {
+            width: 0%;
+            height: 100%;
+            background: #ffcc00;
+            transition: width 0.3s;
+        }
+
+        /* HUD */
+        #crosshair {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            color: #ffcc00;
+            font-size: 24px;
+            z-index: 50;
+            pointer-events: none;
+            text-shadow: 0 0 4px rgba(255, 204, 0, 0.5);
+        }
+
+        #hud-bottom-left {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        .hud-bar-group {
+            margin-bottom: 6px;
+        }
+
+        .hud-label {
+            color: #ffcc00;
+            font-size: 12px;
+            margin-bottom: 2px;
+        }
+
+        .hud-bar-bg {
+            width: 180px;
+            height: 8px;
+            background: rgba(255, 204, 0, 0.15);
+            border: 1px solid #ffcc00;
+        }
+
+        .hud-bar-fill {
+            height: 100%;
+            background: #ffcc00;
+            width: 100%;
+            transition: width 0.1s;
+        }
+
+        #hud-bottom-right {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 50;
+            pointer-events: none;
+            color: #ffcc00;
+            text-align: right;
+        }
+
+        #ammo-count {
+            font-size: 36px;
+            display: block;
+        }
+
+        #weapon-name {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        #compass-wrapper {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 50;
+            pointer-events: none;
+            color: #ffcc00;
+            font-size: 14px;
+            opacity: 0.8;
+            width: 300px;
+            height: 30px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #compass-arrow {
+            color: #ffcc00;
+            font-size: 10px;
+            margin-bottom: 2px;
+        }
+
+        #compass-container {
+            width: 100%;
+            height: 20px;
+            position: relative;
+        }
+
+        #compass-ticks {
+            position: absolute;
+            white-space: nowrap;
+            transition: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            letter-spacing: 20px;
+            font-weight: bold;
+            left: 50%;
+        }
+
+        #click-to-play {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 60;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.5);
+            cursor: pointer;
+        }
+
+        #click-to-play span {
+            color: #ffcc00;
+            font-size: 24px;
+            font-family: 'Share Tech Mono', monospace;
+            border: 2px solid #ffcc00;
+            padding: 15px 40px;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        /* VATS Overlay */
+        #vats-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 45;
+            display: none;
+            background: radial-gradient(ellipse at center, rgba(0, 255, 0, 0.03) 0%, rgba(0, 80, 0, 0.15) 100%);
+            border: 3px solid rgba(0, 255, 0, 0.3);
+            box-shadow: inset 0 0 120px rgba(0, 255, 0, 0.1);
+        }
+
+        #vats-overlay.active {
+            display: block;
+        }
+
+        #vats-label {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #00ff00;
+            font-size: 28px;
+            z-index: 46;
+            letter-spacing: 8px;
+            display: none;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        #vats-label.active {
+            display: block;
+        }
+
+        .vats-marker {
+            position: fixed;
+            pointer-events: none;
+            z-index: 46;
+            border: 2px solid #00ff00;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.4), inset 0 0 15px rgba(0, 255, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        .vats-marker span {
+            color: #00ff00;
+            font-size: 14px;
+            text-shadow: 0 0 5px #00ff00;
+        }
+
+        #vats-ap-cost {
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #00ff00;
+            font-size: 16px;
+            z-index: 46;
+            display: none;
+            font-family: 'Share Tech Mono', monospace;
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+        }
+
+        #vats-ap-cost.active {
+            display: block;
+        }
+
+        .scanlines {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            background: linear-gradient(to bottom, transparent, transparent 50%, rgba(0, 0, 0, 0.08) 50%, rgba(0, 0, 0, 0.08));
+            background-size: 100% 4px;
+            z-index: 100;
+        }
+
+        /* WORLD MAP (Pip-Boy) */
+        #world-map {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 80%;
+            background: #001a00;
+            border: 4px solid #00ff00;
+            z-index: 200;
+            display: none;
+            flex-direction: column;
+            box-shadow: 0 0 50px rgba(0, 255, 0, 0.2), inset 0 0 100px rgba(0, 50, 0, 0.5);
+            font-family: 'Share Tech Mono', monospace;
+            color: #00ff00;
+        }
+
+        #world-map.active {
+            display: flex;
+        }
+
+        #map-header {
+            padding: 15px 20px;
+            border-bottom: 2px solid #00ff00;
+            font-size: 24px;
+            letter-spacing: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #pip-tabs {
+            display: flex;
+            padding: 0 20px;
+            border-bottom: 1px solid rgba(0, 255, 0, 0.3);
+            background: rgba(0, 255, 0, 0.05);
+        }
+
+        .pip-tab {
+            padding: 10px 30px;
+            cursor: pointer;
+            border-right: 1px solid rgba(0, 255, 0, 0.3);
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .pip-tab:hover {
+            background: rgba(0, 255, 0, 0.1);
+        }
+
+        .pip-tab.active {
+            background: #00ff00;
+            color: #001a00;
+            font-weight: bold;
+        }
+
+        #pip-screen {
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pip-page {
+            display: none;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .pip-page.active {
+            display: block;
+        }
+
+        #map-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(0, 255, 0, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 0, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        #world-topo {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        .map-marker {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            transition: left 0.2s, top 0.2s;
+        }
+
+        .map-marker.player {
+            width: 14px;
+            height: 14px;
+            background: #00ff00;
+            border-radius: 50%;
+            box-shadow: 0 0 15px #00ff00;
+            z-index: 10;
+        }
+
+        .map-marker.location {
+            width: 10px;
+            height: 10px;
+            border: 2px solid #00ff00;
+            transform: translate(-50%, -50%) rotate(45deg);
+        }
+
+        .map-label {
+            position: absolute;
+            white-space: nowrap;
+            font-size: 14px;
+            margin-top: 12px;
+            transform: translateX(-50%);
+            text-shadow: 0 0 5px #000;
+        }
+
+        #local-radar {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: radial-gradient(circle, rgba(0, 255, 0, 0.05) 0%, transparent 70%);
+        }
+
+        .radar-line {
+            position: absolute;
+            width: 100%;
+            height: 1px;
+            background: rgba(0, 255, 0, 0.2);
+            top: 50%;
+            left: 0;
+        }
+
+        .radar-line.vert {
+            width: 1px;
+            height: 100%;
+            top: 0;
+            left: 50%;
+        }
+
+        .radar-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 1px solid rgba(0, 255, 0, 0.15);
+            border-radius: 50%;
+        }
+
+        #data-screen {
+            padding: 40px;
+            display: none;
+        }
+
+        #data-screen.active {
+            display: block;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            width: 300px;
+            margin-bottom: 20px;
+            font-size: 20px;
+            border-bottom: 1px solid rgba(0, 255, 0, 0.2);
+            padding-bottom: 5px;
+        }
+
+        .stat-val {
+            color: #00ff00;
+            text-shadow: 0 0 10px #00ff00;
+        }
+
+        #pa-finder-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, rgba(0, 50, 255, 0.1) 0%, rgba(0, 10, 40, 0.95) 100%);
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #00ccff;
+            font-family: 'Share Tech Mono', monospace;
+            backdrop-filter: blur(8px);
+        }
+
+        #pa-finder-overlay.active {
+            display: flex;
+        }
+
+        #finder-grid {
+            width: 80vh;
+            height: 80vh;
+            border: 2px solid #00ccff;
+            position: relative;
+            background-image:
+                linear-gradient(rgba(0, 204, 255, 0.2) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 204, 255, 0.2) 1px, transparent 1px);
+            background-size: 40px 40px;
+            box-shadow: 0 0 50px rgba(0, 204, 255, 0.2);
+            overflow: hidden;
+        }
+
+        #finder-header {
+            font-size: 32px;
+            letter-spacing: 10px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 15px #00ccff;
+        }
+
+        .finder-marker {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #00ccff;
+            border-radius: 2px;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px #00ccff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .finder-marker::after {
+            content: '';
+            position: absolute;
+            width: 300%;
+            height: 300%;
+            border: 1px solid rgba(0, 204, 255, 0.3);
+            border-radius: 50%;
+            animation: ping 1.5s infinite;
+        }
+
+        @keyframes ping {
+            0% {
+                transform: scale(0.5);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(2);
+                opacity: 0;
+            }
+        }
+
+        .finder-label {
+            position: absolute;
+            white-space: nowrap;
+            font-size: 12px;
+            margin-top: 25px;
+            transform: translateX(-50%);
+            color: #00ccff;
+            text-shadow: 0 0 5px #000;
+        }
+
+        #finder-player {
+            width: 8px;
+            height: 8px;
+            background: #fff;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px #fff;
+        }
+
+        #map-footer {
+            padding: 10px 20px;
+            font-size: 14px;
+            opacity: 0.7;
+            border-top: 1px solid rgba(0, 255, 0, 0.2);
+        }
+
+        /* ---- QUEST SYSTEM ---- */
+        #page-QUESTS {
+            padding: 20px;
+            overflow-y: auto;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .quest-entry {
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            background: rgba(0, 255, 0, 0.04);
+        }
+
+        .quest-entry.active {
+            border-color: #00ff00;
+            background: rgba(0, 255, 0, 0.1);
+        }
+
+        .quest-entry.completed {
+            opacity: 0.55;
+            border-color: rgba(0, 255, 0, 0.2);
+        }
+
+        .quest-name {
+            font-size: 16px;
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .quest-badge {
+            font-size: 11px;
+            padding: 1px 6px;
+            border-radius: 3px;
+            letter-spacing: 1px;
+        }
+
+        .quest-badge.active {
+            background: #00ff00;
+            color: #001a00;
+        }
+
+        .quest-badge.completed {
+            background: #005500;
+            color: #00ff99;
+        }
+
+        .quest-badge.locked {
+            background: #333;
+            color: #888;
+        }
+
+        .quest-desc {
+            font-size: 13px;
+            opacity: 0.7;
+            margin-bottom: 8px;
+        }
+
+        .quest-objective {
+            font-size: 13px;
+            padding: 2px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .quest-objective.done {
+            opacity: 0.5;
+            text-decoration: line-through;
+        }
+
+        .obj-check {
+            font-size: 14px;
+        }
+
+        /* Quest notification pop-up */
+        #quest-notification {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(0, 20, 0, 0.92);
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 14px;
+            letter-spacing: 2px;
+            padding: 10px 24px;
+            border-radius: 4px;
+            z-index: 90;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.4s, transform 0.4s;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+            white-space: pre-line;
+        }
+
+        #quest-notification.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+    <script>
+        window.onerror = function (msg, url, line, col, error) {
+            const div = document.getElementById('error-console');
+            if (div) { div.style.display = 'block'; div.innerHTML += `ERROR: ${msg}\nLine: ${line}:${col}\n${error?.stack || ''}\n\n`; }
+        };
+        window.addEventListener('unhandledrejection', e => {
+            const div = document.getElementById('error-console');
+            if (div) { div.style.display = 'block'; div.innerHTML += `PROMISE REJECTION: ${e.reason}\n\n`; }
+        });
+    </script>
+</head>
+
+<body>
+    <div id="error-console"></div>
+    <div id="loading-screen">
+        <h1>FALLOUT</h1>
+        <p>WAR NEVER CHANGES</p>
+        <div id="loading-bar">
+            <div id="loading-progress"></div>
+        </div>
+    </div>
+
+    <div id="crosshair">+</div>
+    <div id="hud-bottom-left">
+        <div class="hud-bar-group">
+            <div class="hud-label">HP</div>
+            <div class="hud-bar-bg">
+                <div id="hp-bar" class="hud-bar-fill"></div>
+            </div>
+        </div>
+        <div class="hud-bar-group">
+            <div class="hud-label">AP</div>
+            <div class="hud-bar-bg">
+                <div id="ap-bar" class="hud-bar-fill"></div>
+            </div>
+        </div>
+    </div>
+    <div id="hud-bottom-right">
+        <span id="ammo-count">096</span>
+        <span id="weapon-name">10mm Pistol</span>
+    </div>
+    <div id="compass-wrapper">
+        <div id="compass-arrow">▼</div>
+        <div id="compass-container">
+            <div id="compass-ticks">N . . . NE . . . E . . . SE . . . S . . . SW . . . W . . . NW . . . N . . . NE . . .
+                E . . . SE . . . S . . . SW . . . W . . . NW . . . N</div>
+        </div>
+    </div>
+
+    <div id="world-map">
+        <div id="map-header">
+            <span>PIP-BOY 3000</span>
+            <span id="pip-clock">20:30</span>
+        </div>
+        <div id="pip-tabs">
+            <div class="pip-tab active" onclick="switchTab('WORLD')">WORLD MAP</div>
+            <div class="pip-tab" onclick="switchTab('LOCAL')">LOCAL MAP</div>
+            <div class="pip-tab" onclick="switchTab('DATA')">STAT</div>
+            <div class="pip-tab" onclick="switchTab('QUESTS')">QUESTS</div>
+        </div>
+        <div id="pip-screen">
+            <!-- WORLD MAP -->
+            <div id="page-WORLD" class="pip-page active">
+                <div id="map-container">
+                    <canvas id="world-topo"></canvas>
+                    <div id="map-player-world" class="map-marker player" title="You"></div>
+                    <div id="dynamic-markers"></div>
+                </div>
+            </div>
+
+            <!-- LOCAL MAP -->
+            <div id="page-LOCAL" class="pip-page">
+                <div id="local-radar">
+                    <div class="radar-line"></div>
+                    <div class="radar-line vert"></div>
+                    <div class="radar-circle" style="width: 200px; height: 200px;"></div>
+                    <div class="radar-circle" style="width: 400px; height: 400px;"></div>
+                    <div id="radar-player" class="map-marker player"></div>
+                    <div id="radar-entities"></div>
+                </div>
+            </div>
+
+            <!-- DATA -->
+            <div id="page-DATA" class="pip-page">
+                <div id="data-screen" class="active">
+                    <div class="stat-row"><span>HP</span><span id="data-hp" class="stat-val">100/100</span></div>
+                    <div class="stat-row"><span>AP</span><span id="data-ap" class="stat-val">100/100</span></div>
+                    <div class="stat-row"><span>LEVEL</span><span class="stat-val">11</span></div>
+                    <div class="stat-row"><span>XP</span><span class="stat-val">15,420</span></div>
+                    <div class="stat-row"><span>CAPS</span><span class="stat-val">482</span></div>
+                </div>
+            </div>
+
+            <!-- QUESTS -->
+            <div id="page-QUESTS" class="pip-page">
+                <div id="quest-log-container"></div>
+            </div>
+        </div>
+        <div id="map-footer">
+            PRESS 'M' TO EXIT PIP-BOY
+        </div>
+    </div>
+    <div id="pa-finder-overlay">
+        <div id="finder-header">POWER ARMOR LOCATOR</div>
+        <div id="finder-grid">
+            <div id="finder-player"></div>
+            <div id="finder-markers"></div>
+        </div>
+        <div style="margin-top:20px; opacity:0.6;">PRESS 'P' TO CLOSE SCANNER</div>
+    </div>
+
+    <div class="scanlines"></div>
+    <div id="quest-notification"></div>
+
+    <!-- Three.js from CDN as a regular script (NOT module) -->
+    <script src="https://unpkg.com/fflate@0.8.0/umd/index.js"></script>
+    <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/examples/jsm/loaders/FBXLoader": "https://unpkg.com/three@0.160.0/examples/jsm/loaders/FBXLoader.js"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
+
+        // ============================================================
+        //  FALLOUT - CLASSIC 3D  (Fully Self-Contained)
+        // ============================================================
+
+        'use strict';
+
+        const loadBar = document.getElementById('loading-progress');
+        const loadScreen = document.getElementById('loading-screen');
+        let loadPct = 0;
+        function setLoad(p) { loadPct = p; loadBar.style.width = p + '%'; }
+        setLoad(10);
+
+        // ---- SCENE SETUP ----
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xDDAA77);
+        scene.fog = new THREE.FogExp2(0xDDAA77, 0.002);
+
+        const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 3000);
+        camera.position.set(0, 10, 50);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+        document.body.appendChild(renderer.domElement);
+        setLoad(20);
+
+        // ---- LIGHTING ----
+        scene.add(new THREE.HemisphereLight(0xFFAA77, 0x443322, 0.7));
+        const dirLight = new THREE.DirectionalLight(0xFFEEDD, 1.5);
+        dirLight.position.set(200, 300, -100);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        const sd = 400;
+        dirLight.shadow.camera.left = -sd;
+        dirLight.shadow.camera.right = sd;
+        dirLight.shadow.camera.top = sd;
+        dirLight.shadow.camera.bottom = -sd;
+        dirLight.shadow.bias = -0.0005;
+        scene.add(dirLight);
+        setLoad(30);
+
+        // ---- CONTROLS (Custom Pointer Lock) ----
+        const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+        const PI_2 = Math.PI / 2;
+        let isLocked = false;
+
+        document.addEventListener('pointerlockchange', () => {
+            isLocked = (document.pointerLockElement === document.body);
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (!isLocked) return;
+            euler.setFromQuaternion(camera.quaternion);
+            euler.y -= e.movementX * 0.002;
+            euler.x -= e.movementY * 0.002;
+            euler.x = Math.max(-PI_2, Math.min(PI_2, euler.x));
+            camera.quaternion.setFromEuler(euler);
+        });
+
+        function lockControls() {
+            try {
+                const p = document.body.requestPointerLock();
+                if (p && p.catch) p.catch(() => { });
+            } catch (e) { }
+        }
+
+        // Movement helpers
+        function moveForwardFn(dist) {
+            const v = new THREE.Vector3();
+            v.setFromMatrixColumn(camera.matrix, 0);
+            v.crossVectors(camera.up, v);
+            camera.position.addScaledVector(v, dist);
+        }
+        function moveRightFn(dist) {
+            const v = new THREE.Vector3();
+            v.setFromMatrixColumn(camera.matrix, 0);
+            camera.position.addScaledVector(v, dist);
+        }
+
+        const velocity = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+        let moveF = false, moveB = false, moveL = false, moveR = false, sprint = false, canJump = true;
+
+        // Player stats
+        let hp = 100, maxHp = 100, ap = 100, maxAp = 100;
+
+        document.addEventListener('keydown', e => {
+            switch (e.code) {
+                case 'KeyW': moveF = true; break;
+                case 'KeyS': moveB = true; break;
+                case 'KeyA': moveL = true; break;
+                case 'KeyD': moveR = true; break;
+                case 'ShiftLeft': if (ap > 0) sprint = true; break;
+                case 'Space':
+                    if (canJump) { velocity.y += 12; canJump = false; }
+                    break;
+            }
+        });
+        document.addEventListener('keyup', e => {
+            switch (e.code) {
+                case 'KeyW': moveF = false; break;
+                case 'KeyS': moveB = false; break;
+                case 'KeyA': moveL = false; break;
+                case 'KeyD': moveR = false; break;
+                case 'ShiftLeft': sprint = false; break;
+            }
+        });
+
+        // ---- SHOOTING ----
+        const enemies = [];
+
+        document.addEventListener('click', () => {
+            if (!isLocked) {
+                lockControls();
+                return;
+            }
+            // Shoot
+            const ch = document.getElementById('crosshair');
+            ch.style.transform = 'translate(-50%,-50%) scale(1.5)';
+            ch.style.color = '#ff4400';
+            setTimeout(() => { ch.style.transform = 'translate(-50%,-50%) scale(1)'; ch.style.color = '#ffcc00'; }, 80);
+
+            const ray = new THREE.Raycaster();
+            ray.setFromCamera(new THREE.Vector2(0, 0), camera);
+            const meshes = enemies.filter(e => !e.dead).map(e => e.mesh);
+            const hits = ray.intersectObjects(meshes);
+            if (hits.length > 0) {
+                const e = hits[0].object.userData.enemy;
+                if (e) e.takeDamage(25);
+            }
+        });
+
+        // ---- V.A.T.S. SYSTEM (Optimized) ----
+        let vatsActive = false;
+        let vatsMarkersPool = [];
+        const vatsOverlay = document.createElement('div'); vatsOverlay.id = 'vats-overlay'; document.body.appendChild(vatsOverlay);
+        const vatsLabel = document.createElement('div'); vatsLabel.id = 'vats-label'; vatsLabel.textContent = 'V.A.T.S.'; document.body.appendChild(vatsLabel);
+        const vatsApCost = document.createElement('div'); vatsApCost.id = 'vats-ap-cost'; document.body.appendChild(vatsApCost);
+        const AP_PER_SHOT = 20;
+
+        function enterVATS() {
+            if (ap < AP_PER_SHOT) return;
+            vatsActive = true;
+            vatsOverlay.classList.add('active');
+            vatsLabel.classList.add('active');
+            vatsApCost.classList.add('active');
+            vatsApCost.textContent = 'CLICK TARGET TO FIRE | AP COST: ' + AP_PER_SHOT;
+        }
+
+        function exitVATS() {
+            vatsActive = false;
+            vatsOverlay.classList.remove('active');
+            vatsLabel.classList.remove('active');
+            vatsApCost.classList.remove('active');
+            hideVATSMarkers();
+        }
+
+        function hideVATSMarkers() {
+            vatsMarkersPool.forEach(m => { m.style.display = 'none'; });
+        }
+
+        function updateVATSMarkers() {
+            const alive = enemies.filter(e => !e.dead);
+            let poolIdx = 0;
+
+            alive.forEach(e => {
+                const dist = e.mesh.position.distanceTo(camera.position);
+                if (dist > 40) return;
+
+                // Project to screen
+                const pos = e.mesh.position.clone();
+                pos.project(camera);
+                if (pos.z > 1) return; // behind camera
+
+                const sx = (pos.x * 0.5 + 0.5) * window.innerWidth;
+                const sy = (-pos.y * 0.5 + 0.5) * window.innerHeight;
+
+                // Re-use or create marker
+                let marker = vatsMarkersPool[poolIdx];
+                if (!marker) {
+                    marker = document.createElement('div');
+                    marker.className = 'vats-marker';
+                    marker.innerHTML = '<span></span>';
+                    marker.style.pointerEvents = 'auto';
+                    marker.style.cursor = 'crosshair';
+                    document.body.appendChild(marker);
+                    vatsMarkersPool.push(marker);
+
+                    marker.addEventListener('click', (ev) => {
+                        ev.stopPropagation();
+                        const targetEnemy = marker.userDataEnemy;
+                        if (ap < AP_PER_SHOT || !targetEnemy || targetEnemy.dead) { exitVATS(); return; }
+
+                        const hitChance = parseInt(marker.querySelector('span').textContent);
+                        const roll = Math.random() * 100;
+                        ap -= AP_PER_SHOT;
+                        document.getElementById('ap-bar').style.width = (ap / maxAp * 100) + '%';
+
+                        if (roll < hitChance) {
+                            targetEnemy.takeDamage(35);
+                            marker.style.borderColor = '#ff0000';
+                            marker.querySelector('span').textContent = 'HIT!';
+                        } else {
+                            marker.querySelector('span').textContent = 'MISS';
+                            marker.style.borderColor = '#ffaa00';
+                        }
+
+                        const ch = document.getElementById('crosshair');
+                        ch.style.transform = 'translate(-50%,-50%) scale(1.5)';
+                        ch.style.color = '#00ff00';
+                        setTimeout(() => { ch.style.transform = 'translate(-50%,-50%) scale(1)'; ch.style.color = '#ffcc00'; }, 100);
+
+                        if (ap < AP_PER_SHOT) setTimeout(() => exitVATS(), 300);
+                        else setTimeout(() => updateVATSMarkers(), 200);
+                    });
+                }
+
+                marker.userDataEnemy = e;
+                marker.style.display = 'block';
+                marker.style.left = sx + 'px';
+                marker.style.top = sy + 'px';
+                marker.style.borderColor = '#00ff00';
+                const hitChance = Math.min(95, Math.max(15, Math.round(100 - dist * 2.5)));
+                marker.querySelector('span').textContent = hitChance + '%';
+                marker.querySelector('span').style.color = '#00ff00';
+
+                poolIdx++;
+            });
+
+            // Hide remaining markers in pool
+            for (let i = poolIdx; i < vatsMarkersPool.length; i++) {
+                vatsMarkersPool[i].style.display = 'none';
+            }
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.code === 'KeyQ' && isLocked) {
+                if (vatsActive) exitVATS();
+                else enterVATS();
+            }
+            if (e.code === 'KeyP') {
+                togglePAFinder();
+            }
+        });
+
+        function togglePAFinder() {
+            paFinderActive = !paFinderActive;
+            const overlay = document.getElementById('pa-finder-overlay');
+            if (paFinderActive) {
+                overlay.classList.add('active');
+                if (document.pointerLockElement === document.body) {
+                    document.exitPointerLock();
+                }
+                updatePAFinder();
+            } else {
+                overlay.classList.remove('active');
+                lockControls();
+            }
+        }
+
+        function updatePAFinder() {
+            if (!paFinderActive) return;
+            const container = document.getElementById('finder-markers');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const p = camera.position;
+            const range = 2000; // Total range shown on finder grid
+
+            allPowerArmors.forEach(pa => {
+                // Calculate relative position to player
+                const dx = pa.position.x - p.x;
+                const dz = pa.position.z - p.z;
+
+                // Show if within range
+                if (Math.abs(dx) < range && Math.abs(dz) < range) {
+                    const px = (dx / range) * 50 + 50; // Percentage offset from center
+                    const pz = (dz / range) * 50 + 50;
+
+                    const marker = document.createElement('div');
+                    marker.className = 'finder-marker';
+                    marker.style.left = px + '%';
+                    marker.style.top = pz + '%';
+
+                    // Icon based on type
+                    const type = pa.userData.type || 'PA';
+                    marker.innerHTML = `<span style="font-size:8px;">${type[0]}</span>`;
+
+                    const label = document.createElement('div');
+                    label.className = 'finder-label';
+                    label.style.left = px + '%';
+                    label.style.top = pz + '%';
+                    const dist = Math.round(pa.position.distanceTo(p));
+                    label.innerText = `${type} [${dist}m]`;
+
+                    container.appendChild(marker);
+                    container.appendChild(label);
+                }
+            });
+        }
+
+        // ---- PIP-BOY LOGIC ----
+        let mapActive = false;
+        let currentTab = 'WORLD';
+
+        window.switchTab = function (tab) {
+            currentTab = tab;
+            document.querySelectorAll('.pip-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.pip-page').forEach(p => p.classList.remove('active'));
+
+            const btn = Array.from(document.querySelectorAll('.pip-tab')).find(t => t.innerText.includes(tab));
+            if (btn) btn.classList.add('active');
+
+            const page = document.getElementById('page-' + tab);
+            if (page) page.classList.add('active');
+
+            if (tab === 'WORLD') drawTopoMap();
+        };
+
+        function toggleMap() {
+            mapActive = !mapActive;
+            const mapEl = document.getElementById('world-map');
+            if (mapActive) {
+                mapEl.classList.add('active');
+                if (document.pointerLockElement === document.body) {
+                    document.exitPointerLock();
+                }
+                drawTopoMap();
+            } else {
+                mapEl.classList.remove('active');
+                lockControls();
+            }
+        }
+
+        const worldLocations = [
+            { name: "Vault 13", x: 0, z: 0 },
+            { name: "Shady Sands", x: 1200, z: -800 },
+            { name: "Raider Camp", x: -1000, z: -1400 },
+            { name: "Broken Highway", x: -400, z: 1500 }
+        ];
+
+        function spawnMapMarkers() {
+            const container = document.getElementById('dynamic-markers');
+            if (!container) return;
+            container.innerHTML = '';
+            worldLocations.forEach(loc => {
+                const mx = (loc.x / 4000 * 100) + 50;
+                const mz = (loc.z / 4000 * 100) + 50;
+
+                const marker = document.createElement('div');
+                marker.className = 'map-marker location';
+                marker.style.left = mx + '%';
+                marker.style.top = mz + '%';
+
+                const label = document.createElement('div');
+                label.className = 'map-label';
+                label.style.left = mx + '%';
+                label.style.top = mz + '%';
+                label.innerText = loc.name;
+
+                container.appendChild(marker);
+                container.appendChild(label);
+            });
+        }
+
+        function drawTopoMap() {
+            const canvas = document.getElementById('world-topo');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.parentElement.offsetWidth;
+            canvas.height = canvas.parentElement.offsetHeight;
+
+            ctx.strokeStyle = 'rgba(0, 255, 0, 0.2)';
+            ctx.lineWidth = 1;
+            // Simple concentric circles for "topo" look
+            for (let i = 0; i < 5; i++) {
+                ctx.beginPath();
+                ctx.ellipse(canvas.width * 0.5, canvas.height * 0.5, 300 + i * 20, 250 + i * 15, 0, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.ellipse(canvas.width * 0.65, canvas.height * 0.45, 100 + i * 10, 80 + i * 8, 0, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            spawnMapMarkers();
+        }
+
+        let lastClockUpdate = 0;
+        function updateMap() {
+            // Update Clock (Throttled)
+            const nowTotal = Date.now();
+            if (nowTotal - lastClockUpdate > 1000) {
+                const d = new Date();
+                document.getElementById('pip-clock').innerText = d.getHours().toString().padStart(2, '0') + ":" + d.getMinutes().toString().padStart(2, '0');
+                lastClockUpdate = nowTotal;
+            }
+
+            if (!mapActive) return;
+            const p = camera.position;
+
+            if (currentTab === 'WORLD') {
+                const marker = document.getElementById('map-player-world');
+                // Terrain is 4000x4000
+                const mx = (p.x / 4000 * 100) + 50;
+                const mz = (p.z / 4000 * 100) + 50;
+                marker.style.left = mx + '%';
+                marker.style.top = mz + '%';
+            } else if (currentTab === 'LOCAL') {
+                const radar = document.getElementById('radar-entities');
+                radar.innerHTML = '';
+                const scale = 2; // local zoom
+
+                // Show enemies
+                enemies.forEach(e => {
+                    if (e.dead) return;
+                    const dx = (e.mesh.position.x - p.x) * scale;
+                    const dz = (e.mesh.position.z - p.z) * scale;
+                    if (Math.abs(dx) < 250 && Math.abs(dz) < 250) {
+                        const em = document.createElement('div');
+                        em.className = 'map-marker location';
+                        em.style.borderColor = '#ff3300';
+                        em.style.left = `calc(50% + ${dx}px)`;
+                        em.style.top = `calc(50% + ${dz}px)`;
+                        radar.appendChild(em);
+                    }
+                });
+
+                // Show Power Armors
+                allPowerArmors.forEach(pa => {
+                    if (inPowerArmor && pa === currentPowerArmor) return;
+                    const dx = (pa.position.x - p.x) * scale;
+                    const dz = (pa.position.z - p.z) * scale;
+                    if (Math.abs(dx) < 250 && Math.abs(dz) < 250) {
+                        const pam = document.createElement('div');
+                        pam.className = 'map-marker location';
+                        let color = '#00ffaa';
+                        if (pa.userData.type === 'X-01') color = '#ffaa00';
+                        if (pa.userData.type === 'Hellfire') color = '#ff0000';
+                        if (pa.userData.type === 'X-O2') color = '#ff2222';
+                        if (pa.userData.type === 'Raider') color = '#aaaa66';
+                        pam.style.borderColor = color;
+                        pam.style.left = `calc(50% + ${dx}px)`;
+                        pam.style.top = `calc(50% + ${dz}px)`;
+                        radar.appendChild(pam);
+                    }
+                });
+            } else if (currentTab === 'DATA') {
+                document.getElementById('data-hp').innerText = Math.round(hp) + "/" + maxHp;
+                document.getElementById('data-ap').innerText = Math.round(ap) + "/" + maxAp;
+            }
+        }
+
+        // ---- TERRAIN ----
+        function getTerrainHeight(x, z) {
+            // Formula-based height check (faster than raycasting)
+            let h = Math.sin(x * 0.005) * Math.cos(z * 0.004) * 20 + Math.sin(x * 0.02 + z * 0.01) * 5;
+            if (x > -50 && x < 50 && z > -50 && z < 50) h *= 0.1;
+            if (x > 200 && x < 350 && z > 100 && z < 250) h *= 0.1;
+            return h;
+        }
+
+        function createTerrain() {
+            const geo = new THREE.PlaneGeometry(4000, 4000, 200, 200);
+            const pos = geo.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+                const x = pos.getX(i), z = pos.getY(i);
+                pos.setZ(i, getTerrainHeight(x, z));
+            }
+            geo.computeVertexNormals();
+
+            const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+            const ctx = c.getContext('2d');
+            ctx.fillStyle = '#C2A374'; ctx.fillRect(0, 0, 256, 256);
+            for (let i = 0; i < 5000; i++) {
+                ctx.fillStyle = Math.random() > 0.5 ? '#B18E5A' : '#D4BA8C';
+                ctx.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
+            }
+            const tex = new THREE.CanvasTexture(c);
+            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(80, 80);
+
+            const terrain = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, roughness: 1.0, color: 0xDDCCAA }));
+            terrain.rotation.x = -Math.PI / 2;
+            terrain.receiveShadow = true;
+            scene.add(terrain);
+            return terrain;
+        }
+
+        // ---- VAULT 13 ----
+        function createVault(x, z) {
+            const g = new THREE.Group();
+            // Rock face
+            const rock = new THREE.Mesh(
+                new THREE.SphereGeometry(40, 16, 16, 0, Math.PI, 0, Math.PI / 2),
+                new THREE.MeshStandardMaterial({ color: 0x887766, roughness: 0.9 })
+            );
+            rock.rotation.y = Math.PI;
+            g.add(rock);
+            // Frame
+            const frame = new THREE.Mesh(new THREE.BoxGeometry(20, 15, 5), new THREE.MeshStandardMaterial({ color: 0x777777 }));
+            frame.position.set(0, 7.5, 30);
+            g.add(frame);
+            // Hole
+            const hole = new THREE.Mesh(new THREE.CylinderGeometry(6, 6, 6, 32), new THREE.MeshBasicMaterial({ color: 0 }));
+            hole.rotation.x = Math.PI / 2; hole.position.set(0, 7, 30.5); g.add(hole);
+            // Gear door
+            const door = new THREE.Mesh(new THREE.CylinderGeometry(6.5, 6.5, 2, 12), new THREE.MeshStandardMaterial({ color: 0x888844, metalness: 0.8, roughness: 0.4 }));
+            door.rotation.x = Math.PI / 2; door.position.set(-8, 7, 32); g.add(door);
+            // 13 label
+            const cv = document.createElement('canvas'); cv.width = 128; cv.height = 128;
+            const cx = cv.getContext('2d');
+            cx.fillStyle = '#AAAA55'; cx.fillRect(0, 0, 128, 128);
+            cx.fillStyle = '#FFEEDD'; cx.font = 'bold 80px sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+            cx.fillText('111)', 64, 64);
+            const dec = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv) }));
+            dec.position.set(0, 1.1, 0); dec.rotation.x = -Math.PI / 2; door.add(dec);
+
+            g.position.set(x, 0, z);
+            scene.add(g);
+        }
+
+        // ---- SHADY SANDS ----
+        function createShadySands(ox, oz) {
+            const adobe = new THREE.MeshStandardMaterial({ color: 0xCCBB99, roughness: 1 });
+            [{ x: 0, z: 0, w: 20, d: 20 }, { x: -30, z: 20, w: 15, d: 25 }, { x: 40, z: -10, w: 25, d: 15 }, { x: 10, z: 40, w: 20, d: 20 }, { x: 50, z: 30, w: 15, d: 15 }]
+                .forEach(p => {
+                    const h = 8 + Math.random() * 2;
+                    const b = new THREE.Mesh(new THREE.BoxGeometry(p.w, h, p.d), adobe);
+                    b.position.set(ox + p.x, h / 2, oz + p.z);
+                    b.castShadow = true; b.receiveShadow = true;
+                    scene.add(b);
+                });
+            // Wall ring
+            const wm = new THREE.MeshStandardMaterial({ color: 0xDDBB99 });
+            for (let i = 0; i < 30; i++) {
+                if (i > 25 && i < 28) continue;
+                const a = (i / 30) * Math.PI * 2, r = 60;
+                const w = new THREE.Mesh(new THREE.BoxGeometry(6, 6, 2), wm);
+                w.position.set(ox + Math.cos(a) * r, 3, oz + Math.sin(a) * r);
+                w.lookAt(ox, 3, oz); w.castShadow = true; scene.add(w);
+            }
+        }
+
+        // ---- RAIDER CAMP ----
+        function createRaiderCamp(ox, oz) {
+            const tm = new THREE.MeshStandardMaterial({ color: 0x443322, roughness: 1 });
+            for (let i = 0; i < 4; i++) {
+                const t = new THREE.Mesh(new THREE.ConeGeometry(8, 10, 4), tm);
+                t.position.set(ox + (Math.random() - 0.5) * 40, 5, oz + (Math.random() - 0.5) * 40);
+                t.rotation.y = Math.PI / 4; t.castShadow = true; scene.add(t);
+            }
+            for (let i = 0; i < 6; i++) spawnEnemy(ox + (Math.random() - 0.5) * 40, oz + (Math.random() - 0.5) * 40, 0x992222);
+        }
+
+        // ---- BROKEN HIGHWAY ----
+        function createHighway(x, z) {
+            const g = new THREE.Group();
+            const rm = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.9 });
+            const pm = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.9 });
+            for (let i = 0; i < 5; i++) {
+                if (i === 2) continue;
+                const rc = new THREE.Mesh(new THREE.BoxGeometry(40, 2, 60), rm);
+                rc.position.set(0, 40, i * 65); rc.castShadow = true; g.add(rc);
+                const pl = new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 40, 8), pm);
+                pl.position.set(0, 20, i * 65); pl.castShadow = true; g.add(pl);
+            }
+            g.position.set(x, 0, z); g.rotation.y = Math.PI / 6;
+            scene.add(g);
+        }
+
+        // ---- POWER ARMOR SYSTEM ----
+        const allPowerArmors = [];
+        let currentPowerArmor = null; // Reference to the suit being worn
+        let inPowerArmor = false;
+        let paOverlay = null;
+        let paFinderActive = false; // "P" key scanner state
+
+        // --- High-Poly T-45 Assets ---
+        const fbxLoader = new FBXLoader();
+        const textureLoader = new THREE.TextureLoader();
+        let cachedT45Model = null;
+
+        async function loadT45Model() {
+            console.log("Loading T-45 high-poly assets...");
+            return new Promise((resolve) => {
+                fbxLoader.load('source/t45 final.fbx', (fbx) => {
+                    console.log("T-45 FBX loaded successfully.");
+                    // Error callback for textures
+                    const onTexError = (url) => console.warn(`Failed to load texture: ${url}`);
+
+                    // Load Textures
+                    const texArms = {
+                        map: textureLoader.load('textures/t45_arm_s_T45Arms_BaseColor.png', undefined, undefined, onTexError),
+                        normalMap: textureLoader.load('textures/t45_arm_s_T45Arms_Normal.png', undefined, undefined, onTexError),
+                        roughnessMap: textureLoader.load('textures/t45_arm_s_T45Arms_Roughness.png', undefined, undefined, onTexError),
+                        metalnessMap: textureLoader.load('textures/t45_arm_s_T45Arms_Metallic.png', undefined, undefined, onTexError)
+                    };
+                    const texHelmet = {
+                        map: textureLoader.load('textures/t45_helm_T45PowerHelmet_BaseColor.png', undefined, undefined, onTexError),
+                        normalMap: textureLoader.load('textures/t45_helm_T45PowerHelmet_Normal.png', undefined, undefined, onTexError),
+                        roughnessMap: textureLoader.load('textures/t45_helm_T45PowerHelmet_Roughness.png', undefined, undefined, onTexError),
+                        metalnessMap: textureLoader.load('textures/t45_helm_T45PowerHelmet_Metallic.png', undefined, undefined, onTexError)
+                    };
+                    const texVisor = {
+                        map: textureLoader.load('textures/t45_helm_Visor_BaseColor.png', undefined, undefined, onTexError),
+                        normalMap: textureLoader.load('textures/t45_helm_Visor_Normal.png', undefined, undefined, onTexError),
+                        roughnessMap: textureLoader.load('textures/t45_helm_Visor_Roughness.png', undefined, undefined, onTexError)
+                    };
+                    const texBackpack = {
+                        map: textureLoader.load('textures/t45_metal_suit_T45Backpack_BaseColor.png', undefined, undefined, onTexError),
+                        normalMap: textureLoader.load('textures/t45_metal_suit_T45Backpack_Normal.png', undefined, undefined, onTexError),
+                        roughnessMap: textureLoader.load('textures/t45_metal_suit_T45Backpack_Roughness.png', undefined, undefined, onTexError),
+                        metalnessMap: textureLoader.load('textures/t45_metal_suit_T45Backpack_Metallic.png', undefined, undefined, onTexError)
+                    };
+                    const texChest = {
+                        map: textureLoader.load('textures/t45_metal_suit_T45Chest_BaseColor.png', undefined, undefined, onTexError),
+                        normalMap: textureLoader.load('textures/t45_metal_suit_T45Chest_Normal.png', undefined, undefined, onTexError),
+                        roughnessMap: textureLoader.load('textures/t45_metal_suit_T45Chest_Roughness.png', undefined, undefined, onTexError),
+                        metalnessMap: textureLoader.load('textures/t45_metal_suit_T45Chest_Metallic.png', undefined, undefined, onTexError)
+                    };
+                    const texLegs = {
+                        map: textureLoader.load('textures/t45_metal_suit_T45Legs_BaseColor.png', undefined, undefined, onTexError),
+                        normalMap: textureLoader.load('textures/t45_metal_suit_T45Legs_Normal.png', undefined, undefined, onTexError),
+                        roughnessMap: textureLoader.load('textures/t45_metal_suit_T45Legs_Roughness.png', undefined, undefined, onTexError),
+                        metalnessMap: textureLoader.load('textures/t45_metal_suit_T45Legs_Metallic.png', undefined, undefined, onTexError)
+                    };
+                    const texUnder = {
+                        map: textureLoader.load('textures/t45_undersuit_Leather_BaseColor.png', undefined, undefined, onTexError),
+                        normalMap: textureLoader.load('textures/t45_undersuit_Leather_Normal.png', undefined, undefined, onTexError),
+                        roughnessMap: textureLoader.load('textures/t45_undersuit_Leather_Roughness.png', undefined, undefined, onTexError)
+                    };
+
+                    fbx.traverse((child) => {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+
+                            const name = child.name.toLowerCase();
+                            let m = new THREE.MeshStandardMaterial({ roughness: 0.8, metalness: 0.5 });
+
+                            if (name.includes('chest')) Object.assign(m, texChest);
+                            else if (name.includes('arm')) Object.assign(m, texArms);
+                            else if (name.includes('leg')) Object.assign(m, texLegs);
+                            else if (name.includes('helm')) Object.assign(m, texHelmet);
+                            else if (name.includes('visor')) Object.assign(m, texVisor);
+                            else if (name.includes('backpack') || name.includes('back')) Object.assign(m, texBackpack);
+                            else if (name.includes('leather') || name.includes('under')) Object.assign(m, texUnder);
+
+                            child.material = m;
+                        }
+                    });
+
+                    fbx.scale.set(0.015, 0.015, 0.015);
+                    cachedT45Model = fbx;
+                    resolve(fbx);
+                }, undefined, (err) => {
+                    console.error("Error loading T-45 FBX:", err);
+                    console.warn("If you are opening this file locally, you MUST use a local server (e.g., Live Server or python -m http.server) due to browser security policies.");
+                    resolve(null); // Resolve with null so game can proceed
+                });
+            });
+        }
+
+        function createPBRTexture(type = 'metal') {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 1024;
+            const ctx = canvas.getContext('2d');
+
+            // Base Colors
+            if (type === 'metal') {
+                ctx.fillStyle = '#6B6B78'; // Steel
+            } else if (type === 'paint') {
+                ctx.fillStyle = '#606650'; // Olive Drab
+            } else if (type === 'rust') {
+                ctx.fillStyle = '#4A3222'; // Dark Rust
+            }
+            ctx.fillRect(0, 0, 1024, 1024);
+
+            // Add Noise/Grain
+            for (let i = 0; i < 20000; i++) {
+                const x = Math.random() * 1024;
+                const y = Math.random() * 1024;
+                const size = Math.random() * 2;
+                const grey = Math.random() * 50 - 25;
+                ctx.fillStyle = `rgba(${100 + grey}, ${100 + grey}, ${100 + grey}, 0.1)`;
+                ctx.fillRect(x, y, size, size);
+            }
+
+            // Add Rust spots
+            for (let i = 0; i < 40; i++) {
+                const x = Math.random() * 1024;
+                const y = Math.random() * 1024;
+                const radius = Math.random() * 100 + 20;
+                const grad = ctx.createRadialGradient(x, y, 0, x, y, radius);
+                grad.addColorStop(0, 'rgba(139, 69, 19, 0.4)'); // Rust brown
+                grad.addColorStop(1, 'rgba(139, 69, 19, 0)');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Add Scratches / Exposed Metal
+            ctx.strokeStyle = 'rgba(200, 200, 210, 0.3)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 100; i++) {
+                ctx.beginPath();
+                const x = Math.random() * 1024;
+                const y = Math.random() * 1024;
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + (Math.random() - 0.5) * 50, y + (Math.random() - 0.5) * 50);
+                ctx.stroke();
+            }
+
+            // Add Mud/Grime (clumping near edges/bottom)
+            for (let i = 0; i < 15; i++) {
+                const x = Math.random() * 1024;
+                const y = (0.8 + Math.random() * 0.2) * 1024; // Concentrated at "bottom"
+                const radius = Math.random() * 150 + 50;
+                const grad = ctx.createRadialGradient(x, y, 5, x, y, radius);
+                grad.addColorStop(0, 'rgba(80, 60, 40, 0.6)');
+                grad.addColorStop(1, 'rgba(80, 60, 40, 0)');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.anisotropy = 16;
+            return tex;
+        }
+
+        function createT45PowerArmor(x, z) {
+            if (!cachedT45Model) {
+                console.warn("T-45 High-Poly Model not loaded, falling back to dummy.");
+                const g = new THREE.Group();
+                g.add(new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), new THREE.MeshStandardMaterial({ color: 0x888888 })));
+                g.position.set(x, 0, z);
+                scene.add(g);
+                allPowerArmors.push(g);
+                return g;
+            }
+
+            const g = cachedT45Model.clone();
+            g.userData.type = 'T-45';
+
+            // Shadows and Materials already set during loadT45Model traverse
+            // but we traverse again to ensure clone properties
+            g.traverse(child => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+
+            // Add Rim Lighting for Studio Look
+            const rimLight1 = new THREE.PointLight(0xFFFFFF, 0.4, 10);
+            rimLight1.position.set(5, 5, 5); g.add(rimLight1);
+
+            g.position.set(x, 1.2, z); // Adjust Y offset for FBX pivot
+            scene.add(g);
+            allPowerArmors.push(g);
+            return g;
+        }
+
+        // ---- T-51 POWER ARMOR ----
+        function createT51PowerArmor(x, z) {
+            const g = new THREE.Group();
+            g.userData.type = 'T-51';
+
+            const olive = new THREE.MeshStandardMaterial({ color: 0x606650, roughness: 0.4, metalness: 0.8 });
+            const dark = new THREE.MeshStandardMaterial({ color: 0x404040, roughness: 0.5, metalness: 0.9 });
+            const visorMat = new THREE.MeshStandardMaterial({ color: 0x00FF00, emissive: 0x003300, emissiveIntensity: 0.5, transparent: true, opacity: 0.8 });
+
+            // Torso
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.8, 1.1), olive);
+            torso.position.y = 1.8; g.add(torso);
+
+            // Helmet (Iconic T-51 shape)
+            const helmet = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.45, 0.9, 12), olive);
+            helmet.position.set(0, 3.2, 0); g.add(helmet);
+            const dome = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), olive);
+            dome.position.set(0, 3.65, 0); g.add(dome);
+            const visor = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.1, 0.1), visorMat);
+            visor.position.set(0, 3.25, 0.46); g.add(visor);
+
+            // Respirator tubes
+            const tubeL = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.6, 8), dark);
+            tubeL.rotation.z = Math.PI / 4; tubeL.position.set(-0.35, 2.9, 0.35); g.add(tubeL);
+            const tubeR = tubeL.clone(); tubeR.rotation.z = -Math.PI / 4; tubeR.position.set(0.35, 2.9, 0.35); g.add(tubeR);
+
+            // Massive "Bell" Shoulders
+            [[-1.1, 0], [1.1, 0]].forEach(([sx]) => {
+                const pauldron = new THREE.Mesh(new THREE.SphereGeometry(0.6, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), olive);
+                pauldron.scale.set(1, 0.8, 1.1);
+                pauldron.position.set(sx, 2.4, 0);
+                g.add(pauldron);
+            });
+
+            // Legs & Arms (standard beefy procedural)
+            [[-0.6, 0.5, 0], [0.6, 0.5, 0]].forEach(([lx, ly, lz]) => {
+                const leg = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.5, 0.5), olive);
+                leg.position.set(lx, ly, lz); g.add(leg);
+                const boot = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.3, 0.8), dark);
+                boot.position.set(lx, -0.2, 0.15); g.add(boot);
+            });
+
+            g.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+            g.position.set(x, 0, z);
+            g.scale.set(1.25, 1.25, 1.25);
+            scene.add(g);
+            allPowerArmors.push(g);
+            return g;
+        }
+
+        // ---- X-01 POWER ARMOR ----
+        function createX01PowerArmor(x, z) {
+            const g = new THREE.Group();
+            g.userData.type = 'X-01';
+
+            const charcoal = new THREE.MeshStandardMaterial({ color: 0x2A2A2A, roughness: 0.2, metalness: 0.95 });
+            const gunmetal = new THREE.MeshStandardMaterial({ color: 0x404045, roughness: 0.3, metalness: 1.0 });
+            const eyeMat = new THREE.MeshStandardMaterial({ color: 0xFF9900, emissive: 0xFF5500, emissiveIntensity: 2.0 });
+
+            // Torso (Angular)
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.9, 1.2), charcoal);
+            torso.position.y = 1.8; g.add(torso);
+
+            // Helmet (Bird-like / Insectoid)
+            const helmet = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.7, 1.0), charcoal);
+            helmet.position.set(0, 3.1, 0.1); g.add(helmet);
+
+            // Glowing eyes
+            [[-0.2, 3.2, 0.55], [0.2, 3.2, 0.55]].forEach(([ex, ey, ez]) => {
+                const eye = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), eyeMat);
+                eye.position.set(ex, ey, ez); g.add(eye);
+                const eyeLight = new THREE.PointLight(0xFF5500, 0.2, 2);
+                eyeLight.position.copy(eye.position); g.add(eyeLight);
+            });
+
+            // Overlapping Shoulders
+            [[-1.2, 0], [1.2, 0]].forEach(([sx]) => {
+                const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.4, 1.2), gunmetal);
+                p1.position.set(sx, 2.7, 0); p1.rotation.z = sx > 0 ? 0.3 : -0.3; g.add(p1);
+                const p2 = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 1.1), charcoal);
+                p2.position.set(sx, 2.4, 0); g.add(p2);
+            });
+
+            // Beefy angular legs
+            [[-0.6, 0.5, 0], [0.6, 0.5, 0]].forEach(([lx, ly, lz]) => {
+                const leg = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.6, 0.6), charcoal);
+                leg.position.set(lx, ly, lz); g.add(leg);
+                const boot = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.4, 0.9), gunmetal);
+                boot.position.set(lx, -0.15, 0.2); g.add(boot);
+            });
+
+            g.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+            g.position.set(x, 0, z);
+            g.scale.set(1.3, 1.3, 1.3);
+            scene.add(g);
+            allPowerArmors.push(g);
+            return g;
+        }
+
+        // ---- HELLFIRE POWER ARMOR ----
+        function createHellfirePowerArmor(x, z) {
+            const g = new THREE.Group();
+            g.userData.type = 'Hellfire';
+
+            const darkGrey = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.2, metalness: 0.9 });
+            const heatShield = new THREE.MeshStandardMaterial({ color: 0x442211, roughness: 0.5, metalness: 0.7 });
+            const redGlow = new THREE.MeshStandardMaterial({ color: 0xFF0000, emissive: 0xFF0000, emissiveIntensity: 2.5 });
+
+            // Torso (Bulky)
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(1.8, 2.0, 1.3), darkGrey);
+            torso.position.y = 1.8; g.add(torso);
+            const plates = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.5, 0.4), heatShield);
+            plates.position.set(0, 1.8, 0.6); g.add(plates);
+
+            // Helmet (Sloped)
+            const helmet = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.6, 0.8, 8), darkGrey);
+            helmet.position.set(0, 3.2, 0); g.add(helmet);
+
+            // Red glowing eyes (Intense)
+            [[-0.2, 3.3, 0.45], [0.2, 3.3, 0.45]].forEach(([ex, ey, ez]) => {
+                const eye = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), redGlow);
+                eye.position.set(ex, ey, ez); g.add(eye);
+                const eyeLight = new THREE.PointLight(0xFF0000, 0.4, 3);
+                eyeLight.position.copy(eye.position); g.add(eyeLight);
+            });
+
+            // Heavy Shoulders
+            [[-1.25, 0], [1.25, 0]].forEach(([sx]) => {
+                const pauldron = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.6, 1.3), heatShield);
+                pauldron.position.set(sx, 2.6, 0); g.add(pauldron);
+            });
+
+            // Thick legs
+            [[-0.6, 0.5, 0], [0.6, 0.5, 0]].forEach(([lx, ly, lz]) => {
+                const leg = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.6, 0.7), darkGrey);
+                leg.position.set(lx, ly, lz); g.add(leg);
+                const guard = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.2), heatShield);
+                guard.position.set(lx, 0.5, 0.35); g.add(guard);
+                const boot = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.4, 1.0), darkGrey);
+                boot.position.set(lx, -0.15, 0.2); g.add(boot);
+            });
+
+            g.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+            g.position.set(x, 0, z);
+            g.scale.set(1.35, 1.35, 1.35);
+            scene.add(g);
+            allPowerArmors.push(g);
+            return g;
+        }
+
+        // ---- X-O2 POWER ARMOR ----
+        function createXO2PowerArmor(x, z) {
+            const g = new THREE.Group();
+            g.userData.type = 'X-O2';
+
+            const black = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 1.0 });
+            const redVisor = new THREE.MeshStandardMaterial({ color: 0xFF2200, emissive: 0xFF1100, emissiveIntensity: 1.5 });
+
+            // Torso (Sleek)
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.9, 1.1), black);
+            torso.position.y = 1.8; g.add(torso);
+
+            // Helmet (Enclave style)
+            const helmet = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.8, 0.9), black);
+            helmet.position.set(0, 3.2, 0); g.add(helmet);
+            const visor = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.1, 0.1), redVisor);
+            visor.position.set(0, 3.3, 0.45); g.add(visor);
+
+            // Sharp Shoulders
+            [[-1.1, 0], [1.1, 0]].forEach(([sx]) => {
+                const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.3, 1.1), black);
+                p1.position.set(sx, 2.7, 0); p1.rotation.z = sx > 0 ? 0.5 : -0.5; g.add(p1);
+            });
+
+            // Legs
+            [[-0.55, 0.5, 0], [0.55, 0.5, 0]].forEach(([lx, ly, lz]) => {
+                const leg = new THREE.Mesh(new THREE.BoxGeometry(0.55, 1.7, 0.55), black);
+                leg.position.set(lx, ly, lz); g.add(leg);
+                const boot = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.4, 0.85), black);
+                boot.position.set(lx, -0.15, 0.15); g.add(boot);
+            });
+
+            g.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+            g.position.set(x, 0, z);
+            g.scale.set(1.3, 1.3, 1.3);
+            scene.add(g);
+            allPowerArmors.push(g);
+            return g;
+        }
+
+        // ---- POWER ARMOR FRAME ----
+        function createPowerArmorFrame(x, z) {
+            const g = new THREE.Group();
+            g.userData.type = 'Frame';
+
+            const frameMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.6, metalness: 0.7 });
+            const jointMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8, metalness: 0.5 });
+
+            // Simple skeletal structure
+            // Torso
+            const spine = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.8, 0.3), frameMat);
+            spine.position.y = 1.8; g.add(spine);
+            const shoulders = new THREE.Mesh(new THREE.BoxGeometry(2, 0.2, 0.3), frameMat);
+            shoulders.position.set(0, 2.6, 0); g.add(shoulders);
+            const hips = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.2, 0.3), frameMat);
+            hips.position.set(0, 1.0, 0); g.add(hips);
+
+            // Arms
+            [[-1, 0], [1, 0]].forEach(([ax]) => {
+                const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.5), frameMat);
+                arm.position.set(ax, 1.8, 0); g.add(arm);
+                const joint = new THREE.Mesh(new THREE.SphereGeometry(0.15), jointMat);
+                joint.position.set(ax, 2.6, 0); g.add(joint);
+            });
+
+            // Legs
+            [[-0.4, 0], [0.4, 0]].forEach(([lx]) => {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 1.6), frameMat);
+                leg.position.set(lx, 0.2, 0); g.add(leg);
+                const knee = new THREE.Mesh(new THREE.SphereGeometry(0.15), jointMat);
+                knee.position.set(lx, 0.2, 0); g.add(knee);
+            });
+
+            // Head mount
+            const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.4), frameMat);
+            neck.position.set(0, 2.8, 0); g.add(neck);
+
+            g.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+            g.position.set(x, 0, z);
+            g.scale.set(1.2, 1.2, 1.2);
+            scene.add(g);
+            allPowerArmors.push(g);
+            return g;
+        }
+
+        // ---- RAIDER POWER ARMOR ----
+        function createRaiderPowerArmor(x, z) {
+            const g = new THREE.Group();
+            g.userData.type = 'Raider';
+
+            const rust = new THREE.MeshStandardMaterial({ color: 0x664433, roughness: 1.0, metalness: 0.1 });
+            const junk = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.9, metalness: 0.3 });
+            const yellowVisor = new THREE.MeshStandardMaterial({ color: 0xFFFF00, emissive: 0x888800, emissiveIntensity: 0.5 });
+
+            // Torso (Scrappy)
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.7, 1.0), rust);
+            torso.position.y = 1.8; g.add(torso);
+            // Added "spikes"
+            for (let i = 0; i < 5; i++) {
+                const spike = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.4, 4), junk);
+                spike.position.set((Math.random() - 0.5) * 1.5, 2.7, (Math.random() - 0.5) * 1);
+                g.add(spike);
+            }
+
+            // Helmet (Cage-like)
+            const helmet = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.8), junk);
+            helmet.position.set(0, 3.1, 0); g.add(helmet);
+            const cage = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.05, 8, 16), rust);
+            cage.position.set(0, 3.1, 0.35); cage.rotation.y = Math.PI / 2; g.add(cage);
+            const visor = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.1, 0.1), yellowVisor);
+            visor.position.set(0, 3.2, 0.4); g.add(visor);
+
+            // Mismatched Shoulders
+            const p1 = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 8, 0, Math.PI, 0, Math.PI / 2), rust);
+            p1.position.set(-1.0, 2.5, 0); p1.rotation.y = Math.PI; g.add(p1);
+            const p2 = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), junk);
+            p2.position.set(1.0, 2.5, 0); p2.rotation.z = 0.4; g.add(p2);
+
+            // Legs
+            [[-0.5, 0.5, 0], [0.5, 0.5, 0]].forEach(([lx, ly, lz]) => {
+                const leg = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.5, 0.5), rust);
+                leg.position.set(lx, ly, lz); g.add(leg);
+                const boot = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.4, 0.6), junk);
+                boot.position.set(lx, -0.2, 0.2); g.add(boot);
+            });
+
+            g.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+            g.position.set(x, 0, z);
+            g.scale.set(1.2, 1.2, 1.2);
+            scene.add(g);
+            allPowerArmors.push(g);
+            return g;
+        }
+
+        // Power Armor enter/exit
+        document.addEventListener('keydown', e => {
+            if (e.code !== 'KeyE') return;
+
+            if (inPowerArmor) {
+                // Exit
+                inPowerArmor = false;
+                const pa = currentPowerArmor;
+                pa.visible = true;
+                // Place PA where player is, slightly forward
+                const dir = new THREE.Vector3();
+                camera.getWorldDirection(dir);
+                pa.position.copy(camera.position);
+                pa.position.y -= 1.7;
+                pa.position.add(dir.multiplyScalar(3));
+
+                currentPowerArmor = null;
+                if (paOverlay) { paOverlay.remove(); paOverlay = null; }
+                document.getElementById('crosshair').style.color = '#ffcc00';
+            } else {
+                // Check distance to ALL PAs
+                let closest = null;
+                let minDist = 5;
+                allPowerArmors.forEach(pa => {
+                    if (pa.userData.type === 'Frame') return; // Frame does nothing
+                    const d = camera.position.distanceTo(pa.position.clone().add(new THREE.Vector3(0, 1.7, 0)));
+                    if (d < minDist) {
+                        minDist = d;
+                        closest = pa;
+                    }
+                });
+
+                if (closest) {
+                    inPowerArmor = true;
+                    currentPowerArmor = closest;
+                    closest.visible = false;
+
+                    // HUD overlay (color based on armor type)
+                    let hue = '255,170,0'; // T-45 amber
+                    if (closest.userData.type === 'T-51') hue = '0,255,120'; // T-51 green
+                    if (closest.userData.type === 'X-01') hue = '255,100,0'; // X-01 intense orange
+                    if (closest.userData.type === 'Hellfire') hue = '255,0,0'; // Hellfire red
+                    if (closest.userData.type === 'X-O2') hue = '200,30,0'; // X-O2 dark red
+                    if (closest.userData.type === 'Raider') hue = '160,140,80'; // Raider brown/yellow
+
+                    paOverlay = document.createElement('div');
+                    paOverlay.style.cssText = `position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:40;border:4px solid rgba(${hue},0.4);box-shadow:inset 0 0 80px rgba(${hue},0.15);background:radial-gradient(ellipse at center,transparent 60%,rgba(${hue},0.08) 100%);`;
+                    document.body.appendChild(paOverlay);
+                    document.getElementById('crosshair').style.color = `rgb(${hue})`;
+                }
+            }
+        });
+
+        function spawnRandomPowerArmor() {
+            const types = [
+                createT45PowerArmor,
+                createT51PowerArmor,
+                createX01PowerArmor,
+                createHellfirePowerArmor,
+                createXO2PowerArmor,
+                createRaiderPowerArmor,
+                createPowerArmorFrame
+            ];
+
+            // Spawn all suits in a grid near the start (0, 0)
+            const spacing = 15;
+            const offset = 40; // Avoid spawning directly on the vault door
+            for (let i = 0; i < 25; i++) {
+                const spawnFn = types[i % types.length];
+                const x = (i % 5 - 2) * spacing;
+                const z = (Math.floor(i / 5) - 2) * spacing + offset;
+                spawnFn(x, z);
+            }
+        }
+
+        // ---- ENEMIES ----
+        function spawnEnemy(x, z, color) {
+            color = color || 0x3B2F2F;
+            const mesh = new THREE.Mesh(
+                new THREE.SphereGeometry(0.8),
+                new THREE.MeshStandardMaterial({ color: color })
+            );
+            mesh.position.set(x, 2, z);
+            mesh.castShadow = true;
+            const enemy = {
+                mesh, hp: 40, dead: false,
+                takeDamage(amt) {
+                    if (this.dead) return;
+                    this.hp -= amt;
+                    this.mesh.material.emissive.setHex(0xff0000);
+                    setTimeout(() => { if (!this.dead) this.mesh.material.emissive.setHex(0); }, 100);
+                    if (this.hp <= 0) { this.dead = true; this.mesh.position.y = 0.2; this.mesh.material.color.setHex(0x333333); this.mesh.rotation.x = Math.PI / 2; }
+                }
+            };
+            mesh.userData.enemy = enemy;
+            enemies.push(enemy);
+            scene.add(mesh);
+        }
+
+        // ---- DESERT PROPS ----
+        function createDesertProps() {
+            const rg = new THREE.DodecahedronGeometry(2);
+            const rm = new THREE.MeshStandardMaterial({ color: 0x887766, roughness: 1 });
+            const sg = new THREE.SphereGeometry(1.5, 4, 4);
+            const sm = new THREE.MeshStandardMaterial({ color: 0x554422, wireframe: true });
+            for (let i = 0; i < 300; i++) {
+                const px = (Math.random() - 0.5) * 3000, pz = (Math.random() - 0.5) * 3000;
+                if (Math.random() > 0.3) {
+                    const s = 0.5 + Math.random() * 2;
+                    const r = new THREE.Mesh(rg, rm);
+                    r.scale.set(s, Math.random() * s, s); r.position.set(px, r.scale.y, pz); r.castShadow = true; scene.add(r);
+                } else {
+                    const sh = new THREE.Mesh(sg, sm); sh.position.set(px, 1.5, pz); scene.add(sh);
+                }
+            }
+        }
+
+        // ---- COMPANION (DOGMEAT) ----
+        const dogGroup = new THREE.Group();
+        const dogBody = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 1), new THREE.MeshStandardMaterial({ color: 0x885522 }));
+        dogBody.position.y = 0.5; dogGroup.add(dogBody);
+        const dogHead = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.5), new THREE.MeshStandardMaterial({ color: 0x885522 }));
+        dogHead.position.set(0, 0.8, 0.6); dogGroup.add(dogHead);
+        const band = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.1, 0.42), new THREE.MeshStandardMaterial({ color: 0xff0000 }));
+        band.position.set(0, 0.65, 0.4); dogGroup.add(band);
+        dogGroup.castShadow = true;
+        scene.add(dogGroup);
+
+        // ---- BUILD THE WORLD ----
+        try {
+            setLoad(40);
+            const terrainMesh = createTerrain();
+            setLoad(55);
+            createVault(worldLocations[0].x, worldLocations[0].z);
+            createShadySands(worldLocations[1].x, worldLocations[1].z);
+            createRaiderCamp(worldLocations[2].x, worldLocations[2].z);
+            createHighway(worldLocations[3].x, worldLocations[3].z);
+
+            // Spawn Power Armors
+            console.log("Starting asset load sequence...");
+            await loadT45Model();
+            spawnRandomPowerArmor();
+            setLoad(70);
+            createDesertProps();
+            setLoad(85);
+
+            // Wild enemies (increasing range and count)
+            for (let i = 0; i < 30; i++) {
+                const px = (Math.random() - 0.5) * 3000, pz = (Math.random() - 0.5) * 3000;
+                if (Math.sqrt(px * px + pz * pz) < 300) continue;
+                spawnEnemy(px, pz);
+            }
+            setLoad(95);
+        } catch (error) {
+            console.error("Critical error during world building:", error);
+            // Attempt to finish loading even on error
+            setLoad(100);
+        }
+
+        // ---- GAME LOOP ----
+        const clock = new THREE.Clock();
+        const PLAYER_HEIGHT = 1.7;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            let dt = clock.getDelta();
+
+            // VATS slow-motion
+            if (vatsActive) {
+                dt *= 0.1;
+                updateVATSMarkers();
+            }
+
+            updateMap();
+            updatePAFinder();
+            updateQuestProximity();
+
+            if (isLocked && !mapActive && !paFinderActive) {
+                velocity.x -= velocity.x * 10 * dt;
+                velocity.z -= velocity.z * 10 * dt;
+                velocity.y -= 20 * dt;
+
+                direction.z = Number(moveF) - Number(moveB);
+                direction.x = Number(moveR) - Number(moveL);
+                direction.normalize();
+
+                let speed = 350; // Slower base speed
+                if (inPowerArmor) speed = 500;
+
+                if (sprint && (moveF || moveB || moveL || moveR) && ap > 0) {
+                    speed = 700; // Sprint speed
+                    ap -= 15 * dt;
+                    if (ap <= 0) { ap = 0; sprint = false; }
+                    document.getElementById('ap-bar').style.width = (ap / maxAp * 100) + '%';
+                }
+
+                if (moveF || moveB) velocity.z -= direction.z * speed * dt;
+                if (moveL || moveR) velocity.x -= direction.x * speed * dt;
+
+                moveRightFn(-velocity.x * dt);
+                moveForwardFn(-velocity.z * dt);
+                camera.position.y += velocity.y * dt;
+
+                // Terrain following (Optimized Heightmap)
+                const floorY = getTerrainHeight(camera.position.x, camera.position.z) + PLAYER_HEIGHT;
+
+                if (camera.position.y < floorY) {
+                    velocity.y = 0; camera.position.y = floorY; canJump = true;
+                    if (ap < maxAp) { ap += 10 * dt; document.getElementById('ap-bar').style.width = (ap / maxAp * 100) + '%'; }
+                }
+            }
+
+            // Enemies chase
+            enemies.forEach(e => {
+                if (e.dead) return;
+                // Terrain following for enemies (Optimized)
+                e.mesh.position.y = getTerrainHeight(e.mesh.position.x, e.mesh.position.z) + 1;
+
+                const d = e.mesh.position.distanceTo(camera.position);
+                if (d < 30 && d > 2) {
+                    const dir = new THREE.Vector3().subVectors(camera.position, e.mesh.position).normalize();
+                    dir.y = 0; // only move horizontally
+                    e.mesh.position.add(dir.multiplyScalar(3 * dt));
+                }
+                // Damage player
+                if (d < 2) {
+                    hp -= 15 * dt;
+                    document.getElementById('hp-bar').style.width = Math.max(0, hp / maxHp * 100) + '%';
+                }
+            });
+
+            // Dogmeat follow
+            const dd = dogGroup.position.distanceTo(camera.position);
+            if (dd > 5) {
+                dogGroup.lookAt(camera.position.x, dogGroup.position.y, camera.position.z);
+                const ddir = new THREE.Vector3().subVectors(camera.position, dogGroup.position).normalize();
+                dogGroup.position.add(ddir.multiplyScalar(5 * dt));
+            }
+
+            // Update compass
+            const cTicks = document.getElementById('compass-ticks');
+            if (cTicks) {
+                const rotY = camera.rotation.y;
+                // Normalize to 0-360, inverted for horizontal slide
+                const degree = ((-rotY * (180 / Math.PI)) % 360 + 360) % 360;
+                const fullWidth = cTicks.offsetWidth / 2;
+                const offset = (degree / 360) * fullWidth;
+                cTicks.style.transform = `translateX(${-offset}px)`;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // ---- RESIZE ----
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // ---- FINISH LOADING ----
+        setLoad(100);
+        setTimeout(() => {
+            loadScreen.style.transition = 'opacity 0.8s';
+            loadScreen.style.opacity = 0;
+            setTimeout(() => loadScreen.remove(), 1000);
+
+            // Show click-to-play overlay
+            const overlay = document.createElement('div');
+            overlay.id = 'click-to-play';
+            overlay.innerHTML = '<span>CLICK TO PLAY</span>';
+            document.body.appendChild(overlay);
+            overlay.addEventListener('click', () => {
+                lockControls();
+                overlay.remove();
+            });
+        }, 500);
+
+        // ============================================================
+        //  QUEST SYSTEM
+        // ============================================================
+
+        // Quest definitions — status: 'locked' | 'active' | 'completed'
+        const questLog = [
+            {
+                id: 'escape_vault',
+                name: 'ESCAPE THE VAULT',
+                desc: 'Leave the safety of Vault 13 and venture into the wasteland.',
+                status: 'active',
+                xpReward: 100,
+                objectives: [
+                    { text: 'Walk away from Vault 13', done: false }
+                ]
+            },
+            {
+                id: 'shady_sands',
+                name: 'AID SHADY SANDS',
+                desc: 'The settlement of Shady Sands needs assistance. Head there and make contact.',
+                status: 'locked',
+                xpReward: 200,
+                objectives: [
+                    { text: 'Reach Shady Sands', done: false }
+                ]
+            },
+            {
+                id: 'raider_assault',
+                name: 'ASSAULT THE RAIDER CAMP',
+                desc: 'Raiders have been terrorizing the region. Eliminate the threat at their camp.',
+                status: 'locked',
+                xpReward: 350,
+                objectives: [
+                    { text: 'Reach the Raider Camp', done: false },
+                    { text: 'Eliminate 4 raiders (0/4)', done: false }
+                ]
+            },
+            {
+                id: 'highway_recon',
+                name: 'BROKEN HIGHWAY RECON',
+                desc: 'Reports of a pre-war structure on the old highway. Scout the location.',
+                status: 'locked',
+                xpReward: 250,
+                objectives: [
+                    { text: 'Reach the Broken Highway', done: false }
+                ]
+            }
+        ];
+
+        // Tracking vars
+        let raidersKilled = 0;
+        let raidersNeeded = 4;
+        let raidersAtCampKilled = 0;
+        let totalXpEarned = 0;
+
+        // ---- Quest UI Renderer ----
+        function updateQuestUI() {
+            const container = document.getElementById('quest-log-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            questLog.forEach(q => {
+                const entry = document.createElement('div');
+                entry.className = 'quest-entry ' + q.status;
+
+                const badgeLabel = q.status === 'active' ? 'ACTIVE' : q.status === 'completed' ? 'DONE' : 'LOCKED';
+                const name = document.createElement('div');
+                name.className = 'quest-name';
+                name.innerHTML = `${q.name} <span class="quest-badge ${q.status}">${badgeLabel}</span>`;
+
+                const desc = document.createElement('div');
+                desc.className = 'quest-desc';
+                desc.textContent = q.desc;
+
+                entry.appendChild(name);
+                entry.appendChild(desc);
+
+                if (q.status !== 'locked') {
+                    q.objectives.forEach(obj => {
+                        const objEl = document.createElement('div');
+                        objEl.className = 'quest-objective' + (obj.done ? ' done' : '');
+                        objEl.innerHTML = `<span class="obj-check">${obj.done ? '✓' : '▸'}</span> ${obj.text}`;
+                        entry.appendChild(objEl);
+                    });
+
+                    if (q.status === 'completed') {
+                        const reward = document.createElement('div');
+                        reward.style.cssText = 'font-size:12px;margin-top:6px;color:#00ff99;';
+                        reward.textContent = `+ ${q.xpReward} XP`;
+                        entry.appendChild(reward);
+                    }
+                }
+
+                container.appendChild(entry);
+            });
+        }
+
+        // ---- Notification Pop-up ----
+        let notifTimeout = null;
+        function showQuestNotification(title, subtitle) {
+            const el = document.getElementById('quest-notification');
+            if (!el) return;
+            el.textContent = title + (subtitle ? '\n' + subtitle : '');
+            el.classList.add('show');
+            if (notifTimeout) clearTimeout(notifTimeout);
+            notifTimeout = setTimeout(() => el.classList.remove('show'), 4000);
+        }
+
+        // ---- Quest Advancement ----
+        function getQuest(id) { return questLog.find(q => q.id === id); }
+
+        function activateQuest(id) {
+            const q = getQuest(id);
+            if (!q || q.status !== 'locked') return;
+            q.status = 'active';
+            showQuestNotification('NEW QUEST', q.name);
+            updateQuestUI();
+        }
+
+        function completeObjective(questId, objIndex, display) {
+            const q = getQuest(questId);
+            if (!q || q.status !== 'active') return;
+            if (q.objectives[objIndex].done) return;
+
+            q.objectives[objIndex].done = true;
+            if (display) q.objectives[objIndex].text = display;
+
+            // Check if all objectives done
+            if (q.objectives.every(o => o.done)) {
+                completeQuest(questId);
+            } else {
+                updateQuestUI();
+            }
+        }
+
+        function completeQuest(id) {
+            const q = getQuest(id);
+            if (!q || q.status !== 'active') return;
+            q.status = 'completed';
+            q.objectives.forEach(o => o.done = true);
+            totalXpEarned += q.xpReward;
+            showQuestNotification('QUEST COMPLETE', q.name + '\n+' + q.xpReward + ' XP');
+            updateQuestUI();
+
+            // Chain to next quest
+            const idx = questLog.indexOf(q);
+            if (idx + 1 < questLog.length) {
+                setTimeout(() => activateQuest(questLog[idx + 1].id), 1500);
+            }
+        }
+
+        // ---- Proximity Tracking (called each frame) ----
+        let lastQuestCheck = 0;
+        function updateQuestProximity() {
+            const now = Date.now();
+            if (now - lastQuestCheck < 500) return; // Only check every 500ms
+            lastQuestCheck = now;
+
+            const p = camera.position;
+
+            // Quest 1: Escape Vault — get >80 units from origin
+            const q1 = getQuest('escape_vault');
+            if (q1 && q1.status === 'active' && !q1.objectives[0].done) {
+                const distFromVault = Math.sqrt(p.x * p.x + p.z * p.z);
+                if (distFromVault > 80) {
+                    completeObjective('escape_vault', 0);
+                }
+            }
+
+            // Quest 2: Shady Sands (x≈1200, z≈-800) — within 100 units
+            const q2 = getQuest('shady_sands');
+            if (q2 && q2.status === 'active' && !q2.objectives[0].done) {
+                const dx = p.x - 1200, dz = p.z - (-800);
+                if (Math.sqrt(dx * dx + dz * dz) < 100) {
+                    completeObjective('shady_sands', 0);
+                }
+            }
+
+            // Quest 3 obj 0: Reach Raider Camp (x≈-1000, z≈-1400)
+            const q3 = getQuest('raider_assault');
+            if (q3 && q3.status === 'active' && !q3.objectives[0].done) {
+                const dx = p.x - (-1000), dz = p.z - (-1400);
+                if (Math.sqrt(dx * dx + dz * dz) < 120) {
+                    completeObjective('raider_assault', 0);
+                }
+            }
+
+            // Quest 4: Broken Highway (x≈-400, z≈1500) — within 120 units
+            const q4 = getQuest('highway_recon');
+            if (q4 && q4.status === 'active' && !q4.objectives[0].done) {
+                const dx = p.x - (-400), dz = p.z - 1500;
+                if (Math.sqrt(dx * dx + dz * dz) < 120) {
+                    completeObjective('highway_recon', 0);
+                }
+            }
+        }
+
+        // ---- Hook into enemy takeDamage for quest 3 kill counting ----
+        const _origSpawnEnemy = spawnEnemy;
+        // Wrap the existing enemies array — patch takeDamage on each enemy
+        // We'll patch on enemy creation by wrapping spawnEnemy
+        function patchEnemyForQuests(enemy, ex, ez) {
+            const origTakeDamage = enemy.takeDamage.bind(enemy);
+            enemy.takeDamage = function (amt) {
+                const wasDead = this.dead;
+                origTakeDamage(amt);
+                if (!wasDead && this.dead) {
+                    // Enemy just died — check if it was near the Raider Camp
+                    const dx = this.mesh.position.x - (-1000);
+                    const dz = this.mesh.position.z - (-1400);
+                    const distToRaiderCamp = Math.sqrt(dx * dx + dz * dz);
+                    const q3 = getQuest('raider_assault');
+                    if (q3 && q3.status === 'active' && q3.objectives[0].done && !q3.objectives[1].done) {
+                        if (distToRaiderCamp < 200) {
+                            raidersAtCampKilled++;
+                            const remaining = Math.min(raidersAtCampKilled, raidersNeeded);
+                            const objText = `Eliminate 4 raiders (${remaining}/${raidersNeeded})`;
+                            if (raidersAtCampKilled >= raidersNeeded) {
+                                completeObjective('raider_assault', 1, 'Eliminate 4 raiders (4/4)');
+                            } else {
+                                q3.objectives[1].text = objText;
+                                updateQuestUI();
+                            }
+                        }
+                    }
+                }
+            };
+        }
+
+        // Patch all existing enemies (those already spawned by createRaiderCamp etc.)
+        enemies.forEach(e => patchEnemyForQuests(e));
+
+        // Override spawnEnemy to auto-patch future enemies
+        const originalSpawnEnemy = spawnEnemy;
+        window._spawnEnemyPatched = true;
+        // Hook into the scene's enemies array via a Proxy isn't feasible here,
+        // so patch after world build by iterating enemies once more
+        setTimeout(() => {
+            enemies.forEach(e => patchEnemyForQuests(e));
+        }, 2000);
+
+        // ---- Hook switchTab to render quest UI ----
+        const _origSwitchTab = window.switchTab;
+        window.switchTab = function (tab) {
+            _origSwitchTab(tab);
+            if (tab === 'QUESTS') updateQuestUI();
+        };
+
+        // ---- M key: toggle Pip-Boy ----
+        document.addEventListener('keydown', e => {
+            if (e.code === 'KeyM') toggleMap();
+        });
+
+        // Initial render
+        updateQuestUI();
+        // Auto-notify on game start
+        setTimeout(() => showQuestNotification('QUEST STARTED', 'ESCAPE THE VAULT'), 2500);
+
+        animate();
+        console.log("Fallout - Classic 3D loaded successfully!");
+
+
+    </script>
+</body>
+
+</html>

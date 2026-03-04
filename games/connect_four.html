@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Connect Four | The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: radial-gradient(ellipse at center, #0f2027, #203a43, #2c5364);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px #facc15;
+        }
+
+        #status {
+            font-size: 1.2rem;
+            margin-bottom: 12px;
+            min-height: 1.5em;
+        }
+
+        #board {
+            background: linear-gradient(135deg, #1d4ed8, #1e40af);
+            border-radius: 16px;
+            padding: 12px;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+            display: inline-block;
+        }
+
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(7, 70px);
+            gap: 8px;
+        }
+
+        .cell {
+            width: 70px;
+            height: 70px;
+            background: #0f172a;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background .15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cell:hover {
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.2);
+        }
+
+        .cell.p1 {
+            background: radial-gradient(circle at 35% 35%, #fde68a, #f59e0b);
+        }
+
+        .cell.p2 {
+            background: radial-gradient(circle at 35% 35%, #fca5a5, #ef4444);
+        }
+
+        .cell.win {
+            box-shadow: 0 0 20px #fff, inset 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .col-hint {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 4px;
+        }
+
+        .hint {
+            width: 70px;
+            height: 30px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 1.2rem;
+            opacity: 0.5;
+        }
+
+        .hint:hover {
+            opacity: 1;
+        }
+
+        #score {
+            display: flex;
+            gap: 40px;
+            margin-top: 14px;
+            font-size: 1.1rem;
+        }
+
+        button {
+            margin-top: 14px;
+            padding: 10px 32px;
+            background: linear-gradient(135deg, #facc15, #f59e0b);
+            color: #000;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            letter-spacing: 2px;
+        }
+
+        button:hover {
+            transform: scale(1.07);
+        }
+
+        #menuBtn {
+            background: linear-gradient(135deg, #334155, #1e293b);
+            color: #fff;
+            display: none;
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999;
+        }
+
+        #homeBtn:hover {
+            background: #1e40af;
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>🔴 CONNECT FOUR</h1>
+    <div id="status">🟡 Yellow's Turn</div>
+    <div id="board">
+        <div class="col-hint" id="hints"></div>
+        <div id="grid"></div>
+    </div>
+    <div id="score"><span>🟡 Yellow: <b id="s1">0</b></span><span>🔴 Red: <b id="s2">0</b></span></div>
+    <button onclick="resetGame()">NEW GAME</button>
+    <button id="menuBtn" onclick="window.close()">🏠 Return to Menu</button>
+    <script src="../scripts/scores.js"></script>
+    <script>
+        const ROWS = 6, COLS = 7;
+        let board, current, gameOver, scores = [0, 0];
+
+        function resetGame() {
+            board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+            current = 1; gameOver = false;
+            document.getElementById('status').textContent = "🟡 Yellow's Turn";
+            renderBoard();
+        }
+
+        function renderBoard() {
+            const grid = document.getElementById('grid'); grid.innerHTML = '';
+            const hints = document.getElementById('hints'); hints.innerHTML = '';
+            for (let c = 0; c < COLS; c++) {
+                const h = document.createElement('div'); h.className = 'hint'; h.textContent = '⬇';
+                h.onclick = () => dropPiece(c); hints.appendChild(h);
+            }
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const cell = document.createElement('div'); cell.className = 'cell';
+                    if (board[r][c] === 1) cell.classList.add('p1');
+                    else if (board[r][c] === 2) cell.classList.add('p2');
+                    cell.onclick = () => dropPiece(c);
+                    grid.appendChild(cell);
+                }
+            }
+        }
+
+        function dropPiece(col) {
+            if (gameOver) return;
+            let row = -1;
+            for (let r = ROWS - 1; r >= 0; r--) { if (board[r][col] === 0) { row = r; break; } }
+            if (row === -1) return;
+            board[row][col] = current;
+            renderBoard();
+            const wins = checkWin(row, col);
+            if (wins.length) {
+                gameOver = true; scores[current - 1]++;
+                document.getElementById(`s${current}`).textContent = scores[current - 1];
+                // Highlight
+                wins.forEach(([r, c]) => {
+                    const cells = document.querySelectorAll('.cell');
+                    cells[r * COLS + c].classList.add('win');
+                });
+                const name = current === 1 ? '🟡 Yellow' : '🔴 Red';
+                document.getElementById('status').textContent = `${name} wins! 🎉`;
+                document.getElementById('menuBtn').style.display = '';
+                PizzaScores.save('Connect Four', 1, `Player ${current} wins`);
+                return;
+            }
+            if (board[0].every(c => c !== 0)) {
+                gameOver = true; document.getElementById('status').textContent = "It's a Draw!"; return;
+            }
+            current = current === 1 ? 2 : 1;
+            const name = current === 1 ? '🟡 Yellow' : '🔴 Red';
+            document.getElementById('status').textContent = `${name}'s Turn`;
+        }
+
+        function checkWin(row, col) {
+            const p = board[row][col];
+            const dirs = [[0, 1], [1, 0], [1, 1], [1, -1]];
+            for (const [dr, dc] of dirs) {
+                let cells = [[row, col]];
+                for (let k = 1; k < 4; k++) { const r = row + dr * k, c = col + dc * k; if (r >= 0 && r < ROWS && c >= 0 && c < COLS && board[r][c] === p) cells.push([r, c]); else break; }
+                for (let k = 1; k < 4; k++) { const r = row - dr * k, c = col - dc * k; if (r >= 0 && r < ROWS && c >= 0 && c < COLS && board[r][c] === p) cells.push([r, c]); else break; }
+                if (cells.length >= 4) return cells.slice(0, 4);
+            }
+            return [];
+        }
+        resetGame();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Tetris 2 – The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0a0018;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #a78bfa;
+            font-size: 2rem;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px #a78bfa
+        }
+
+        #game {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start
+        }
+
+        canvas {
+            border: 2px solid #a78bfa;
+            box-shadow: 0 0 30px rgba(167, 139, 250, 0.4)
+        }
+
+        #side {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            color: #a78bfa
+        }
+
+        #side h3 {
+            font-size: .9rem
+        }
+
+        #next-canvas {
+            border: 1px solid #4c1d95;
+            border-radius: 4px
+        }
+
+        #ctrl {
+            margin-top: 6px;
+            color: #555;
+            font-size: .8rem;
+            text-align: center
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Tetris Extreme</h1>
+    <div id="game">
+        <canvas id="c" width="300" height="600"></canvas>
+        <div id="side">
+            <div>
+                <h3>NEXT</h3><canvas id="next-canvas" width="100" height="100"></canvas>
+            </div>
+            <div>Score<br><span id="sc" style="font-size:1.3rem">0</span></div>
+            <div>Lines<br><span id="ln" style="font-size:1.3rem">0</span></div>
+            <div>Level<br><span id="lv" style="font-size:1.3rem">1</span></div>
+            <div style="font-size:.75rem;color:#555">← → move<br>↑ rotate<br>↓ soft drop<br>Space: hard drop<br>R:
+                restart</div>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+        const nc = document.getElementById('next-canvas'), nctx = nc.getContext('2d');
+        const COLS = 10, ROWS = 20, CS = 30;
+        const PIECES = [
+            { shape: [[1, 1, 1, 1]], color: '#22d3ee' },
+            { shape: [[1, 1], [1, 1]], color: '#facc15' },
+            { shape: [[0, 1, 0], [1, 1, 1]], color: '#a855f7' },
+            { shape: [[1, 0], [1, 0], [1, 1]], color: '#f97316' },
+            { shape: [[0, 1], [0, 1], [1, 1]], color: '#3b82f6' },
+            { shape: [[0, 1, 1], [1, 1, 0]], color: '#22c55e' },
+            { shape: [[1, 1, 0], [0, 1, 1]], color: '#ef4444' },
+        ];
+        let grid, piece, nextPiece, score, lines, level, over, keys, dropTimer, dropInterval;
+        function randPiece() { const p = PIECES[Math.floor(Math.random() * PIECES.length)]; return { shape: p.shape.map(r => [...r]), color: p.color, x: Math.floor(COLS / 2) - Math.floor(p.shape[0].length / 2), y: 0 }; }
+        function init() {
+            grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+            score = 0; lines = 0; level = 1; over = false; keys = {}; dropInterval = 600; dropTimer = 0;
+            piece = randPiece(); nextPiece = randPiece();
+            document.getElementById('sc').textContent = 0; document.getElementById('ln').textContent = 0; document.getElementById('lv').textContent = 1;
+        }
+        function rotate(s) { return s[0].map((_, c) => s.map(r => r[c]).reverse()); }
+        function valid(s, ox, oy) { return s.every((row, r) => row.every((c, ci) => !c || ((ox + ci >= 0) && (ox + ci < COLS) && (oy + r >= 0) && (oy + r < ROWS) && !grid[oy + r][ox + ci]))); }
+        function place() { piece.shape.forEach((row, r) => row.forEach((c, ci) => { if (c) grid[piece.y + r][piece.x + ci] = piece.color; })); clearLines(); piece = nextPiece; nextPiece = randPiece(); if (!valid(piece.shape, piece.x, piece.y)) { over = true; } }
+        function clearLines() { let cleared = 0; for (let r = ROWS - 1; r >= 0; r--) { if (grid[r].every(c => c)) { grid.splice(r, 1); grid.unshift(Array(COLS).fill(null)); cleared++; r++; } } if (cleared) { lines += cleared; score += [0, 100, 300, 500, 800][cleared] * level; level = Math.floor(lines / 10) + 1; dropInterval = Math.max(80, 600 - level * 50); document.getElementById('sc').textContent = score; document.getElementById('ln').textContent = lines; document.getElementById('lv').textContent = level; } }
+        document.addEventListener('keydown', e => {
+            if (e.key === 'r' || e.key === 'R') { init(); return; }
+            if (over) return;
+            if (e.key === 'ArrowLeft') { if (valid(piece.shape, piece.x - 1, piece.y)) piece.x--; }
+            else if (e.key === 'ArrowRight') { if (valid(piece.shape, piece.x + 1, piece.y)) piece.x++; }
+            else if (e.key === 'ArrowUp') { const r = rotate(piece.shape); if (valid(r, piece.x, piece.y)) piece.shape = r; }
+            else if (e.key === 'ArrowDown') { if (valid(piece.shape, piece.x, piece.y + 1)) piece.y++; else place(); }
+            else if (e.key === ' ') { while (valid(piece.shape, piece.x, piece.y + 1)) piece.y++; place(); }
+            e.preventDefault();
+        });
+        let last = 0;
+        function drawGrid(context, g, cs, ox = 0, oy = 0) { g.forEach((row, r) => row.forEach((c, ci) => { if (c) { context.fillStyle = c; context.fillRect(ox + ci * cs + 1, oy + r * cs + 1, cs - 2, cs - 2); } else { context.fillStyle = '#0f172a'; context.fillRect(ox + ci * cs, oy + r * cs, cs, cs); } })); }
+        function drawPiece(context, p, cs, ox = 0, oy = 0) { p.shape.forEach((row, r) => row.forEach((c, ci) => { if (c) { context.fillStyle = p.color; context.fillRect(ox + (p.x + ci) * cs + 1, oy + (p.y + r) * cs + 1, cs - 2, cs - 2); } })); }
+        function ghostY() { let gy = piece.y; while (valid(piece.shape, piece.x, gy + 1)) gy++; return gy; }
+        function loop(ts) {
+            if (!last) last = ts; const dt = ts - last; last = ts;
+            if (!over) { dropTimer += dt; if (dropTimer >= dropInterval) { dropTimer = 0; if (valid(piece.shape, piece.x, piece.y + 1)) piece.y++; else place(); } }
+            // draw
+            ctx.fillStyle = '#0a0018'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // grid lines
+            ctx.strokeStyle = 'rgba(99,102,241,0.1)'; ctx.lineWidth = 0.5;
+            for (let i = 0; i <= COLS; i++) { ctx.beginPath(); ctx.moveTo(i * CS, 0); ctx.lineTo(i * CS, ROWS * CS); ctx.stroke(); }
+            for (let i = 0; i <= ROWS; i++) { ctx.beginPath(); ctx.moveTo(0, i * CS); ctx.lineTo(COLS * CS, i * CS); ctx.stroke(); }
+            drawGrid(ctx, grid, CS);
+            if (!over) {
+                // ghost
+                const gy = ghostY();
+                piece.shape.forEach((row, r) => row.forEach((c, ci) => { if (c) { ctx.fillStyle = 'rgba(167,139,250,0.15)'; ctx.fillRect((piece.x + ci) * CS + 1, (gy + r) * CS + 1, CS - 2, CS - 2); } }));
+                drawPiece(ctx, piece, CS);
+            }
+            // next piece preview
+            nctx.fillStyle = '#0a0018'; nctx.fillRect(0, 0, 100, 100);
+            const ns = nextPiece.shape, psz = 20; const ox = (100 - ns[0].length * psz) / 2, oy = (100 - ns.length * psz) / 2;
+            ns.forEach((row, r) => row.forEach((c, ci) => { if (c) { nctx.fillStyle = nextPiece.color; nctx.fillRect(ox + ci * psz + 1, oy + r * psz + 1, psz - 2, psz - 2); } }));
+            if (over) { ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#a78bfa'; ctx.font = 'bold 28px monospace'; ctx.textAlign = 'center'; ctx.fillText('GAME OVER', 150, 280); ctx.font = '18px monospace'; ctx.fillText(`Score: ${score}`, 150, 315); ctx.font = '15px monospace'; ctx.fillStyle = '#aaa'; ctx.fillText('Press R to restart', 150, 350); }
+            requestAnimationFrame(loop);
+        }
+        init(); requestAnimationFrame(loop);
+    </script>
+</body>
+
+</html>

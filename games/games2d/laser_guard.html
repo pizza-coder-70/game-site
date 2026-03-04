@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Laser Guard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #030010;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #ef4444;
+            font-size: 1.5rem;
+            text-shadow: 0 0 16px #ef4444;
+            margin-bottom: 6px
+        }
+
+        canvas {
+            border: 2px solid #ef4444;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(239, 68, 68, .4)
+        }
+
+        #ui {
+            display: flex;
+            gap: 20px;
+            color: #ef4444;
+            font-size: .85rem;
+            margin-top: 6px
+        }
+
+        #msg {
+            color: #facc15;
+            font-size: .9rem;
+            min-height: 20px;
+            margin-top: 4px
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔴 Laser Guard</h1>
+    <div id="ui"><span>Score: <b id="sc">0</b></span><span>Lives: <b id="li">5</b></span><span>Wave: <b
+                id="wv">1</b></span></div>
+    <canvas id="c" width="480" height="460"></canvas>
+    <div id="msg">Mouse to move paddle! Block all lasers from hitting city!</div>
+    <script>
+        const cv = document.getElementById('c'), cx = cv.getContext('2d');
+        const W = 480, H = 460;
+        let paddle = { x: W / 2, w: 100, y: H - 30, h: 14 };
+        let lasers = [], particles = [], buildings = [];
+        let score = 0, lives = 5, wave = 1, over = false, won = false, mouse = { x: W / 2 };
+        cv.addEventListener('mousemove', e => { const r = cv.getBoundingClientRect(); mouse.x = e.clientX - r.left; });
+        // City buildings
+        function initBuildings() { buildings = []; for (let i = 0; i < 6; i++)buildings.push({ x: 20 + i * 76, y: H - 80, w: 60, h: 60 + Math.random() * 40, hp: 3, maxHp: 3 }); }
+        initBuildings();
+
+        function spawnLaser(w) {
+            const colors = ['#ef4444', '#f97316', '#a855f7', '#06b6d4'];
+            return { x: 20 + Math.random() * (W - 40), y: 0, speed: 3 + w * .5, r: 6, col: colors[Math.floor(Math.random() * colors.length)], trail: [] };
+        }
+        function spawnWave(w) {
+            lasers = [];
+            const waveInterval = setInterval(() => {
+                if (lasers.length < 4 + w * 2) lasers.push(spawnLaser(w));
+            }, 600);
+            setTimeout(() => clearInterval(waveInterval), (4 + w * 2) * 600 + 2000);
+        }
+        spawnWave(1);
+        let waveTimer = 0;
+
+        function update() {
+            if (over || won) return;
+            paddle.x = Math.max(paddle.w / 2, Math.min(W - paddle.w / 2, mouse.x));
+            waveTimer++;
+            lasers.forEach(l => {
+                l.trail.push({ x: l.x, y: l.y }); if (l.trail.length > 12) l.trail.shift();
+                l.y += l.speed;
+                // Paddle collision
+                if (l.y + l.r >= paddle.y && l.y - l.r <= paddle.y + paddle.h && l.x >= paddle.x - paddle.w / 2 && l.x <= paddle.x + paddle.w / 2) {
+                    score += 10 * wave; document.getElementById('sc').textContent = score;
+                    for (let i = 0; i < 8; i++) { const a = Math.PI * 2 * i / 8; particles.push({ x: l.x, y: l.y, vx: Math.cos(a) * 4, vy: Math.sin(a) * 4 - 2, life: 20, col: l.col }); }
+                    l.y = -999; return;
+                }
+                // Building collision
+                if (l.y > H - 110) {
+                    buildings.forEach(b => { if (l.x > b.x && l.x < b.x + b.w && l.y > b.y - 10) { b.hp--; lives--; document.getElementById('li').textContent = lives; l.y = -999; if (lives <= 0) over = true; } });
+                }
+                if (l.y > H + 20) { lives--; document.getElementById('li').textContent = lives; l.y = -999; if (lives <= 0) over = true; }
+            });
+            lasers = lasers.filter(l => l.y > -100);
+            particles = particles.filter(p => { p.x += p.vx; p.y += p.vy; p.vy += .3; p.life--; return p.life > 0; });
+            // Next wave
+            if (lasers.length === 0 && waveTimer > 300) { wave++; document.getElementById('wv').textContent = wave; if (wave > 6) { won = true; return; } waveTimer = 0; spawnWave(wave); }
+        }
+        function draw() {
+            cx.fillStyle = '#030010'; cx.fillRect(0, 0, W, H);
+            // Stars
+            for (let i = 0; i < 80; i++) { cx.fillStyle = 'rgba(255,255,255,.5)'; cx.fillRect((i * 157) % W, (i * 113) % 160, 1, 1); }
+            // Buildings
+            buildings.forEach(b => {
+                const dmg = 1 - b.hp / b.maxHp;
+                cx.fillStyle = `rgba(${Math.floor(30 + dmg * 80)},${Math.floor(50 - dmg * 50)},${Math.floor(80 - dmg * 80)},.9)`;
+                cx.fillRect(b.x, b.y, b.w, b.h);
+                // Windows
+                for (let wy = b.y + 8; wy < H - 10; wy += 14)for (let wx = b.x + 8; wx < b.x + b.w - 6; wx += 14) { const lit = Math.random() > .6 || dmg > .5; cx.fillStyle = lit ? '#facc1550' : '#33333380'; cx.fillRect(wx, wy, 8, 8); }
+                // HP
+                cx.fillStyle = 'rgba(0,0,0,.5)'; cx.fillRect(b.x, b.y - 10, b.w, 6); cx.fillStyle = dmg > .5 ? '#f43f5e' : '#4ade80'; cx.fillRect(b.x, b.y - 10, b.w * b.hp / b.maxHp, 6);
+            });
+            // Ground
+            cx.fillStyle = '#1a1030'; cx.fillRect(0, H - 20, W, 20);
+            // Lasers
+            lasers.forEach(l => {
+                l.trail.forEach((t, i) => { cx.globalAlpha = (i / l.trail.length) * .6; cx.fillStyle = l.col; cx.beginPath(); cx.arc(t.x, t.y, l.r * (i / l.trail.length), 0, Math.PI * 2); cx.fill(); });
+                cx.globalAlpha = 1; cx.fillStyle = l.col; cx.shadowColor = l.col; cx.shadowBlur = 14; cx.beginPath(); cx.arc(l.x, l.y, l.r, 0, Math.PI * 2); cx.fill(); cx.shadowBlur = 0;
+            });
+            particles.forEach(p => { cx.globalAlpha = p.life / 20; cx.fillStyle = p.col; cx.fillRect(p.x - 2, p.y - 2, 4, 4); }); cx.globalAlpha = 1;
+            // Paddle
+            const pg = cx.createLinearGradient(paddle.x - paddle.w / 2, 0, paddle.x + paddle.w / 2, 0); pg.addColorStop(0, '#6d28d9'); pg.addColorStop(.5, '#818cf8'); pg.addColorStop(1, '#6d28d9');
+            cx.fillStyle = pg; cx.beginPath(); cx.roundRect(paddle.x - paddle.w / 2, paddle.y, paddle.w, paddle.h, 7); cx.fill();
+            cx.strokeStyle = '#c4b5fd'; cx.lineWidth = 2; cx.stroke(); cx.shadowColor = '#818cf8'; cx.shadowBlur = 16; cx.stroke(); cx.shadowBlur = 0;
+            if (over) { cx.fillStyle = 'rgba(0,0,0,.85)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#ef4444'; cx.font = 'bold 38px monospace'; cx.textAlign = 'center'; cx.fillText('CITY DESTROYED!', W / 2, H / 2 - 20); cx.fillStyle = '#aaa'; cx.font = '16px monospace'; cx.fillText('Score: ' + score + ' | R restart', W / 2, H / 2 + 18); }
+            if (won) { cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#facc15'; cx.font = 'bold 40px monospace'; cx.textAlign = 'center'; cx.fillText('CITY SAVED! 🏆', W / 2, H / 2 - 20); cx.fillStyle = '#ef4444'; cx.font = '20px monospace'; cx.fillText('Score: ' + score, W / 2, H / 2 + 20); }
+        }
+        document.addEventListener('keydown', e => { if (e.code === 'KeyR' && (over || won)) { score = 0; lives = 5; wave = 1; lasers = []; particles = []; over = false; won = false; waveTimer = 0; initBuildings(); document.getElementById('sc').textContent = 0; document.getElementById('li').textContent = 5; document.getElementById('wv').textContent = 1; spawnWave(1); } });
+        function loop() { update(); draw(); requestAnimationFrame(loop); } loop();
+    </script>
+
+    <script src="../mobile_controls.js"></script>
+</body>
+
+</html>

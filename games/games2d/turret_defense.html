@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Turret Defense</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #020a10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #34d399;
+            font-size: 1.5rem;
+            text-shadow: 0 0 16px #34d399;
+            margin-bottom: 6px
+        }
+
+        canvas {
+            border: 2px solid #34d399;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(52, 211, 153, .4);
+            cursor: pointer
+        }
+
+        #ui {
+            display: flex;
+            gap: 14px;
+            color: #34d399;
+            font-size: .82rem;
+            margin-top: 6px
+        }
+
+        #msg {
+            color: #facc15;
+            font-size: .85rem;
+            min-height: 20px;
+            margin-top: 4px
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🗼 Turret Defense</h1>
+    <div id="ui"><span>HP: <b id="hp">10</b></span><span>Gold: <b id="gd">50</b></span><span>Wave: <b
+                id="wv">1</b></span><span>Score: <b id="sc">0</b></span><span>Selected: <b
+                id="sel">Basic(10g)</b></span></div>
+    <canvas id="c" width="520" height="440"></canvas>
+    <div id="msg">Click to place turret | R=rotate selection | 1/2/3=change type</div>
+    <script>
+        const cv = document.getElementById('c'), cx = cv.getContext('2d');
+        const W = 520, H = 440, TILE = 40;
+        const COLS = W / TILE, ROWS = H / TILE;
+        const TURRET_TYPES = [
+            { name: 'Basic', cost: 10, range: 90, dmg: 10, rate: 40, col: '#34d399', bullet: '#86efac' },
+            { name: 'Cannon', cost: 25, range: 120, dmg: 35, rate: 80, col: '#f97316', bullet: '#fed7aa' },
+            { name: 'Laser', cost: 40, range: 160, dmg: 8, rate: 15, col: '#818cf8', bullet: '#c7d2fe' },
+        ];
+        let selType = 0, gold = 50, hp = 10, score = 0, wave = 1, over = false, won = false;
+        let turrets = [], enemies = [], bullets = [], particles = [];
+        // Path: hardcoded for simplicity
+        const PATH = [[0, 5], [1, 5], [2, 5], [3, 5], [4, 5], [4, 4], [4, 3], [4, 2], [5, 2], [6, 2], [7, 2], [8, 2], [8, 3], [8, 4], [8, 5], [8, 6], [8, 7], [7, 7], [6, 7], [5, 7], [4, 7], [3, 7], [2, 7], [1, 7], [0, 7]];
+        let pathSet = new Set(PATH.map(([c, r]) => r + ',' + c));
+        let blocked = new Set(PATH.map(([c, r]) => r + ',' + c));
+
+        function spawnWave(w) {
+            for (let i = 0; i < 5 + w * 3; i++) { setTimeout(() => { enemies.push({ pathIdx: 0, x: PATH[0][0] * TILE + TILE / 2, y: PATH[0][1] * TILE + TILE / 2, hp: (20 + w * 10) * (1 + i * .02), maxHp: (20 + w * 10) * (1 + i * .02), spd: 1.5 + w * .2, r: 10, col: '#f43f5e' }); }, i * 500); }
+        }
+        spawnWave(1);
+        let waveTimer = 0;
+
+        cv.addEventListener('click', e => {
+            const rc = cv.getBoundingClientRect(); const px = e.clientX - rc.left, py = e.clientY - rc.top;
+            const col = Math.floor(px / TILE), row = Math.floor(py / TILE);
+            const key = row + ',' + col;
+            const t = TURRET_TYPES[selType];
+            if (!blocked.has(key) && col >= 0 && col < COLS && row >= 0 && row < ROWS && gold >= t.cost) {
+                turrets.push({ c: col, r: row, x: col * TILE + TILE / 2, y: row * TILE + TILE / 2, ...t, cd: 0 });
+                blocked.add(key); gold -= t.cost; document.getElementById('gd').textContent = gold;
+            }
+        });
+        document.addEventListener('keydown', e => {
+            if (e.key === '1') selType = 0; if (e.key === '2') selType = 1; if (e.key === '3') selType = 2;
+            document.getElementById('sel').textContent = TURRET_TYPES[selType].name + '(' + TURRET_TYPES[selType].cost + 'g)';
+        });
+
+        function update() {
+            if (over || won) return;
+            waveTimer++;
+            enemies.forEach(en => {
+                if (en.pathIdx < PATH.length - 1) {
+                    const t = PATH[en.pathIdx + 1]; const tx = t[0] * TILE + TILE / 2, ty = t[1] * TILE + TILE / 2;
+                    const dx = tx - en.x, dy = ty - en.y, d = Math.hypot(dx, dy);
+                    if (d < en.spd) { en.pathIdx++; en.x = tx; en.y = ty; }
+                    else { en.x += dx / d * en.spd; en.y += dy / d * en.spd; }
+                } else {
+                    hp -= 1; document.getElementById('hp').textContent = hp; if (hp <= 0) over = true;
+                    en.hp = 0;
+                }
+            });
+            enemies = enemies.filter(e => e.hp > 0);
+            turrets.forEach(t => {
+                t.cd--; if (t.cd > 0) return;
+                const tgt = enemies.find(e => Math.hypot(e.x - t.x, e.y - t.y) < t.range);
+                if (tgt) { t.cd = t.rate; bullets.push({ x: t.x, y: t.y, tx: tgt, dmg: t.dmg, spd: 8, col: t.bullet }); }
+            });
+            bullets = bullets.filter(b => {
+                const dx = b.tx.x - b.x, dy = b.tx.y - b.y, d = Math.hypot(dx, dy);
+                if (d < b.spd) { b.tx.hp -= b.dmg; if (b.tx.hp <= 0) { score += 10; gold += 3; document.getElementById('sc').textContent = score; document.getElementById('gd').textContent = gold; for (let i = 0; i < 6; i++) { const a = Math.PI * 2 * i / 6; particles.push({ x: b.tx.x, y: b.tx.y, vx: Math.cos(a) * 3, vy: Math.sin(a) * 3, life: 18, col: b.tx.col }); } } return false; }
+                b.x += dx / d * b.spd; b.y += dy / d * b.spd; return true;
+            });
+            particles = particles.filter(p => { p.x += p.vx; p.y += p.vy; p.life--; return p.life > 0; });
+            if (enemies.length === 0 && waveTimer > 200) { wave++; document.getElementById('wv').textContent = wave; if (wave > 7) { won = true; return; } waveTimer = 0; spawnWave(wave); }
+        }
+
+        function draw() {
+            cx.fillStyle = '#020a10'; cx.fillRect(0, 0, W, H);
+            for (let r = 0; r < ROWS; r++)for (let c = 0; c < COLS; c++) {
+                const key = r + ',' + c;
+                if (pathSet.has(key)) { cx.fillStyle = '#1a3a20'; cx.fillRect(c * TILE, r * TILE, TILE, TILE); cx.fillStyle = 'rgba(52,211,153,.1)'; cx.fillRect(c * TILE + 2, r * TILE + 2, TILE - 4, TILE - 4); }
+                else { cx.fillStyle = 'rgba(255,255,255,.02)'; cx.fillRect(c * TILE, r * TILE, TILE, TILE); }
+                cx.strokeStyle = 'rgba(255,255,255,.04)'; cx.strokeRect(c * TILE, r * TILE, TILE, TILE);
+            }
+            // Path arrows
+            for (let i = 0; i < PATH.length - 1; i++) { const [c0, r0] = PATH[i], [c1, r1] = PATH[i + 1]; cx.fillStyle = 'rgba(52,211,153,.15)'; cx.font = '10px monospace'; cx.textAlign = 'center'; cx.fillText(c1 > c0 ? '▶' : c1 < c0 ? '◀' : r1 > r0 ? '▼' : '▲', c0 * TILE + TILE / 2, r0 * TILE + TILE / 2 + 4); }
+            turrets.forEach(t => { cx.fillStyle = t.col; cx.fillRect(t.c * TILE + 4, t.r * TILE + 4, TILE - 8, TILE - 8); cx.fillStyle = 'rgba(255,255,255,.3)'; cx.fillRect(t.c * TILE + TILE / 2 - 2, t.r * TILE + 4, 4, 12); });
+            enemies.forEach(e => { cx.fillStyle = e.col; cx.beginPath(); cx.arc(e.x, e.y, e.r, 0, Math.PI * 2); cx.fill(); cx.fillStyle = 'rgba(0,0,0,.5)'; cx.fillRect(e.x - 12, e.y - e.r - 8, 24, 5); cx.fillStyle = '#4ade80'; cx.fillRect(e.x - 12, e.y - e.r - 8, 24 * e.hp / e.maxHp, 5); });
+            bullets.forEach(b => { cx.fillStyle = b.col; cx.beginPath(); cx.arc(b.x, b.y, 4, 0, Math.PI * 2); cx.fill(); });
+            particles.forEach(p => { cx.globalAlpha = p.life / 18; cx.fillStyle = p.col; cx.fillRect(p.x - 2, p.y - 2, 4, 4); }); cx.globalAlpha = 1;
+            if (over) { cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#f43f5e'; cx.font = 'bold 36px monospace'; cx.textAlign = 'center'; cx.fillText('BASE LOST!', W / 2, H / 2 - 20); cx.fillStyle = '#aaa'; cx.font = '16px monospace'; cx.fillText('Score: ' + score + ' | R restart', W / 2, H / 2 + 18); }
+            if (won) { cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#facc15'; cx.font = 'bold 40px monospace'; cx.textAlign = 'center'; cx.fillText('YOU WIN! 🏆', W / 2, H / 2 - 20); cx.fillStyle = '#34d399'; cx.font = '20px monospace'; cx.fillText('Score: ' + score, W / 2, H / 2 + 20); }
+        }
+        document.addEventListener('keydown', e => { if (e.code === 'KeyR' && (over || won)) { gold = 50; hp = 10; score = 0; wave = 1; turrets = []; enemies = []; bullets = []; particles = []; blocked = new Set(PATH.map(([c, r]) => r + ',' + c)); over = false; won = false; waveTimer = 0; document.getElementById('hp').textContent = 10; document.getElementById('gd').textContent = 50; document.getElementById('sc').textContent = 0; document.getElementById('wv').textContent = 1; spawnWave(1); } });
+        function loop() { update(); draw(); requestAnimationFrame(loop); } loop();
+    </script>
+
+    <script src="../mobile_controls.js"></script>
+</body>
+
+</html>

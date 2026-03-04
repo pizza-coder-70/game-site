@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Gem Diver</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #000a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #06b6d4;
+            font-size: 1.5rem;
+            text-shadow: 0 0 16px #06b6d4;
+            margin-bottom: 6px
+        }
+
+        canvas {
+            border: 2px solid #06b6d4;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(6, 182, 212, .4)
+        }
+
+        #ui {
+            display: flex;
+            gap: 20px;
+            color: #06b6d4;
+            font-size: .85rem;
+            margin-top: 6px
+        }
+
+        #msg {
+            color: #facc15;
+            font-size: .9rem;
+            min-height: 20px;
+            margin-top: 4px
+        }
+    </style>
+</head>
+
+<body>
+    <h1>💎 Gem Diver</h1>
+    <div id="ui"><span>Gems: <b id="gm">0</b></span><span>Score: <b id="sc">0</b></span><span>Depth: <b
+                id="dp">0</b>m</span></div>
+    <canvas id="c" width="420" height="500"></canvas>
+    <div id="msg">A/D or ←/→ to move! Fall down, collect gems, avoid spikes!</div>
+    <script>
+        const cv = document.getElementById('c'), cx = cv.getContext('2d');
+        const W = 420, H = 500;
+        const GEM_TYPES = [{ e: '💎', v: 10, col: '#38bdf8' }, { e: '🔴', v: 20, col: '#f43f5e' }, { e: '💛', v: 15, col: '#facc15' }, { e: '💚', v: 12, col: '#4ade80' }];
+        let player = { x: W / 2, y: 60, w: 24, h: 28, vx: 0, vy: 0, onPlatform: false };
+        let platforms = [], gems = [], spikes = [], scrollY = 0, score = 0, gemCount = 0, depth = 0, over = false, won = false, maxDepth = 0;
+        let keys = {};
+        document.addEventListener('keydown', e => { keys[e.code] = true; if (e.code.startsWith('Arrow')) e.preventDefault(); });
+        document.addEventListener('keyup', e => keys[e.code] = false);
+
+        function genChunk(startY) {
+            const chunks = [];
+            for (let i = 0; i < 8; i++) {
+                const y = startY + i * 70 + Math.random() * 30;
+                const w = 80 + Math.random() * 120, x = 20 + Math.random() * (W - w - 40);
+                chunks.push({ x, y, w, h: 14, col: '#1e3a5a' });
+                if (Math.random() < .6) { const gt = GEM_TYPES[Math.floor(Math.random() * GEM_TYPES.length)]; chunks.push({ gem: true, x: x + w / 2 - 10, y: y - 28, ...gt }); }
+                if (Math.random() < .25) chunks.push({ spike: true, x: x + Math.random() * (w - 20), y: y - 14, w: 14, h: 14 });
+            }
+            return chunks;
+        }
+
+        // Init platforms
+        platforms.push({ x: 0, y: 100, w: W, h: 14, col: '#1e3a5a' });// Start platform
+        platforms.push({ x: 100, y: 200, w: 200, h: 14, col: '#1e3a5a' });
+        let worldH = 300;
+        const allObjs = genChunk(200);
+        allObjs.forEach(o => { if (o.gem) gems.push(o); else if (o.spike) spikes.push(o); else platforms.push(o); });
+        // Deep exit
+        const exitY = 2000;
+
+        function update() {
+            if (over || won) return;
+            // Expand world
+            if (depth > worldH - 800) { const chunk = genChunk(worldH); chunk.forEach(o => { if (o.gem) gems.push(o); else if (o.spike) spikes.push(o); else platforms.push(o); }); worldH += 500; }
+            if (keys['ArrowLeft'] || keys['KeyA']) player.vx -= .8;
+            if (keys['ArrowRight'] || keys['KeyD']) player.vx += .8;
+            player.vx *= .82; player.vy += .5;
+            if (Math.abs(player.vx) > 6) player.vx = Math.sign(player.vx) * 6;
+            player.x += player.vx; player.y += player.vy;
+            // Wall wrap
+            if (player.x < 0) player.x = W - player.w; if (player.x > W - player.w) player.x = 0;
+            // Platform collision
+            player.onPlatform = false;
+            platforms.forEach(p => {
+                if (player.x + player.w > p.x && player.x < p.x + p.w && player.y + player.h > p.y && player.y + player.h < p.y + 14 + player.vy + 2 && player.vy >= 0) {
+                    player.y = p.y - player.h; player.vy = 0; player.onPlatform = true;
+                }
+            });
+            // Scroll camera when player falls below mid
+            if (player.y - scrollY > H * .55) { scrollY += player.y - scrollY - H * .55; }
+            depth = Math.max(depth, Math.floor(player.y * .1)); maxDepth = Math.max(maxDepth, depth);
+            document.getElementById('dp').textContent = depth;
+            // Collect gems
+            gems = gems.filter(g => { if (!g.collected && Math.hypot(player.x + player.w / 2 - g.x - 10, player.y + player.h / 2 - g.y - 10) < 24) { g.collected = true; score += g.v; gemCount++; document.getElementById('sc').textContent = score; document.getElementById('gm').textContent = gemCount; return false; } return true; });
+            // Spikes
+            spikes.forEach(s => { if (player.x + player.w > s.x && player.x < s.x + s.w && player.y + player.h > s.y && player.y < s.y + s.h) over = true; });
+            // Win at depth 200
+            if (depth >= 200 && !won) won = true;
+        }
+
+        function draw() {
+            cx.fillStyle = '#000a1a'; cx.fillRect(0, 0, W, H);
+            cx.save(); cx.translate(0, -scrollY);
+            // Depth gradient bg
+            const bg = cx.createLinearGradient(0, scrollY, 0, scrollY + H); bg.addColorStop(0, '#000a1a'); bg.addColorStop(1, '#001a10'); cx.fillStyle = bg; cx.fillRect(0, scrollY, W, H);
+            platforms.forEach(p => { cx.fillStyle = p.col; cx.fillRect(p.x, p.y, p.w, p.h); cx.fillStyle = 'rgba(6,182,212,.3)'; cx.fillRect(p.x, p.y, p.w, 3); });
+            gems.forEach(g => { if (g.collected) return; cx.font = '20px monospace'; cx.textAlign = 'center'; cx.fillText(g.e, g.x + 10, g.y + 18); });
+            spikes.forEach(s => { cx.fillStyle = '#f43f5e'; cx.beginPath(); cx.moveTo(s.x, s.y + s.h); cx.lineTo(s.x + s.w / 2, s.y); cx.lineTo(s.x + s.w, s.y + s.h); cx.fill(); });
+            // Exit glow
+            cx.fillStyle = 'rgba(250,204,21,.2)'; cx.fillRect(0, exitY, W, 30); cx.fillStyle = '#facc15'; cx.font = '18px monospace'; cx.textAlign = 'center'; cx.fillText('🏆 TREASURE VAULT 🏆', W / 2, exitY + 18);
+            cx.fillStyle = '#06b6d4'; cx.fillRect(player.x, player.y, player.w, player.h); cx.fillStyle = '#fff'; cx.fillRect(player.x + 5, player.y + 6, 6, 7); cx.fillRect(player.x + 13, player.y + 6, 6, 7);
+            cx.restore();
+            // Depth bar
+            cx.fillStyle = 'rgba(6,182,212,.15)'; cx.fillRect(W - 16, 0, 16, H); cx.fillStyle = '#06b6d4'; cx.fillRect(W - 16, 0, 16, Math.min(H, depth / 200 * H));
+            cx.fillStyle = '#aaa'; cx.font = '10px monospace'; cx.textAlign = 'center'; cx.fillText('200m', W - 8, H - 4);
+            if (over) { cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#f43f5e'; cx.font = 'bold 38px monospace'; cx.textAlign = 'center'; cx.fillText('SPIKED! 💀', W / 2, H / 2 - 20); cx.fillStyle = '#aaa'; cx.font = '16px monospace'; cx.fillText('Gems: ' + gemCount + ' | R restart', W / 2, H / 2 + 18); }
+            if (won) { cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#facc15'; cx.font = 'bold 40px monospace'; cx.textAlign = 'center'; cx.fillText('YOU WIN! 🏆', W / 2, H / 2 - 24); cx.fillStyle = '#06b6d4'; cx.font = '20px monospace'; cx.fillText(gemCount + ' gems | ' + score + ' pts', W / 2, H / 2 + 20); }
+        }
+        document.addEventListener('keydown', e => { if (e.code === 'KeyR' && (over || won)) { player = { x: W / 2, y: 60, w: 24, h: 28, vx: 0, vy: 0 }; scrollY = 0; score = 0; gemCount = 0; depth = 0; over = false; won = false; platforms = [{ x: 0, y: 100, w: W, h: 14, col: '#1e3a5a' }]; gems = []; spikes = []; worldH = 300; document.getElementById('sc').textContent = 0; document.getElementById('gm').textContent = 0; document.getElementById('dp').textContent = 0; } });
+        function loop() { update(); draw(); requestAnimationFrame(loop); } loop();
+    </script>
+
+    <script src="../mobile_controls.js"></script>
+</body>
+
+</html>

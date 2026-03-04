@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Marble Roll 3D</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #000;
+            overflow: hidden;
+            font-family: 'Courier New', monospace
+        }
+
+        #hud {
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            color: #4ade80;
+            font-size: .85rem;
+            text-shadow: 0 0 8px #4ade80
+        }
+
+        #hud b {
+            color: #86efac
+        }
+
+        #msg {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #facc15;
+            font-size: 2rem;
+            font-weight: 700;
+            text-align: center;
+            display: none;
+            text-shadow: 0 0 20px #facc15;
+            background: rgba(0, 0, 0, .7);
+            padding: 20px 40px;
+            border-radius: 16px
+        }
+
+        #info {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #475569;
+            font-size: .78rem
+        }
+    </style>
+</head>
+
+<body>
+    <div id="hud">💎 Gems: <b id="gm">0</b>/<b id="gn">0</b> &nbsp;|&nbsp; ⏱ <b id="tm">0</b>s &nbsp;|&nbsp; Level: <b
+            id="lv">1</b></div>
+    <div id="msg"></div>
+    <div id="info">Arrow keys / WASD = tilt board | Roll the marble to the GOLD goal!</div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(innerWidth, innerHeight); renderer.shadowMap.enabled = true; document.body.appendChild(renderer.domElement);
+        const scene = new THREE.Scene(); scene.background = new THREE.Color(0x000a10); scene.fog = new THREE.FogExp2(0x000a10, .04);
+        const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, .1, 300);
+        camera.position.set(0, 22, 18); camera.lookAt(0, 0, 0);
+        scene.add(new THREE.AmbientLight(0x4ade80, .4));
+        const dl = new THREE.DirectionalLight(0x86efac, 1.5); dl.position.set(8, 20, 8); dl.castShadow = true; scene.add(dl);
+        const pl = new THREE.PointLight(0x38bdf8, 1, 30); pl.position.set(0, 10, 0); scene.add(pl);
+
+        // Board
+        const boardGroup = new THREE.Group(); scene.add(boardGroup);
+        const boardMat = new THREE.MeshLambertMaterial({ color: 0x0a2a1a });
+        const board = new THREE.Mesh(new THREE.BoxGeometry(20, 1, 20), boardMat); board.receiveShadow = true; boardGroup.add(board);
+
+        // Boundaries
+        const wallMat = new THREE.MeshLambertMaterial({ color: 0x0d5c30, transparent: true, opacity: .7 });
+        [[0, 1.5, -10.5, 20, 2, 1], [0, 1.5, 10.5, 20, 2, 1], [10.5, 1.5, 0, 1, 2, 20], [-10.5, 1.5, 0, 1, 2, 20]].forEach(([x, y, z, w, h, d]) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat); m.position.set(x, y, z); boardGroup.add(m); });
+
+        // Marble
+        const marbleMat = new THREE.MeshPhongMaterial({ color: 0x38bdf8, shininess: 120, specular: 0x818cf8, emissive: 0x0a1a3a });
+        const marble = new THREE.Mesh(new THREE.SphereGeometry(.7, 16, 16), marbleMat); marble.castShadow = true; marble.position.set(-8, .7, -8); boardGroup.add(marble);
+        const marbleLight = new THREE.PointLight(0x38bdf8, .8, 4); marble.add(marbleLight);
+
+        // Holes & gems & goal
+        let gems = [], gemCount = 0, level = 1, startTime = Date.now(), over = false, won = false;
+        let holes = [], obstacles = [];
+        let marbleVel = new THREE.Vector3();
+        const goalGeo = new THREE.CylinderGeometry(.9, .9, .2, 16);
+        const goalMat = new THREE.MeshPhongMaterial({ color: 0xfacc15, emissive: 0x7a5c00, shininess: 200 });
+        const goal = new THREE.Mesh(goalGeo, goalMat); goal.position.set(7.5, .6, 7.5); boardGroup.add(goal);
+        const goalLight = new THREE.PointLight(0xfacc15, 1.5, 4); goal.add(goalLight);
+
+        function makeGem(x, z) {
+            const g = new THREE.Mesh(new THREE.OctahedronGeometry(.45), new THREE.MeshPhongMaterial({ color: 0x4ade80, emissive: 0x0a2a0a, shininess: 150 }));
+            g.position.set(x, 1.1, z); boardGroup.add(g); gems.push(g); gemCount++; document.getElementById('gn').textContent = gemCount; return g;
+        }
+        function makeObstacle(x, z, sx, sz) {
+            const o = new THREE.Mesh(new THREE.BoxGeometry(sx, 1.5, sz), new THREE.MeshLambertMaterial({ color: 0x1a4a2a }));
+            o.position.set(x, 1, z); boardGroup.add(o); obstacles.push(o); return o;
+        }
+        function makeHole(x, z) {
+            const h = new THREE.Mesh(new THREE.CylinderGeometry(.9, .9, .2, 16), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+            h.position.set(x, -.05, z); boardGroup.add(h); holes.push({ pos: new THREE.Vector3(x, 0, z), r: .9 }); return h;
+        }
+        function initLevel(l) {
+            // Clear
+            gems.forEach(g => boardGroup.remove(g)); gems = []; gemCount = 0; holes = []; obstacles.forEach(o => boardGroup.remove(o)); obstacles = [];
+            marble.position.set(-8, .7, -8); marbleVel.set(0, 0, 0);
+            document.getElementById('gm').textContent = 0; document.getElementById('gn').textContent = 0;
+            // Gems
+            const gpos = [[-4, .2, -5], [-6, .2, 2], [0, .2, 0], [3, .2, -6], [5, .2, 3], [2, .2, 6], [-2, .2, 5]].slice(0, 4 + l);
+            gpos.forEach(([x, z]) => makeGem(x, z));
+            // Obstacles
+            if (l >= 2) makeObstacle(-2, .2, 2, 2.5); if (l >= 2) makeObstacle(3, .2, 2.5, 2);
+            if (l >= 3) { makeHole(1, 1); makeHole(-3, 3); }
+            startTime = Date.now(); over = false; won = false; document.getElementById('lv').textContent = l;
+            boardGroup.rotation.set(0, 0, 0);
+        }
+        initLevel(1);
+
+        let keys = {};
+        document.addEventListener('keydown', e => keys[e.code] = true); document.addEventListener('keyup', e => keys[e.code] = false);
+        const msgEl = document.getElementById('msg');
+        function showMsg(t) { msgEl.innerHTML = t; msgEl.style.display = 'block'; }
+        let tiltX = 0, tiltZ = 0;
+        const clock = new THREE.Clock();
+        function update() {
+            const dt = clock.getDelta();
+            if (over || won) return;
+            document.getElementById('tm').textContent = Math.floor((Date.now() - startTime) / 1000);
+            // Tilt board
+            if (keys['ArrowLeft'] || keys['KeyA']) tiltZ = Math.min(.32, tiltZ + .015);
+            else if (keys['ArrowRight'] || keys['KeyD']) tiltZ = Math.max(-.32, tiltZ - .015);
+            else tiltZ *= .9;
+            if (keys['ArrowUp'] || keys['KeyW']) tiltX = Math.max(-.32, tiltX - .015);
+            else if (keys['ArrowDown'] || keys['KeyS']) tiltX = Math.min(.32, tiltX + .015);
+            else tiltX *= .9;
+            boardGroup.rotation.x = tiltX; boardGroup.rotation.z = tiltZ;
+            // Gravity on marble
+            marbleVel.x += Math.sin(tiltZ) * 9.8 * dt;
+            marbleVel.z += Math.sin(tiltX) * 9.8 * dt;
+            marbleVel.multiplyScalar(.92);
+            marble.position.x += marbleVel.x * dt; marble.position.z += marbleVel.z * dt;
+            // Boundary clamp
+            const r = .7; const limit = 9.3;
+            if (marble.position.x < -limit) { marble.position.x = -limit; marbleVel.x *= -.6; }
+            if (marble.position.x > limit) { marble.position.x = limit; marbleVel.x *= -.6; }
+            if (marble.position.z < -limit) { marble.position.z = -limit; marbleVel.z *= -.6; }
+            if (marble.position.z > limit) { marble.position.z = limit; marbleVel.z *= -.6; }
+            // Obstacle collision
+            obstacles.forEach(o => { const dx = Math.abs(marble.position.x - o.position.x), dz = Math.abs(marble.position.z - o.position.z); if (dx < 1.5 && dz < 1.5) { if (dx > dz) marbleVel.x *= -.7; else marbleVel.z *= -.7; } });
+            // Holes
+            holes.forEach(h => { if (new THREE.Vector2(marble.position.x - h.pos.x, marble.position.z - h.pos.z).length() < h.r) { over = true; showMsg('😵 FELL IN!<br><small>Press R to retry</small>'); } });
+            // Goal
+            if (new THREE.Vector2(marble.position.x - goal.position.x, marble.position.z - goal.position.z).length() < 1.2) {
+                if (gems.length === 0) {
+                    level++; document.getElementById('lv').textContent = level;
+                    if (level > 5) { won = true; showMsg('🏆 YOU WIN!<br><small>All levels complete!</small>'); return; }
+                    initLevel(level);
+                }
+            }
+            // Gems
+            gems = gems.filter(g => { if (new THREE.Vector2(marble.position.x - g.position.x, marble.position.z - g.position.z).length() < 1.2) { boardGroup.remove(g); const c = parseInt(document.getElementById('gm').textContent || 0) + 1; document.getElementById('gm').textContent = c; return false; } g.rotation.y += 2 * dt; return true; });
+            goal.rotation.y += 1 * dt;
+        }
+        document.addEventListener('keydown', e => { if (e.code === 'KeyR') { msgEl.style.display = 'none'; level = 1; initLevel(1); } });
+        function animate() { requestAnimationFrame(animate); update(); renderer.render(scene, camera); } animate();
+        window.addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+    </script>
+
+    <script src="../mobile_controls.js"></script>
+</body>
+
+</html>

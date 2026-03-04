@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Pac-Man Maze 2 – The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #ff0
+        }
+
+        h1 {
+            color: #ff0;
+            font-size: 2rem;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px #ff0
+        }
+
+        canvas {
+            border: 2px solid #ff0;
+            box-shadow: 0 0 30px rgba(255, 255, 0, 0.4)
+        }
+
+        #hud {
+            margin-top: 10px;
+            color: #ff0
+        }
+
+        #ctrl {
+            margin-top: 6px;
+            color: #555;
+            font-size: .8rem
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Pac-Man II</h1>
+    <canvas id="c" width="420" height="460"></canvas>
+    <div id="hud">Score: <span id="sc">0</span> &nbsp; Lives: <span id="li">3</span></div>
+    <div id="ctrl">Arrow Keys to move | R: restart</div>
+    <script>
+        const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+        const CS = 28, COLS = 15, ROWS = 16;
+        const MAP = [
+            '###############',
+            '#.....#.....#.#',
+            '#.###.#.###.#.#',
+            '#.............#',
+            '#.###.###.###.#',
+            '#.....#...#...#',
+            '#####.#.###.###',
+            '    #.#.....   ',
+            '#####.#.###.###',
+            '#.....#...#...#',
+            '#.###.###.###.#',
+            '#.............#',
+            '#.###.#.###.#.#',
+            '#.....#.....#.#',
+            '#.###########.#',
+            '###############',
+        ];
+        let pac, ghosts, score, lives, over, won, keys, dir, mouthA;
+        function walls(row, col) { return MAP[row] && MAP[row][col] === '#'; }
+        function canMove(ox, oy, dx, dy) { const nx = ox + dx, ny = oy + dy; return !walls(Math.floor((ny + 4) / CS), Math.floor((nx + 4) / CS)) && !walls(Math.floor((ny + CS - 5) / CS), Math.floor((nx + CS - 5) / CS)); }
+
+        function init() {
+            // collect dots
+            let dots = new Set();
+            for (let r = 0; r < ROWS; r++)for (let c = 0; c < COLS; c++)if (MAP[r][c] === '.') dots.add(`${r},${c}`);
+            pac = { x: 7 * CS + 2, y: 7 * CS + 2, dx: 0, dy: 0, dots };
+            ghosts = [
+                { x: 4 * CS + 2, y: 2 * CS + 2, dx: 1, dy: 0, color: '#ef4444' },
+                { x: 10 * CS + 2, y: 2 * CS + 2, dx: -1, dy: 0, color: '#ec4899' },
+                { x: 4 * CS + 2, y: 13 * CS + 2, dx: 1, dy: 0, color: '#22d3ee' },
+                { x: 10 * CS + 2, y: 13 * CS + 2, dx: -1, dy: 0, color: '#f97316' },
+            ];
+            score = 0; lives = 3; over = false; won = false; keys = {}; dir = { dx: 0, dy: 0 }; mouthA = 0;
+            document.getElementById('sc').textContent = 0; document.getElementById('li').textContent = 3;
+        }
+        document.addEventListener('keydown', e => {
+            if (e.key === 'r' || e.key === 'R') init();
+            if (e.key === 'ArrowLeft') dir = { dx: -2, dy: 0 };
+            if (e.key === 'ArrowRight') dir = { dx: 2, dy: 0 };
+            if (e.key === 'ArrowUp') dir = { dx: 0, dy: -2 };
+            if (e.key === 'ArrowDown') dir = { dx: 0, dy: 2 };
+            e.preventDefault();
+        });
+        function moveGhost(g) {
+            const spd = 1.2;
+            if (Math.random() < 0.03) { const dirs = [{ dx: spd, dy: 0 }, { dx: -spd, dy: 0 }, { dx: 0, dy: spd }, { dx: 0, dy: -spd }]; const ok = dirs.filter(d => canMove(g.x, g.y, d.dx, d.dy)); if (ok.length > 0) { const pick = ok[Math.floor(Math.random() * ok.length)]; g.dx = pick.dx; g.dy = pick.dy; } }
+            if (!canMove(g.x, g.y, g.dx, g.dy)) { const dirs = [{ dx: spd, dy: 0 }, { dx: -spd, dy: 0 }, { dx: 0, dy: spd }, { dx: 0, dy: -spd }]; const ok = dirs.filter(d => canMove(g.x, g.y, d.dx, d.dy)); if (ok.length > 0) { const pick = ok[Math.floor(Math.random() * ok.length)]; g.dx = pick.dx; g.dy = pick.dy; } }
+            g.x += g.dx; g.y += g.dy;
+            g.x = Math.max(0, Math.min((COLS - 1) * CS, g.x)); g.y = Math.max(0, Math.min((ROWS - 1) * CS, g.y));
+        }
+        function update() {
+            if (over || won) return;
+            mouthA = (mouthA + 0.15) % Math.PI;
+            if (canMove(pac.x, pac.y, dir.dx, dir.dy)) { pac.dx = dir.dx; pac.dy = dir.dy; }
+            if (canMove(pac.x, pac.y, pac.dx, pac.dy)) { pac.x += pac.dx; pac.y += pac.dy; }
+            pac.x = Math.max(0, Math.min((COLS - 1) * CS, pac.x)); pac.y = Math.max(0, Math.min((ROWS - 1) * CS, pac.y));
+            const dotKey = `${Math.round(pac.y / CS)},${Math.round(pac.x / CS)}`;
+            if (pac.dots.has(dotKey)) { pac.dots.delete(dotKey); score += 10; document.getElementById('sc').textContent = score; }
+            if (pac.dots.size === 0) won = true;
+            ghosts.forEach(g => { moveGhost(g); if (Math.hypot(pac.x - g.x, pac.y - g.y) < CS * 0.8) { lives--; document.getElementById('li').textContent = lives; pac.x = 7 * CS + 2; pac.y = 7 * CS + 2; pac.dx = 0; pac.dy = 0; if (lives <= 0) over = true; } });
+        }
+        function draw() {
+            ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // walls & dots
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    if (walls(r, c)) { ctx.fillStyle = '#1d4ed8'; ctx.fillRect(c * CS, r * CS, CS, CS); }
+                    else if (pac.dots.has(`${r},${c}`)) { ctx.beginPath(); ctx.arc(c * CS + CS / 2, r * CS + CS / 2, 4, 0, Math.PI * 2); ctx.fillStyle = '#fde68a'; ctx.fill(); }
+                }
+            }
+            // pac-man
+            const px = pac.x + CS / 2, py = pac.y + CS / 2;
+            const angle = Math.atan2(pac.dy, pac.dx) || 0;
+            ctx.beginPath(); ctx.moveTo(px, py); ctx.arc(px, py, CS / 2 - 2, angle + mouthA * 0.5, angle + Math.PI * 2 - mouthA * 0.5); ctx.closePath(); ctx.fillStyle = '#ff0'; ctx.fill();
+            // ghosts
+            ghosts.forEach(g => {
+                const gx = g.x + CS / 2, gy = g.y + CS / 2;
+                ctx.beginPath(); ctx.arc(gx, gy - 2, CS / 2 - 3, Math.PI, 0); ctx.lineTo(gx + CS / 2 - 3, gy + CS / 2 - 3); ctx.lineTo(gx, gy + CS / 4); ctx.lineTo(gx - CS / 2 + 3, gy + CS / 2 - 3); ctx.closePath(); ctx.fillStyle = g.color; ctx.fill();
+                ctx.beginPath(); ctx.arc(gx - 5, gy - 4, 3, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
+                ctx.beginPath(); ctx.arc(gx + 5, gy - 4, 3, 0, Math.PI * 2); ctx.fill();
+            });
+            if (won) { ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#ff0'; ctx.font = 'bold 32px monospace'; ctx.textAlign = 'center'; ctx.fillText('YOU WIN!', 210, 220); ctx.font = '18px monospace'; ctx.fillText('Press R to restart', 210, 260); }
+            if (over) { ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#ef4444'; ctx.font = 'bold 32px monospace'; ctx.textAlign = 'center'; ctx.fillText('GAME OVER', 210, 220); ctx.font = '18px monospace'; ctx.fillStyle = '#fff'; ctx.fillText('Press R to restart', 210, 260); }
+        }
+        function loop() { update(); draw(); requestAnimationFrame(loop); }
+        init(); loop();
+    </script>
+</body>
+
+</html>

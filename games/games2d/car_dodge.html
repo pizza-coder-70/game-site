@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Car Dodge</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0a0a0a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #22d3ee;
+            font-size: 1.5rem;
+            text-shadow: 0 0 16px #22d3ee;
+            margin-bottom: 6px
+        }
+
+        canvas {
+            border: 2px solid #22d3ee;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(34, 211, 238, .4)
+        }
+
+        #ui {
+            display: flex;
+            gap: 20px;
+            color: #22d3ee;
+            font-size: .85rem;
+            margin-top: 6px
+        }
+
+        #msg {
+            color: #facc15;
+            font-size: .9rem;
+            min-height: 20px;
+            margin-top: 4px
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🚗 Car Dodge</h1>
+    <div id="ui"><span>Score: <b id="sc">0</b></span><span>Lives: <b id="li">3</b></span><span>Speed: <b
+                id="sp">1×</b></span></div>
+    <canvas id="c" width="400" height="540"></canvas>
+    <div id="msg">Arrow keys / AD to change lanes! Dodge cars & collect ⭐!</div>
+    <script>
+        const cv = document.getElementById('c'), cx = cv.getContext('2d');
+        const W = 400, H = 540;
+        const LANES = [80, 160, 240, 320]; const LANE_W = 68;
+        let player = { lane: 1, x: LANES[1], y: H - 90, w: 40, h: 64, targetX: LANES[1], invuln: 0 };
+        let cars = [], stars = [], roadY = 0, score = 0, lives = 3, speed = 3, over = false, won = false, dist = 0;
+        let keys = {};
+        document.addEventListener('keydown', e => { keys[e.code] = true; if (e.key.startsWith('Arrow')) e.preventDefault(); });
+        document.addEventListener('keyup', e => keys[e.code] = false);
+        const CAR_COLS = ['#f43f5e', '#f97316', '#a78bfa', '#34d399', '#fbbf24'];
+        const CAR_EMOJIS = ['🚗', '🚕', '🚙', '🏎️', '🚐'];
+        function spawnCar() { const ln = Math.floor(Math.random() * 4); return { x: LANES[ln], y: -80, w: 44, h: 68, lane: ln, col: CAR_COLS[Math.floor(Math.random() * CAR_COLS.length)], emoji: CAR_EMOJIS[Math.floor(Math.random() * CAR_EMOJIS.length)] }; }
+        function spawnStar() { return { x: LANES[Math.floor(Math.random() * 4)], y: -40, r: 12 }; }
+        let carTimer = 60, starTimer = 200, laneCD = 0;
+        function update() {
+            if (over || won) return;
+            dist++; speed = 3 + dist / 600; document.getElementById('sp').textContent = Math.floor(speed * 10) / 10 + '×';
+            // Lane change
+            laneCD--;
+            if (laneCD <= 0) {
+                if (keys['ArrowLeft'] || keys['KeyA']) { player.lane = Math.max(0, player.lane - 1); player.targetX = LANES[player.lane]; laneCD = 12; }
+                if (keys['ArrowRight'] || keys['KeyD']) { player.lane = Math.min(3, player.lane + 1); player.targetX = LANES[player.lane]; laneCD = 12; }
+            }
+            player.x += (player.targetX - player.x) * .2;
+            if (player.invuln > 0) player.invuln--;
+            roadY = (roadY + speed * 2) % 60;
+            carTimer--; if (carTimer <= 0) { cars.push(spawnCar()); carTimer = Math.max(20, 60 - dist / 100); }
+            starTimer--; if (starTimer <= 0) { stars.push(spawnStar()); starTimer = 120 + Math.random() * 80; }
+            cars.forEach(c => c.y += speed * 1.4); stars.forEach(s => s.y += speed * 1.4);
+            cars = cars.filter(c => c.y < H + 80); stars = stars.filter(s => s.y < H + 40);
+            // Star collect
+            stars = stars.filter(s => { if (Math.hypot(player.x - s.x, player.y - s.y) < 32) { score += 30; document.getElementById('sc').textContent = score; return false; } return true; });
+            // Car collision
+            if (player.invuln <= 0) {
+                cars.forEach(c => { if (Math.abs(player.x - c.x) < 38 && player.y + player.h / 2 > c.y && player.y - player.h / 2 < c.y + c.h) { lives--; document.getElementById('li').textContent = lives; player.invuln = 90; if (lives <= 0) over = true; } });
+            }
+            score++; document.getElementById('sc').textContent = Math.floor(score / 5);
+            if (score > 5000) won = true;
+        }
+        function draw() {
+            // Road
+            cx.fillStyle = '#1a1a1a'; cx.fillRect(0, 0, W, H);
+            cx.fillStyle = '#2a2a2a'; cx.fillRect(40, 0, W - 80, H);
+            // Lane lines
+            for (let l = 0; l < 3; l++) { const lx = LANES[l] + LANE_W / 2; cx.strokeStyle = '#facc1540'; cx.setLineDash([30, 30]); cx.lineWidth = 3; cx.beginPath(); for (let y = -60 + roadY; y < H + 60; y += 60) { cx.moveTo(lx, y); cx.lineTo(lx, y + 30); } cx.stroke(); } cx.setLineDash([]);
+            // Stars
+            stars.forEach(s => { cx.fillStyle = '#facc15'; cx.font = '22px monospace'; cx.textAlign = 'center'; cx.fillText('⭐', s.x, s.y + 8); });
+            // Cars
+            cars.forEach(c => { cx.font = '44px monospace'; cx.textAlign = 'center'; cx.fillText(c.emoji, c.x, c.y + 48); });
+            // Player
+            const alpha = player.invuln > 0 && Math.floor(player.invuln / 8) % 2 === 0 ? .3 : 1;
+            cx.globalAlpha = alpha; cx.font = '46px monospace'; cx.textAlign = 'center'; cx.fillText('🏎️', player.x, player.y + player.h / 2); cx.globalAlpha = 1;
+            if (over) { cx.fillStyle = 'rgba(0,0,0,.8)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#f43f5e'; cx.font = 'bold 34px monospace'; cx.textAlign = 'center'; cx.fillText('CRASHED! 💥', W / 2, H / 2 - 20); cx.fillStyle = '#aaa'; cx.font = '15px monospace'; cx.fillText('Score: ' + Math.floor(score / 5) + ' | R restart', W / 2, H / 2 + 18); }
+            if (won) { cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#facc15'; cx.font = 'bold 38px monospace'; cx.textAlign = 'center'; cx.fillText('YOU WIN! 🏆', W / 2, H / 2 - 24); cx.fillStyle = '#22d3ee'; cx.font = '20px monospace'; cx.fillText('Score: ' + Math.floor(score / 5), W / 2, H / 2 + 20); }
+        }
+        document.addEventListener('keydown', e => { if (e.code === 'KeyR' && (over || won)) { score = 0; lives = 3; over = false; won = false; dist = 0; cars = []; stars = []; player.lane = 1; player.x = player.targetX = LANES[1]; player.invuln = 0; document.getElementById('sc').textContent = 0; document.getElementById('li').textContent = 3; document.getElementById('sp').textContent = '1×'; } });
+        function loop() { update(); draw(); requestAnimationFrame(loop); } loop();
+    </script>
+
+    <script src="../mobile_controls.js"></script>
+</body>
+
+</html>

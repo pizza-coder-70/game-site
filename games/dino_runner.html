@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Dino Runner | The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            letter-spacing: 4px;
+            text-shadow: 0 0 20px #86efac;
+        }
+
+        #hud {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 8px;
+            font-size: 1rem;
+            color: #86efac;
+        }
+
+        canvas {
+            border: 2px solid #86efac;
+            box-shadow: 0 0 30px #86efac33;
+        }
+
+        #msg {
+            margin-top: 12px;
+            font-size: 1.2rem;
+            min-height: 1.5em;
+            color: #fff;
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 10px 32px;
+            background: linear-gradient(135deg, #86efac, #22c55e);
+            color: #000;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            letter-spacing: 2px;
+        }
+
+        button:hover {
+            transform: scale(1.07);
+        }
+
+        #menuBtn {
+            background: linear-gradient(135deg, #334155, #1e293b);
+            color: #fff;
+            display: none;
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999;
+        }
+
+        #homeBtn:hover {
+            background: #1e40af;
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>🦕 DINO RUNNER</h1>
+    <div id="hud"><span>SCORE: <b id="score">0</b></span><span>HI-SCORE: <b id="hi">0</b></span><span>SPEED: <b
+                id="spd">1</b>x</span></div>
+    <canvas id="c" width="700" height="300"></canvas>
+    <div id="msg">Press Space or ↑ to Jump!</div>
+    <button onclick="startGame()">START</button>
+    <button id="menuBtn" onclick="window.close()">🏠 Return to Menu</button>
+    <script src="../scripts/scores.js"></script>
+    <script>
+        const C = document.getElementById('c'), ctx = C.getContext('2d');
+        const W = 700, H = 300, GROUND = 220;
+        let dino, obstacles, clouds, score, hiScore = 0, running, animId, gameSpeed, frame;
+
+        function startGame() {
+            dino = { x: 80, y: GROUND, w: 44, h: 48, vy: 0, onGround: true, ducking: false, frame: 0 };
+            obstacles = []; clouds = []; score = 0; gameSpeed = 4; frame = 0; running = true;
+            document.getElementById('score').textContent = 0;
+            document.getElementById('msg').textContent = '';
+            if (animId) cancelAnimationFrame(animId);
+            loop();
+        }
+
+        function jump() {
+            if (dino.onGround) { dino.vy = -14; dino.onGround = false; }
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === ' ' || e.key === 'ArrowUp') { e.preventDefault(); if (!running) startGame(); else jump(); }
+            if (e.key === 'ArrowDown') dino.ducking = true;
+        });
+        document.addEventListener('keyup', e => { if (e.key === 'ArrowDown') dino.ducking = false; });
+        C.addEventListener('click', () => { if (!running) startGame(); else jump(); });
+
+        let obsCooldown = 0;
+        function update() {
+            frame++;
+            if (frame % 6 === 0) dino.frame = (dino.frame + 1) % 2;
+            // Speed up
+            gameSpeed = 4 + score / 400; document.getElementById('spd').textContent = gameSpeed.toFixed(1);
+            // Dino physics
+            if (dino.ducking && dino.onGround) { dino.h = 28; dino.y = GROUND + 20; }
+            else { dino.h = 48; dino.y = dino.onGround ? GROUND : dino.y; }
+            dino.vy += 0.7; dino.y += dino.vy;
+            if (dino.y >= GROUND) { dino.y = GROUND; dino.vy = 0; dino.onGround = true; } else dino.onGround = false;
+            // Obstacles
+            obsCooldown--;
+            if (obsCooldown <= 0) {
+                const type = Math.random() > 0.3 ? 'cactus' : 'bird';
+                obstacles.push(type === 'cactus' ?
+                    { x: W + 20, y: GROUND, w: 24, h: 48, type: 'cactus', variant: Math.floor(Math.random() * 3) } :
+                    { x: W + 20, y: GROUND - 40 - Math.random() * 60, w: 40, h: 28, type: 'bird', frame: 0 }
+                );
+                obsCooldown = Math.floor(60 + Math.random() * 80);
+            }
+            obstacles.forEach(o => { o.x -= gameSpeed; if (o.type === 'bird') { o.frame = (o.frame || 0) + 0.1; } });
+            obstacles = obstacles.filter(o => o.x > -60);
+            // Birds
+            // Clouds
+            if (Math.random() < 0.01) clouds.push({ x: W, y: 30 + Math.random() * 80, w: 80 + Math.random() * 60 });
+            clouds.forEach(c => c.x -= gameSpeed * 0.3); clouds = clouds.filter(c => c.x > -100);
+            // Score
+            score++; document.getElementById('score').textContent = score;
+            // Collision
+            obstacles.forEach(o => {
+                const dx = Math.max(0, dino.x + 4 - o.x, o.x + o.w - dino.x - dino.w + 4);
+                const dy = Math.max(0, dino.y + 4 - o.y, o.y + o.h - dino.y - dino.h + 4);
+                if (dx < o.w + dino.w - 8 && dy < o.h + dino.h - 8 && d2(dino.x + (dino.w / 2), dino.y + (dino.h / 2), o.x + (o.w / 2), o.y + (o.h / 2)) < 1600) {
+                    running = false; if (score > hiScore) { hiScore = score; document.getElementById('hi').textContent = hiScore; }
+                    document.getElementById('msg').textContent = 'GAME OVER! Press Start.';
+                    document.getElementById('menuBtn').style.display = '';
+                    PizzaScores.save('Dino Runner', score);
+                }
+            });
+        }
+        function d2(x1, y1, x2, y2) { return (x1 - x2) ** 2 + (y1 - y2) ** 2; }
+
+        function drawDino() {
+            const dx = dino.x, dy = dino.y, dw = dino.w, dh = dino.h;
+            ctx.fillStyle = '#86efac'; ctx.shadowColor = '#86efac'; ctx.shadowBlur = 8;
+            // Body
+            ctx.fillRect(dx, dy, dw, dh);
+            // Head
+            ctx.fillRect(dx + dw - 10, dy - 18, 22, 22);
+            // Eye
+            ctx.fillStyle = '#000'; ctx.fillRect(dx + dw + 4, dy - 14, 6, 6);
+            // Legs
+            ctx.fillStyle = '#86efac';
+            if (!dino.ducking) {
+                const l = dino.frame === 0 ? 10 : dh - 8;
+                ctx.fillRect(dx + 4, dy + dh, 10, l === 10 ? 10 : 18);
+                ctx.fillRect(dx + dw - 14, dy + dh, 10, l === 10 ? 18 : 10);
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function drawObstacle(o) {
+            ctx.fillStyle = '#f87171'; ctx.shadowColor = '#f87171'; ctx.shadowBlur = 6;
+            if (o.type === 'cactus') {
+                ctx.fillRect(o.x + 8, o.y - o.h, 8, o.h);
+                if (o.variant > 0) { ctx.fillRect(o.x, o.y - o.h * 0.6, 8, 10); ctx.fillRect(o.x, o.y - o.h * 0.6 - 8, 8, 4); }
+                if (o.variant > 1) { ctx.fillRect(o.x + 16, o.y - o.h * 0.7, 8, 10); ctx.fillRect(o.x + 16, o.y - o.h * 0.7 - 8, 8, 4); }
+            } else {
+                ctx.fillRect(o.x, o.y, o.w, 12);
+                const wingY = Math.sin(o.frame * 2) * 6;
+                ctx.fillRect(o.x + 4, o.y - 8 + wingY, o.w - 8, 10);
+                ctx.fillRect(o.x + 4, o.y + 12 - wingY, o.w - 8, 10);
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function draw() {
+            ctx.fillStyle = '#0a0a0a'; ctx.fillRect(0, 0, W, H);
+            // Stars
+            for (let i = 0; i < 30; i++) { ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fillRect((i * 73 + frame * 0.2) % W, (i * 37) % GROUND * 0.7, 1, 1); }
+            // Clouds
+            clouds.forEach(cl => { ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.beginPath(); ctx.ellipse(cl.x, cl.y, cl.w / 2, 20, 0, 0, Math.PI * 2); ctx.fill(); });
+            // Ground
+            ctx.fillStyle = '#334155'; ctx.fillRect(0, GROUND + 48, W, 4);
+            ctx.strokeStyle = '#475569'; ctx.setLineDash([20, 15]);
+            ctx.beginPath(); ctx.moveTo((frame * -gameSpeed) % 35, GROUND + 50); ctx.lineTo(W, GROUND + 50); ctx.stroke(); ctx.setLineDash([]);
+            // Obstacles
+            obstacles.forEach(o => drawObstacle(o));
+            // Dino
+            drawDino();
+            // Score milestones
+            if (score % 200 === 0 && score > 0) { ctx.fillStyle = 'rgba(134,239,172,0.8)'; ctx.font = 'bold 20px monospace'; ctx.fillText(`${score} pts!`, W / 2 - 40, 80); }
+        }
+
+        function loop() { update(); draw(); if (running) animId = requestAnimationFrame(loop); }
+        draw();
+    </script>
+</body>
+
+</html>

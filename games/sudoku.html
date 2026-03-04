@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Sudoku | The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: radial-gradient(ellipse at center, #0c0c1a, #000);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #e2e8f0;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px #60a5fa;
+        }
+
+        #hud {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 10px;
+            font-size: 1rem;
+            color: #94a3b8;
+        }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(9, 52px);
+            gap: 2px;
+            background: #334155;
+            padding: 4px;
+            border-radius: 8px;
+            box-shadow: 0 0 30px #60a5fa33;
+        }
+
+        .cell {
+            width: 52px;
+            height: 52px;
+            background: #1e293b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: 1px solid #334155;
+            transition: background .15s;
+            color: #e2e8f0;
+        }
+
+        .cell:hover:not(.given) {
+            background: #1d4ed8;
+        }
+
+        .cell.given {
+            color: #f8fafc;
+            font-weight: 900;
+        }
+
+        .cell.selected {
+            background: #2563eb !important;
+        }
+
+        .cell.highlight {
+            background: #1e3a5f;
+        }
+
+        .cell.error {
+            color: #ef4444 !important;
+        }
+
+        .cell.given.error {
+            color: #fca5a5 !important;
+        }
+
+        .cell[data-box-r="0"][data-box-c="2"] {
+            border-right: 3px solid #60a5fa;
+        }
+
+        .cell[data-box-r="0"][data-box-c="5"] {
+            border-right: 3px solid #60a5fa;
+        }
+
+        .cell[data-box-r="2"] {
+            border-bottom: 3px solid #60a5fa;
+        }
+
+        .cell[data-box-r="5"] {
+            border-bottom: 3px solid #60a5fa;
+        }
+
+        #numpad {
+            display: flex;
+            gap: 8px;
+            margin-top: 14px;
+        }
+
+        .nBtn {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #1e40af, #1d4ed8);
+            color: #fff;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .nBtn:hover {
+            transform: scale(1.1);
+        }
+
+        #msg {
+            margin-top: 12px;
+            font-size: 1.2rem;
+            min-height: 1.5em;
+            color: #fff;
+        }
+
+        button {
+            margin-top: 12px;
+            padding: 10px 24px;
+            background: linear-gradient(135deg, #60a5fa, #3b82f6);
+            color: #fff;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            transform: scale(1.07);
+        }
+
+        #controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        #menuBtn {
+            padding: 10px 28px;
+            background: linear-gradient(135deg, #334155, #1e293b);
+            color: #fff;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            letter-spacing: 2px;
+            display: none;
+        }
+
+        #menuBtn:hover {
+            transform: scale(1.07);
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999;
+        }
+
+        #homeBtn:hover {
+            background: #1e40af;
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>🔢 SUDOKU</h1>
+    <div id="hud"><span>Errors: <b id="errors">0</b></span><span>Time: <b id="time">0</b>s</span></div>
+    <div id="board"></div>
+    <div id="numpad"></div>
+    <div id="msg"></div>
+    <button id="menuBtn" onclick="window.close()">🏠 Return to Menu</button>
+    <script src="../scripts/scores.js"></script>
+    <div id="controls">
+        <button onclick="newGame('easy')">Easy</button>
+        <button onclick="newGame('medium')">Medium</button>
+        <button onclick="newGame('hard')">Hard</button>
+        <button onclick="clearCell()">Clear</button>
+    </div>
+    <script>
+        let puzzle, solution, selected, errors, timer, timerInt;
+
+        const PUZZLES = {
+            easy: [
+                [5, 3, 0, 0, 7, 0, 0, 0, 0], [6, 0, 0, 1, 9, 5, 0, 0, 0], [0, 9, 8, 0, 0, 0, 0, 6, 0],
+                [8, 0, 0, 0, 6, 0, 0, 0, 3], [4, 0, 0, 8, 0, 3, 0, 0, 1], [7, 0, 0, 0, 2, 0, 0, 0, 6],
+                [0, 6, 0, 0, 0, 0, 2, 8, 0], [0, 0, 0, 4, 1, 9, 0, 0, 5], [0, 0, 0, 0, 8, 0, 0, 7, 9]
+            ],
+            medium: [
+                [0, 0, 0, 2, 6, 0, 7, 0, 1], [6, 8, 0, 0, 7, 0, 0, 9, 0], [1, 9, 0, 0, 0, 4, 5, 0, 0],
+                [8, 2, 0, 1, 0, 0, 0, 4, 0], [0, 0, 4, 6, 0, 2, 9, 0, 0], [0, 5, 0, 0, 0, 3, 0, 2, 8],
+                [0, 0, 9, 3, 0, 0, 0, 7, 4], [0, 4, 0, 0, 5, 0, 0, 3, 6], [7, 0, 3, 0, 1, 8, 0, 0, 0]
+            ],
+            hard: [
+                [0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 3, 0, 8, 5], [0, 0, 1, 0, 2, 0, 0, 0, 0],
+                [0, 0, 0, 5, 0, 7, 0, 0, 0], [0, 0, 4, 0, 0, 0, 1, 0, 0], [0, 9, 0, 0, 0, 0, 0, 0, 0],
+                [5, 0, 0, 0, 0, 0, 0, 7, 3], [0, 0, 2, 0, 1, 0, 0, 0, 0], [0, 0, 0, 0, 4, 0, 0, 0, 9]
+            ]
+        };
+
+        function solveSudoku(b) {
+            const grid = b.map(r => [...r]);
+            function valid(g, r, c, n) {
+                for (let i = 0; i < 9; i++) { if (g[r][i] === n || g[i][c] === n) return false; }
+                const br = Math.floor(r / 3) * 3, bc = Math.floor(c / 3) * 3;
+                for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) if (g[br + i][bc + j] === n) return false;
+                return true;
+            }
+            function solve(g) {
+                for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) if (g[r][c] === 0) {
+                    for (let n = 1; n <= 9; n++) if (valid(g, r, c, n)) { g[r][c] = n; if (solve(g)) return true; g[r][c] = 0; }
+                    return false;
+                }
+                return true;
+            }
+            solve(grid); return grid;
+        }
+
+        function newGame(diff = 'easy') {
+            const base = PUZZLES[diff];
+            puzzle = base.map(r => [...r]);
+            solution = solveSudoku(puzzle);
+            selected = null; errors = 0; timer = 0;
+            document.getElementById('errors').textContent = 0;
+            document.getElementById('msg').textContent = '';
+            clearInterval(timerInt);
+            timerInt = setInterval(() => { timer++; document.getElementById('time').textContent = timer; }, 1000);
+            renderBoard();
+        }
+
+        function renderBoard() {
+            const board = document.getElementById('board'); board.innerHTML = '';
+            const numpad = document.getElementById('numpad'); numpad.innerHTML = '';
+            for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell' + (puzzle[r][c] !== 0 ? ' given' : '');
+                cell.dataset.r = r; cell.dataset.c = c;
+                cell.dataset.boxR = Math.floor(r / 3); cell.dataset.boxC = Math.floor(c / 3);
+                if (puzzle[r][c]) cell.textContent = puzzle[r][c];
+                cell.addEventListener('click', () => selectCell(r, c));
+                board.appendChild(cell);
+            }
+            for (let n = 1; n <= 9; n++) {
+                const btn = document.createElement('button'); btn.className = 'nBtn'; btn.textContent = n;
+                btn.onclick = () => enterNum(n); numpad.appendChild(btn);
+            }
+        }
+
+        function selectCell(r, c) {
+            selected = { r, c };
+            document.querySelectorAll('.cell').forEach(el => {
+                el.classList.remove('selected', 'highlight');
+                const er = +el.dataset.r, ec = +el.dataset.c;
+                if (er === r && ec === c) el.classList.add('selected');
+                else if (er === r || ec === c || el.dataset.boxR === String(Math.floor(r / 3)) && el.dataset.boxC === String(Math.floor(c / 3))) el.classList.add('highlight');
+            });
+        }
+
+        function enterNum(n) {
+            if (!selected) return;
+            const { r, c } = selected;
+            const cells = document.querySelectorAll('.cell');
+            const el = cells[r * 9 + c];
+            if (el.classList.contains('given')) return;
+            puzzle[r][c] = n;
+            el.textContent = n;
+            if (n !== solution[r][c]) { el.classList.add('error'); errors++; document.getElementById('errors').textContent = errors; }
+            else { el.classList.remove('error'); }
+            if (puzzle.every((row, ri) => row.every((v, ci) => v === solution[ri][ci]))) {
+                clearInterval(timerInt); document.getElementById('msg').textContent = `🎉 Solved in ${timer}s with ${errors} errors!`;
+                document.getElementById('menuBtn').style.display = '';
+                PizzaScores.save('Sudoku', 1, `Solved!`);
+            }
+        }
+
+        function clearCell() {
+            if (!selected) return;
+            const { r, c } = selected;
+            const el = document.querySelectorAll('.cell')[r * 9 + c];
+            if (el.classList.contains('given')) return;
+            puzzle[r][c] = 0; el.textContent = ''; el.classList.remove('error');
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key >= '1' && e.key <= '9') enterNum(+e.key);
+            if (e.key === 'Delete' || e.key === 'Backspace') clearCell();
+        });
+
+        newGame('easy');
+    </script>
+</body>
+
+</html>

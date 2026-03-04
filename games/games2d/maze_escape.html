@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Maze Escape</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #040010;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #4ade80;
+            font-size: 1.5rem;
+            text-shadow: 0 0 16px #4ade80;
+            margin-bottom: 6px
+        }
+
+        canvas {
+            border: 2px solid #4ade80;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(74, 222, 128, .4)
+        }
+
+        #ui {
+            display: flex;
+            gap: 20px;
+            color: #4ade80;
+            font-size: .85rem;
+            margin-top: 6px
+        }
+
+        #msg {
+            color: #facc15;
+            font-size: .9rem;
+            min-height: 20px;
+            margin-top: 4px
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🌿 Maze Escape</h1>
+    <div id="ui"><span>Time: <b id="tm">0</b>s</span><span>Level: <b id="lv">1</b></span><span>Best: <b
+                id="best">--</b>s</span></div>
+    <canvas id="c" width="540" height="540"></canvas>
+    <div id="msg">Arrow keys or WASD to navigate. Reach the 🟡 exit!</div>
+    <script>
+        const cv = document.getElementById('c'), cx = cv.getContext('2d');
+        const CELL = 36, COLS = 15, ROWS = 15, W = COLS * CELL, H = ROWS * CELL;
+        let maze, player, level = 1, startTime, elapsed = 0, over = false, won = false, bestTime = Infinity;
+
+        function genMaze(cols, rows) {
+            const grid = Array.from({ length: rows }, () => Array.from({ length: cols }, () => ({ n: true, s: true, e: true, w: true, visited: false })));
+            function visit(r, c) {
+                grid[r][c].visited = true;
+                const dirs = [['n', -1, 0, 's'], ['s', 1, 0, 'n'], ['e', 0, 1, 'w'], ['w', 0, -1, 'e']].sort(() => Math.random() - .5);
+                for (const [d, dr, dc, opp] of dirs) { const nr = r + dr, nc = c + dc; if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && !grid[nr][nc].visited) { grid[r][c][d] = false; grid[nr][nc][opp] = false; visit(nr, nc); } }
+            }
+            visit(0, 0); return grid;
+        }
+
+        function init() {
+            maze = genMaze(COLS, ROWS);
+            player = { r: 0, c: 0 }; startTime = Date.now(); over = false; won = false; elapsed = 0;
+        }
+        init();
+
+        document.addEventListener('keydown', e => {
+            if (over || won) return;
+            const { r, c } = player;
+            if ((e.key === 'ArrowUp' || e.key === 'w') && !maze[r][c].n && r > 0) { player.r--; }
+            else if ((e.key === 'ArrowDown' || e.key === 's') && !maze[r][c].s && r < ROWS - 1) { player.r++; }
+            else if ((e.key === 'ArrowRight' || e.key === 'd') && !maze[r][c].e && c < COLS - 1) { player.c++; }
+            else if ((e.key === 'ArrowLeft' || e.key === 'a') && !maze[r][c].w && c > 0) { player.c--; }
+            if (e.key.startsWith('Arrow')) e.preventDefault();
+            if (player.r === ROWS - 1 && player.c === COLS - 1) {
+                elapsed = Math.round((Date.now() - startTime) / 1000);
+                if (elapsed < bestTime) { bestTime = elapsed; document.getElementById('best').textContent = bestTime; }
+                won = true;
+            }
+            if (e.key === 'r' || e.key === 'R') { level++; document.getElementById('lv').textContent = level; init(); }
+        });
+
+        function draw() {
+            cx.fillStyle = '#040010'; cx.fillRect(0, 0, W, H);
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const x = c * CELL, y = r * CELL, cell = maze[r][c];
+                    cx.strokeStyle = '#1a4a2a'; cx.lineWidth = 2;
+                    if (cell.n) { cx.beginPath(); cx.moveTo(x, y); cx.lineTo(x + CELL, y); cx.stroke(); }
+                    if (cell.s) { cx.beginPath(); cx.moveTo(x, y + CELL); cx.lineTo(x + CELL, y + CELL); cx.stroke(); }
+                    if (cell.e) { cx.beginPath(); cx.moveTo(x + CELL, y); cx.lineTo(x + CELL, y + CELL); cx.stroke(); }
+                    if (cell.w) { cx.beginPath(); cx.moveTo(x, y); cx.lineTo(x, y + CELL); cx.stroke(); }
+                }
+            }
+            // Exit
+            cx.font = '22px monospace'; cx.textAlign = 'center'; cx.fillText('🟡', (COLS - 1) * CELL + CELL / 2, (ROWS - 1) * CELL + CELL / 2 + 8);
+            // Player
+            const px = player.c * CELL + CELL / 2, py = player.r * CELL + CELL / 2;
+            cx.fillStyle = '#4ade80'; cx.beginPath(); cx.arc(px, py, 10, 0, Math.PI * 2); cx.fill();
+            cx.fillStyle = '#fff'; cx.fillRect(px - 5, py - 5, 4, 4); cx.fillRect(px + 1, py - 5, 4, 4);
+            // Timer
+            if (!won) elapsed = Math.round((Date.now() - startTime) / 1000);
+            document.getElementById('tm').textContent = elapsed;
+            if (won) {
+                cx.fillStyle = 'rgba(0,0,0,.8)'; cx.fillRect(0, 0, W, H);
+                cx.fillStyle = '#4ade80'; cx.font = 'bold 44px monospace'; cx.textAlign = 'center'; cx.fillText('ESCAPED! 🏆', W / 2, H / 2 - 20);
+                cx.font = '20px monospace'; cx.fillStyle = '#facc15'; cx.fillText('Time: ' + elapsed + 's | Press R for next', W / 2, H / 2 + 24);
+            }
+        }
+        function loop() { draw(); requestAnimationFrame(loop); } loop();
+    </script>
+
+    <script src="../mobile_controls.js"></script>
+</body>
+
+</html>

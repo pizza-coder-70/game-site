@@ -1,0 +1,1515 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Sim 3D - Build Your Spaceship</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1a2e 50%, #16213e 100%);
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+        }
+
+        canvas {
+            display: block;
+            cursor: grab;
+        }
+
+        canvas:active {
+            cursor: grabbing;
+        }
+
+        /* UI Overlay */
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .ui-overlay>* {
+            pointer-events: auto;
+        }
+
+        /* Header */
+        .header {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 15px 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #00d4ff 0%, #7b2ff7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 5px;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: #a0a0ff;
+            font-weight: 400;
+        }
+
+        /* Part Toolbar */
+        .part-toolbar {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 25px;
+            padding: 15px 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            max-width: 90%;
+            overflow-x: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+        }
+
+        .part-toolbar::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .part-toolbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        .part-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 12px 20px;
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .part-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.4s, height 0.4s;
+        }
+
+        .part-btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .part-btn:hover {
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .part-btn.active {
+            background: linear-gradient(135deg, #00d4ff 0%, #7b2ff7 100%);
+            border-color: #00d4ff;
+            box-shadow: 0 5px 25px rgba(0, 212, 255, 0.5);
+        }
+
+        .part-btn span {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Control Panel */
+        .control-panel {
+            position: absolute;
+            top: 120px;
+            right: 30px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            min-width: 200px;
+        }
+
+        .control-section {
+            margin-bottom: 20px;
+        }
+
+        .control-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-label {
+            font-size: 0.75rem;
+            color: #a0a0ff;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .rotation-controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .rotate-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 8px 12px;
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            flex: 1;
+            min-width: 55px;
+        }
+
+        .rotate-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: scale(1.05);
+        }
+
+        .mode-btn {
+            width: 100%;
+            background: rgba(255, 100, 100, 0.2);
+            border: 2px solid rgba(255, 100, 100, 0.4);
+            border-radius: 12px;
+            padding: 12px;
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .mode-btn:hover {
+            background: rgba(255, 100, 100, 0.3);
+            border-color: rgba(255, 100, 100, 0.6);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255, 100, 100, 0.3);
+        }
+
+        .mode-btn.active {
+            background: rgba(255, 50, 50, 0.4);
+            border-color: #ff5050;
+            box-shadow: 0 5px 25px rgba(255, 50, 50, 0.5);
+        }
+
+        /* Instructions */
+        .instructions {
+            position: absolute;
+            top: 120px;
+            left: 30px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            max-width: 300px;
+        }
+
+        .instructions h3 {
+            font-size: 1rem;
+            margin-bottom: 12px;
+            color: #00d4ff;
+        }
+
+        .instructions ul {
+            list-style: none;
+            font-size: 0.8rem;
+            line-height: 1.8;
+            color: #ccc;
+        }
+
+        .instructions li {
+            margin-bottom: 6px;
+            padding-left: 15px;
+            position: relative;
+        }
+
+        .instructions li::before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            color: #7b2ff7;
+        }
+
+        /* Mode Indicator */
+        .mode-indicator {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 15px;
+            padding: 10px 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .mode-indicator.build {
+            border-color: rgba(0, 212, 255, 0.5);
+            color: #00d4ff;
+        }
+
+        .mode-indicator.delete {
+            border-color: rgba(255, 100, 100, 0.5);
+            color: #ff6464;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .header {
+                padding: 10px 25px;
+            }
+
+            .part-toolbar {
+                bottom: 20px;
+                padding: 10px 15px;
+            }
+
+            .part-btn {
+                padding: 10px 15px;
+                font-size: 0.75rem;
+            }
+
+            .instructions,
+            .control-panel {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="canvas-container"></div>
+
+    <div class="ui-overlay">
+        <div class="header">
+            <h1>SPACE SIM 3D</h1>
+            <div class="subtitle">Build Your Dream Spaceship</div>
+        </div>
+
+        <div class="mode-indicator build" id="modeIndicator">
+            BUILD MODE
+        </div>
+
+        <div class="instructions">
+            <h3>Controls</h3>
+            <ul>
+                <li>Click to place parts</li>
+                <li>Drag to rotate view</li>
+                <li>Scroll to zoom</li>
+                <li>Use rotation buttons</li>
+                <li>Delete mode to remove</li>
+            </ul>
+        </div>
+
+        <div class="control-panel">
+            <div class="control-section">
+                <div class="control-label">Rotation</div>
+                <div class="rotation-controls">
+                    <button class="rotate-btn" onclick="game.rotatePart('x')">↻ X</button>
+                    <button class="rotate-btn" onclick="game.rotatePart('y')">↻ Y</button>
+                    <button class="rotate-btn" onclick="game.rotatePart('z')">↻ Z</button>
+                </div>
+            </div>
+            <div class="control-section">
+                <button class="mode-btn" id="deleteModeBtn" onclick="game.toggleDeleteMode()">
+                    DELETE MODE
+                </button>
+            </div>
+            <div class="control-section">
+                <button class="mode-btn" id="launchBtn" onclick="game.launchRocket()"
+                    style="background: rgba(0, 255, 100, 0.2); border-color: rgba(0, 255, 100, 0.4);">
+                    🚀 LAUNCH ROCKET
+                </button>
+            </div>
+        </div>
+
+        <div class="part-toolbar" id="partToolbar">
+            <!-- Parts will be added dynamically -->
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        class SpaceSim3D {
+            constructor() {
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.composer = null;
+                this.placedParts = [];
+                this.selectedPartType = null;
+                this.previewPart = null;
+                this.gridHelper = null;
+                this.deleteMode = false;
+                this.flightMode = false;
+                this.currentRotation = { x: 0, y: 0, z: 0 };
+                this.raycaster = new THREE.Raycaster();
+                this.mouse = new THREE.Vector2();
+                this.isDragging = false;
+                this.previousMousePosition = { x: 0, y: 0 };
+
+                // Flight physics
+                this.rocketGroup = null;
+                this.velocity = new THREE.Vector3();
+                this.acceleration = new THREE.Vector3();
+                this.thrust = 0;
+                this.maxThrust = 0.05;
+                this.thrustParticles = [];
+
+                this.partDefinitions = {
+                    cockpit: {
+                        color: 0x00d4ff,
+                        geometry: 'cone',
+                        name: 'Cockpit',
+                        emissive: 0x0066ff
+                    },
+                    engine: {
+                        color: 0xff6b35,
+                        geometry: 'cylinder',
+                        name: 'Engine',
+                        emissive: 0xff3300
+                    },
+                    fuelTank: {
+                        color: 0x888888,
+                        geometry: 'cylinder',
+                        name: 'Fuel Tank',
+                        emissive: 0x444444
+                    },
+                    wing: {
+                        color: 0x4ecdc4,
+                        geometry: 'box',
+                        name: 'Wing',
+                        emissive: 0x2a7a73
+                    },
+                    solarPanel: {
+                        color: 0x1a535c,
+                        geometry: 'plane',
+                        name: 'Solar Panel',
+                        emissive: 0x0d2a30
+                    },
+                    weapon: {
+                        color: 0xff006e,
+                        geometry: 'box',
+                        name: 'Weapon',
+                        emissive: 0xaa0048
+                    },
+                    antenna: {
+                        color: 0xffd60a,
+                        geometry: 'cylinder',
+                        name: 'Antenna',
+                        emissive: 0xaa8800
+                    },
+                    cargo: {
+                        color: 0x6a4c93,
+                        geometry: 'box',
+                        name: 'Cargo Bay',
+                        emissive: 0x3a2c53
+                    }
+                };
+
+                this.init();
+                this.createPartButtons();
+                this.animate();
+            }
+
+            init() {
+                // Scene
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x000510);
+                this.scene.fog = new THREE.FogExp2(0x000510, 0.015);
+
+                // Camera
+                this.camera = new THREE.PerspectiveCamera(
+                    75,
+                    window.innerWidth / window.innerHeight,
+                    0.1,
+                    1000
+                );
+                this.camera.position.set(10, 10, 10);
+                this.camera.lookAt(0, 0, 0);
+
+                // Renderer with advanced features
+                this.renderer = new THREE.WebGLRenderer({
+                    antialias: true,
+                    alpha: true,
+                    powerPreference: 'high-performance'
+                });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                this.renderer.toneMappingExposure = 1.2;
+                this.renderer.outputEncoding = THREE.sRGBEncoding;
+                document.getElementById('canvas-container').appendChild(this.renderer.domElement);
+
+                // Advanced Lighting
+                const ambientLight = new THREE.AmbientLight(0x404080, 0.3);
+                this.scene.add(ambientLight);
+
+                // Main directional light with shadows
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+                directionalLight.position.set(10, 15, 5);
+                directionalLight.castShadow = true;
+                directionalLight.shadow.mapSize.width = 2048;
+                directionalLight.shadow.mapSize.height = 2048;
+                directionalLight.shadow.camera.near = 0.5;
+                directionalLight.shadow.camera.far = 50;
+                directionalLight.shadow.camera.left = -20;
+                directionalLight.shadow.camera.right = 20;
+                directionalLight.shadow.camera.top = 20;
+                directionalLight.shadow.camera.bottom = -20;
+                directionalLight.shadow.bias = -0.0001;
+                this.scene.add(directionalLight);
+
+                // Accent lights
+                const accentLight1 = new THREE.PointLight(0x7b2ff7, 0.8, 30);
+                accentLight1.position.set(-10, 5, -10);
+                this.scene.add(accentLight1);
+
+                const accentLight2 = new THREE.PointLight(0x00d4ff, 0.6, 25);
+                accentLight2.position.set(10, 3, 10);
+                this.scene.add(accentLight2);
+
+                // Rim light
+                const rimLight = new THREE.DirectionalLight(0x00d4ff, 0.5);
+                rimLight.position.set(-5, 0, -10);
+                this.scene.add(rimLight);
+
+                // Grid Helper with shadows
+                this.gridHelper = new THREE.GridHelper(20, 40, 0x00d4ff, 0x1a1a2e);
+                this.gridHelper.material.opacity = 0.3;
+                this.gridHelper.material.transparent = true;
+                this.gridHelper.receiveShadow = true;
+                this.scene.add(this.gridHelper);
+
+                // Ground plane for shadows
+                const groundGeometry = new THREE.PlaneGeometry(50, 50);
+                const groundMaterial = new THREE.ShadowMaterial({ opacity: 0.3 });
+                const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+                ground.rotation.x = -Math.PI / 2;
+                ground.position.y = -0.01;
+                ground.receiveShadow = true;
+                this.scene.add(ground);
+
+                // Starfield and nebula
+                this.createStarfield();
+                this.createNebula();
+
+                // Post-processing
+                this.setupPostProcessing();
+
+                // Event Listeners
+                window.addEventListener('resize', () => this.onWindowResize());
+                window.addEventListener('keydown', (e) => this.onKeyDown(e));
+                window.addEventListener('keyup', (e) => this.onKeyUp(e));
+                this.renderer.domElement.addEventListener('mousedown', (e) => this.onMouseDown(e));
+                this.renderer.domElement.addEventListener('mousemove', (e) => this.onMouseMove(e));
+                this.renderer.domElement.addEventListener('mouseup', () => this.onMouseUp());
+                this.renderer.domElement.addEventListener('click', (e) => this.onClick(e));
+                this.renderer.domElement.addEventListener('wheel', (e) => this.onWheel(e));
+            }
+
+            createStarfield() {
+                const starGeometry = new THREE.BufferGeometry();
+                const starCount = 5000;
+                const positions = new Float32Array(starCount * 3);
+                const colors = new Float32Array(starCount * 3);
+                const sizes = new Float32Array(starCount);
+
+                for (let i = 0; i < starCount; i++) {
+                    positions[i * 3] = (Math.random() - 0.5) * 300;
+                    positions[i * 3 + 1] = (Math.random() - 0.5) * 300;
+                    positions[i * 3 + 2] = (Math.random() - 0.5) * 300;
+
+                    // Varied star colors (white, blue, yellow)
+                    const colorChoice = Math.random();
+                    if (colorChoice > 0.8) {
+                        colors[i * 3] = 0.5 + Math.random() * 0.5;
+                        colors[i * 3 + 1] = 0.7 + Math.random() * 0.3;
+                        colors[i * 3 + 2] = 1.0;
+                    } else if (colorChoice > 0.6) {
+                        colors[i * 3] = 1.0;
+                        colors[i * 3 + 1] = 0.9 + Math.random() * 0.1;
+                        colors[i * 3 + 2] = 0.6 + Math.random() * 0.2;
+                    } else {
+                        colors[i * 3] = 1.0;
+                        colors[i * 3 + 1] = 1.0;
+                        colors[i * 3 + 2] = 1.0;
+                    }
+
+                    sizes[i] = Math.random() * 0.5 + 0.1;
+                }
+
+                starGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                starGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+                starGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+                const starMaterial = new THREE.PointsMaterial({
+                    size: 0.3,
+                    transparent: true,
+                    opacity: 0.9,
+                    vertexColors: true,
+                    sizeAttenuation: true,
+                    blending: THREE.AdditiveBlending
+                });
+
+                const stars = new THREE.Points(starGeometry, starMaterial);
+                this.scene.add(stars);
+                this.stars = stars;
+            }
+
+            createNebula() {
+                // Create colorful nebula clouds
+                const nebulaGroup = new THREE.Group();
+
+                for (let i = 0; i < 3; i++) {
+                    const geometry = new THREE.SphereGeometry(30, 32, 32);
+                    const material = new THREE.MeshBasicMaterial({
+                        color: i === 0 ? 0x7b2ff7 : i === 1 ? 0x00d4ff : 0xff006e,
+                        transparent: true,
+                        opacity: 0.03,
+                        side: THREE.BackSide,
+                        blending: THREE.AdditiveBlending
+                    });
+                    const nebula = new THREE.Mesh(geometry, material);
+                    nebula.position.set(
+                        (Math.random() - 0.5) * 100,
+                        (Math.random() - 0.5) * 100,
+                        (Math.random() - 0.5) * 100
+                    );
+                    nebulaGroup.add(nebula);
+                }
+
+                this.scene.add(nebulaGroup);
+                this.nebula = nebulaGroup;
+            }
+
+            setupPostProcessing() {
+                // Post-processing disabled for compatibility
+                this.composer = null;
+            }
+
+            launchRocket() {
+                if (this.placedParts.length === 0) {
+                    alert('Build a rocket first!');
+                    return;
+                }
+
+                this.flightMode = true;
+                this.updateModeIndicator();
+
+                // Create rocket group from all parts
+                this.rocketGroup = new THREE.Group();
+
+                // Move all parts to rocket group
+                this.placedParts.forEach(part => {
+                    this.scene.remove(part);
+                    this.rocketGroup.add(part);
+                });
+
+                this.scene.add(this.rocketGroup);
+
+                // Reset physics
+                this.velocity.set(0, 0, 0);
+                this.acceleration.set(0, 0, 0);
+                this.thrust = 0;
+
+                // Hide UI elements
+                document.querySelector('.part-toolbar').style.display = 'none';
+                document.querySelector('.control-panel').style.display = 'none';
+                document.querySelector('.instructions').style.display = 'none';
+
+                // Add flight instructions
+                this.showFlightInstructions();
+            }
+
+            showFlightInstructions() {
+                const instructions = document.createElement('div');
+                instructions.id = 'flight-instructions';
+                instructions.style.cssText = `
+                    position: absolute;
+                    top: 120px;
+                    left: 30px;
+                    background: rgba(255, 255, 255, 0.08);
+                    backdrop-filter: blur(15px);
+                    border: 1px solid rgba(255, 255, 255, 0.15);
+                    border-radius: 20px;
+                    padding: 20px;
+                    color: white;
+                    font-family: 'Orbitron', sans-serif;
+                    max-width: 300px;
+                `;
+                instructions.innerHTML = `
+                    <h3 style="color: #00d4ff; margin-bottom: 12px;">Flight Controls</h3>
+                    <ul style="list-style: none; font-size: 0.8rem; line-height: 1.8;">
+                        <li>▸ SPACE - Thrust</li>
+                        <li>▸ Arrow Keys - Rotate</li>
+                        <li>▸ R - Return to Build</li>
+                    </ul>
+                `;
+                document.querySelector('.ui-overlay').appendChild(instructions);
+            }
+
+            returnToBuild() {
+                this.flightMode = false;
+                this.updateModeIndicator();
+
+                // Move parts back to scene
+                if (this.rocketGroup) {
+                    const parts = [...this.rocketGroup.children];
+                    parts.forEach(part => {
+                        this.rocketGroup.remove(part);
+                        this.scene.add(part);
+                    });
+                    this.scene.remove(this.rocketGroup);
+                    this.rocketGroup = null;
+                }
+
+                // Reset camera
+                this.camera.position.set(10, 10, 10);
+                this.camera.lookAt(0, 0, 0);
+
+                // Show UI
+                document.querySelector('.part-toolbar').style.display = 'flex';
+                document.querySelector('.control-panel').style.display = 'block';
+                document.querySelector('.instructions').style.display = 'block';
+
+                // Remove flight instructions
+                const flightInstructions = document.getElementById('flight-instructions');
+                if (flightInstructions) flightInstructions.remove();
+            }
+
+            createPartButtons() {
+                const toolbar = document.getElementById('partToolbar');
+
+                for (const [key, def] of Object.entries(this.partDefinitions)) {
+                    const btn = document.createElement('button');
+                    btn.className = 'part-btn';
+                    btn.innerHTML = `<span>${def.name}</span>`;
+                    btn.onclick = () => this.selectPart(key, btn);
+                    toolbar.appendChild(btn);
+                }
+            }
+
+            selectPart(partType, btnElement) {
+                // Deselect all buttons
+                document.querySelectorAll('.part-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+
+                // Select this button
+                btnElement.classList.add('active');
+                this.selectedPartType = partType;
+                this.deleteMode = false;
+                this.updateModeIndicator();
+
+                // Reset delete mode button
+                document.getElementById('deleteModeBtn').classList.remove('active');
+            }
+
+            toggleDeleteMode() {
+                this.deleteMode = !this.deleteMode;
+                const btn = document.getElementById('deleteModeBtn');
+
+                if (this.deleteMode) {
+                    btn.classList.add('active');
+                    this.selectedPartType = null;
+                    document.querySelectorAll('.part-btn').forEach(b => b.classList.remove('active'));
+                } else {
+                    btn.classList.remove('active');
+                }
+
+                this.updateModeIndicator();
+            }
+
+            updateModeIndicator() {
+                const indicator = document.getElementById('modeIndicator');
+                if (this.flightMode) {
+                    indicator.textContent = 'FLIGHT MODE';
+                    indicator.className = 'mode-indicator flight';
+                    indicator.style.borderColor = 'rgba(0, 255, 100, 0.5)';
+                    indicator.style.color = '#00ff64';
+                } else if (this.deleteMode) {
+                    indicator.textContent = 'DELETE MODE';
+                    indicator.className = 'mode-indicator delete';
+                } else {
+                    indicator.textContent = 'BUILD MODE';
+                    indicator.className = 'mode-indicator build';
+                }
+            }
+
+            createPartMesh(partType) {
+                const def = this.partDefinitions[partType];
+                let partGroup = new THREE.Group();
+
+                switch (partType) {
+                    case 'cockpit':
+                        // Realistic command module/capsule
+                        const capsuleBody = new THREE.Mesh(
+                            new THREE.ConeGeometry(0.6, 1.2, 16),
+                            new THREE.MeshStandardMaterial({
+                                color: def.color,
+                                metalness: 0.85,
+                                roughness: 0.25,
+                                emissive: def.emissive,
+                                emissiveIntensity: 0.4
+                            })
+                        );
+                        capsuleBody.position.y = 0.3;
+                        partGroup.add(capsuleBody);
+
+                        // Heat shield base
+                        const heatShield = new THREE.Mesh(
+                            new THREE.CylinderGeometry(0.7, 0.8, 0.15, 16),
+                            new THREE.MeshStandardMaterial({
+                                color: 0x2a2a2a,
+                                metalness: 0.3,
+                                roughness: 0.8
+                            })
+                        );
+                        heatShield.position.y = -0.35;
+                        partGroup.add(heatShield);
+
+                        // Windows
+                        for (let i = 0; i < 3; i++) {
+                            const angle = (i * Math.PI * 2) / 3;
+                            const window = new THREE.Mesh(
+                                new THREE.CircleGeometry(0.1, 8),
+                                new THREE.MeshStandardMaterial({
+                                    color: 0x88ccff,
+                                    emissive: 0x4488ff,
+                                    emissiveIntensity: 0.5,
+                                    metalness: 0.9,
+                                    roughness: 0.1
+                                })
+                            );
+                            window.position.set(
+                                Math.sin(angle) * 0.45,
+                                0.4,
+                                Math.cos(angle) * 0.45
+                            );
+                            window.rotation.y = -angle;
+                            partGroup.add(window);
+                        }
+                        break;
+
+                    case 'engine':
+                        // Realistic rocket engine with nozzle
+                        const engineBody = new THREE.Mesh(
+                            new THREE.CylinderGeometry(0.5, 0.5, 0.8, 16),
+                            new THREE.MeshStandardMaterial({
+                                color: def.color,
+                                metalness: 0.9,
+                                roughness: 0.2,
+                                emissive: def.emissive,
+                                emissiveIntensity: 0.3
+                            })
+                        );
+                        partGroup.add(engineBody);
+
+                        // Engine nozzle
+                        const nozzle = new THREE.Mesh(
+                            new THREE.CylinderGeometry(0.3, 0.6, 0.5, 16),
+                            new THREE.MeshStandardMaterial({
+                                color: 0x444444,
+                                metalness: 0.95,
+                                roughness: 0.15
+                            })
+                        );
+                        nozzle.position.y = -0.65;
+                        partGroup.add(nozzle);
+
+                        // Nozzle interior (glowing)
+                        const nozzleInterior = new THREE.Mesh(
+                            new THREE.CylinderGeometry(0.25, 0.5, 0.5, 16),
+                            new THREE.MeshStandardMaterial({
+                                color: 0xff4400,
+                                emissive: 0xff4400,
+                                emissiveIntensity: 0.8,
+                                metalness: 0.5,
+                                roughness: 0.3
+                            })
+                        );
+                        nozzleInterior.position.y = -0.65;
+                        partGroup.add(nozzleInterior);
+
+                        // Mounting ring
+                        const mountingRing = new THREE.Mesh(
+                            new THREE.TorusGeometry(0.55, 0.08, 8, 16),
+                            new THREE.MeshStandardMaterial({
+                                color: 0x666666,
+                                metalness: 0.9,
+                                roughness: 0.3
+                            })
+                        );
+                        mountingRing.rotation.x = Math.PI / 2;
+                        mountingRing.position.y = 0.4;
+                        partGroup.add(mountingRing);
+                        break;
+
+                    case 'fuelTank':
+                        // Realistic cylindrical fuel tank
+                        const tankBody = new THREE.Mesh(
+                            new THREE.CylinderGeometry(0.5, 0.5, 1.5, 16),
+                            new THREE.MeshStandardMaterial({
+                                color: def.color,
+                                metalness: 0.9,
+                                roughness: 0.2,
+                                emissive: def.emissive,
+                                emissiveIntensity: 0.2
+                            })
+                        );
+                        partGroup.add(tankBody);
+
+                        // Top dome
+                        const topDome = new THREE.Mesh(
+                            new THREE.SphereGeometry(0.5, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+                            new THREE.MeshStandardMaterial({
+                                color: def.color,
+                                metalness: 0.9,
+                                roughness: 0.2
+                            })
+                        );
+                        topDome.position.y = 0.75;
+                        partGroup.add(topDome);
+
+                        // Bottom dome
+                        const bottomDome = new THREE.Mesh(
+                            new THREE.SphereGeometry(0.5, 16, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
+                            new THREE.MeshStandardMaterial({
+                                color: def.color,
+                                metalness: 0.9,
+                                roughness: 0.2
+                            })
+                        );
+                        bottomDome.position.y = -0.75;
+                        partGroup.add(bottomDome);
+
+                        // Reinforcement rings
+                        for (let i = 0; i < 3; i++) {
+                            const ring = new THREE.Mesh(
+                                new THREE.TorusGeometry(0.52, 0.03, 8, 16),
+                                new THREE.MeshStandardMaterial({
+                                    color: 0x555555,
+                                    metalness: 0.95,
+                                    roughness: 0.15
+                                })
+                            );
+                            ring.rotation.x = Math.PI / 2;
+                            ring.position.y = -0.5 + i * 0.5;
+                            partGroup.add(ring);
+                        }
+                        break;
+
+                    case 'wing':
+                        // Realistic aerodynamic wing/fin
+                        const wingShape = new THREE.Shape();
+                        wingShape.moveTo(0, 0);
+                        wingShape.lineTo(0.3, 0);
+                        wingShape.lineTo(0.1, 1.5);
+                        wingShape.lineTo(0, 1.2);
+                        wingShape.lineTo(0, 0);
+
+                        const wingGeometry = new THREE.ExtrudeGeometry(wingShape, {
+                            depth: 0.1,
+                            bevelEnabled: true,
+                            bevelThickness: 0.02,
+                            bevelSize: 0.02,
+                            bevelSegments: 3
+                        });
+
+                        const wing = new THREE.Mesh(
+                            wingGeometry,
+                            new THREE.MeshStandardMaterial({
+                                color: def.color,
+                                metalness: 0.85,
+                                roughness: 0.25,
+                                emissive: def.emissive,
+                                emissiveIntensity: 0.3
+                            })
+                        );
+                        wing.rotation.y = Math.PI / 2;
+                        wing.position.set(-0.05, -0.6, 0);
+                        partGroup.add(wing);
+                        break;
+
+                    case 'solarPanel':
+                        // Realistic solar panel array
+                        const panelBase = new THREE.Mesh(
+                            new THREE.BoxGeometry(0.2, 0.1, 0.2),
+                            new THREE.MeshStandardMaterial({
+                                color: 0x333333,
+                                metalness: 0.8,
+                                roughness: 0.3
+                            })
+                        );
+                        partGroup.add(panelBase);
+
+                        // Solar cells
+                        const solarArray = new THREE.Mesh(
+                            new THREE.BoxGeometry(2.5, 0.05, 1.2),
+                            new THREE.MeshStandardMaterial({
+                                color: def.color,
+                                metalness: 0.7,
+                                roughness: 0.2,
+                                emissive: 0x0a2a3a,
+                                emissiveIntensity: 0.3
+                            })
+                        );
+                        solarArray.position.y = 0.1;
+                        partGroup.add(solarArray);
+
+                        // Grid lines on solar panel
+                        const gridMaterial = new THREE.LineBasicMaterial({ color: 0x000000 });
+                        for (let i = -1; i <= 1; i += 0.4) {
+                            const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+                                new THREE.Vector3(-1.25, 0.13, i * 0.6),
+                                new THREE.Vector3(1.25, 0.13, i * 0.6)
+                            ]);
+                            const line = new THREE.Line(lineGeometry, gridMaterial);
+                            partGroup.add(line);
+                        }
+                        for (let i = -1.25; i <= 1.25; i += 0.5) {
+                            const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+                                new THREE.Vector3(i, 0.13, -0.6),
+                                new THREE.Vector3(i, 0.13, 0.6)
+                            ]);
+                            const line = new THREE.Line(lineGeometry, gridMaterial);
+                            partGroup.add(line);
+                        }
+                        break;
+
+                    case 'weapon':
+                        // Realistic weapon/thruster pod
+                        const weaponBody = new THREE.Mesh(
+                            new THREE.BoxGeometry(0.3, 0.3, 1.2),
+                            new THREE.MeshStandardMaterial({
+                                color: def.color,
+                                metalness: 0.9,
+                                roughness: 0.2,
+                                emissive: def.emissive,
+                                emissiveIntensity: 0.4
+                            })
+                        );
+                        partGroup.add(weaponBody);
+
+                        // Barrel/nozzle
+                        const barrel = new THREE.Mesh(
+                            new THREE.CylinderGeometry(0.08, 0.08, 0.6, 8),
+                            new THREE.MeshStandardMaterial({
+                                color: 0x222222,
+                                metalness: 0.95,
+                                roughness: 0.1
+                            })
+                        );
+                        barrel.rotation.x = Math.PI / 2;
+                        barrel.position.z = 0.9;
+                        partGroup.add(barrel);
+
+                        // Muzzle glow
+                        const muzzle = new THREE.Mesh(
+                            new THREE.CircleGeometry(0.09, 8),
+                            new THREE.MeshStandardMaterial({
+                                color: 0xff0066,
+                                emissive: 0xff0066,
+                                emissiveIntensity: 0.8
+                            })
+                        );
+                        muzzle.position.z = 1.21;
+                        partGroup.add(muzzle);
+                        break;
+
+                    case 'antenna':
+                        // Realistic communications antenna
+                        const antennaBase = new THREE.Mesh(
+                            new THREE.CylinderGeometry(0.15, 0.2, 0.3, 8),
+                            new THREE.MeshStandardMaterial({
+                                color: 0x666666,
+                                metalness: 0.9,
+                                roughness: 0.2
+                            })
+                        );
+                        antennaBase.position.y = -0.15;
+                        partGroup.add(antennaBase);
+
+                        // Antenna mast
+                        const mast = new THREE.Mesh(
+                            new THREE.CylinderGeometry(0.05, 0.05, 1.5, 8),
+                            new THREE.MeshStandardMaterial({
+                                color: def.color,
+                                metalness: 0.95,
+                                roughness: 0.1,
+                                emissive: def.emissive,
+                                emissiveIntensity: 0.3
+                            })
+                        );
+                        mast.position.y = 0.6;
+                        partGroup.add(mast);
+
+                        // Dish
+                        const dish = new THREE.Mesh(
+                            new THREE.CylinderGeometry(0.5, 0.3, 0.2, 16),
+                            new THREE.MeshStandardMaterial({
+                                color: 0xcccccc,
+                                metalness: 0.9,
+                                roughness: 0.15
+                            })
+                        );
+                        dish.position.y = 1.3;
+                        partGroup.add(dish);
+
+                        // Receiver
+                        const receiver = new THREE.Mesh(
+                            new THREE.SphereGeometry(0.1, 8, 8),
+                            new THREE.MeshStandardMaterial({
+                                color: def.color,
+                                emissive: def.emissive,
+                                emissiveIntensity: 0.6,
+                                metalness: 0.8,
+                                roughness: 0.2
+                            })
+                        );
+                        receiver.position.y = 1.3;
+                        partGroup.add(receiver);
+                        break;
+
+                    case 'cargo':
+                        // Realistic cargo bay
+                        const cargoBody = new THREE.Mesh(
+                            new THREE.BoxGeometry(1.2, 0.8, 1.5),
+                            new THREE.MeshStandardMaterial({
+                                color: def.color,
+                                metalness: 0.85,
+                                roughness: 0.3,
+                                emissive: def.emissive,
+                                emissiveIntensity: 0.2
+                            })
+                        );
+                        partGroup.add(cargoBody);
+
+                        // Cargo doors
+                        const door1 = new THREE.Mesh(
+                            new THREE.BoxGeometry(1.15, 0.05, 1.45),
+                            new THREE.MeshStandardMaterial({
+                                color: 0x555555,
+                                metalness: 0.9,
+                                roughness: 0.25
+                            })
+                        );
+                        door1.position.y = 0.42;
+                        partGroup.add(door1);
+
+                        // Door hinges
+                        for (let i = -0.6; i <= 0.6; i += 0.6) {
+                            const hinge = new THREE.Mesh(
+                                new THREE.CylinderGeometry(0.05, 0.05, 1.2, 8),
+                                new THREE.MeshStandardMaterial({
+                                    color: 0x333333,
+                                    metalness: 0.95,
+                                    roughness: 0.1
+                                })
+                            );
+                            hinge.rotation.z = Math.PI / 2;
+                            hinge.position.set(0, 0.45, i);
+                            partGroup.add(hinge);
+                        }
+
+                        // Warning stripes
+                        const stripe1 = new THREE.Mesh(
+                            new THREE.BoxGeometry(1.21, 0.1, 0.1),
+                            new THREE.MeshStandardMaterial({
+                                color: 0xffdd00,
+                                emissive: 0xffaa00,
+                                emissiveIntensity: 0.3
+                            })
+                        );
+                        stripe1.position.set(0, 0, 0.7);
+                        partGroup.add(stripe1);
+
+                        const stripe2 = new THREE.Mesh(
+                            new THREE.BoxGeometry(1.21, 0.1, 0.1),
+                            new THREE.MeshStandardMaterial({
+                                color: 0xffdd00,
+                                emissive: 0xffaa00,
+                                emissiveIntensity: 0.3
+                            })
+                        );
+                        stripe2.position.set(0, 0, -0.7);
+                        partGroup.add(stripe2);
+                        break;
+                }
+
+                // Add shadows to all meshes in the group
+                partGroup.traverse((child) => {
+                    if (child instanceof THREE.Mesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+
+                // Add outline to the entire group
+                partGroup.traverse((child) => {
+                    if (child instanceof THREE.Mesh && child.geometry) {
+                        const edges = new THREE.EdgesGeometry(child.geometry);
+                        const lineMaterial = new THREE.LineBasicMaterial({
+                            color: 0xffffff,
+                            linewidth: 1,
+                            transparent: true,
+                            opacity: 0.4
+                        });
+                        const outline = new THREE.LineSegments(edges, lineMaterial);
+                        child.add(outline);
+                    }
+                });
+
+                partGroup.userData.partType = partType;
+                partGroup.userData.originalColor = def.color;
+                partGroup.userData.originalEmissive = def.emissive;
+
+                return partGroup;
+            }
+
+            rotatePart(axis) {
+                const angle = Math.PI / 2; // 90 degrees
+                this.currentRotation[axis] += angle;
+            }
+
+            onClick(event) {
+                if (this.isDragging) return;
+
+                this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+                this.raycaster.setFromCamera(this.mouse, this.camera);
+
+                if (this.deleteMode) {
+                    // Delete mode - remove clicked part
+                    const intersects = this.raycaster.intersectObjects(this.placedParts, true);
+                    if (intersects.length > 0) {
+                        let partToRemove = intersects[0].object;
+                        // Find the root part group
+                        while (partToRemove.parent && !this.placedParts.includes(partToRemove)) {
+                            partToRemove = partToRemove.parent;
+                        }
+                        if (partToRemove) {
+                            this.scene.remove(partToRemove);
+                            this.placedParts = this.placedParts.filter(p => p !== partToRemove);
+                            // Dispose all geometries and materials in the group
+                            partToRemove.traverse((child) => {
+                                if (child instanceof THREE.Mesh) {
+                                    if (child.geometry) child.geometry.dispose();
+                                    if (child.material) child.material.dispose();
+                                }
+                            });
+                        }
+                    }
+                } else if (this.selectedPartType) {
+                    // Build mode - place part
+                    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+                    const intersection = new THREE.Vector3();
+                    this.raycaster.ray.intersectPlane(plane, intersection);
+
+                    if (intersection) {
+                        // Snap to grid
+                        intersection.x = Math.round(intersection.x * 2) / 2;
+                        intersection.y = Math.round(intersection.y * 2) / 2;
+                        intersection.z = Math.round(intersection.z * 2) / 2;
+
+                        const part = this.createPartMesh(this.selectedPartType);
+                        part.position.copy(intersection);
+
+                        // Apply rotation
+                        part.rotation.x = this.currentRotation.x;
+                        part.rotation.y = this.currentRotation.y;
+                        part.rotation.z = this.currentRotation.z;
+
+                        this.scene.add(part);
+                        this.placedParts.push(part);
+                    }
+                }
+            }
+
+            onMouseDown(event) {
+                this.isDragging = false;
+                this.previousMousePosition = {
+                    x: event.clientX,
+                    y: event.clientY
+                };
+            }
+
+            onMouseMove(event) {
+                if (event.buttons === 1) { // Left mouse button
+                    const deltaX = event.clientX - this.previousMousePosition.x;
+                    const deltaY = event.clientY - this.previousMousePosition.y;
+
+                    if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
+                        this.isDragging = true;
+                    }
+
+                    // Rotate camera around scene
+                    const rotationSpeed = 0.005;
+                    const radius = this.camera.position.length();
+
+                    const theta = Math.atan2(this.camera.position.x, this.camera.position.z);
+                    const phi = Math.acos(this.camera.position.y / radius);
+
+                    const newTheta = theta - deltaX * rotationSpeed;
+                    const newPhi = Math.max(0.1, Math.min(Math.PI - 0.1, phi - deltaY * rotationSpeed));
+
+                    this.camera.position.x = radius * Math.sin(newPhi) * Math.sin(newTheta);
+                    this.camera.position.y = radius * Math.cos(newPhi);
+                    this.camera.position.z = radius * Math.sin(newPhi) * Math.cos(newTheta);
+
+                    this.camera.lookAt(0, 0, 0);
+
+                    this.previousMousePosition = {
+                        x: event.clientX,
+                        y: event.clientY
+                    };
+                } else {
+                    // Hover effect
+                    this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                    this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+                    this.raycaster.setFromCamera(this.mouse, this.camera);
+                    const intersects = this.raycaster.intersectObjects(this.placedParts, true);
+
+                    // Reset all parts
+                    this.placedParts.forEach(part => {
+                        part.traverse((child) => {
+                            if (child instanceof THREE.Mesh && child.material.emissiveIntensity !== undefined) {
+                                child.material.emissiveIntensity = 0.2;
+                            }
+                        });
+                    });
+
+                    // Highlight hovered part
+                    if (intersects.length > 0 && this.deleteMode) {
+                        let hoveredPart = intersects[0].object;
+                        // Find the root part group
+                        while (hoveredPart.parent && !this.placedParts.includes(hoveredPart)) {
+                            hoveredPart = hoveredPart.parent;
+                        }
+                        if (hoveredPart) {
+                            hoveredPart.traverse((child) => {
+                                if (child instanceof THREE.Mesh && child.material.emissiveIntensity !== undefined) {
+                                    child.material.emissiveIntensity = 0.8;
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+
+            onMouseUp() {
+                setTimeout(() => {
+                    this.isDragging = false;
+                }, 100);
+            }
+
+            onWheel(event) {
+                event.preventDefault();
+                const zoomSpeed = 0.1;
+                const delta = event.deltaY > 0 ? 1 : -1;
+
+                const distance = this.camera.position.length();
+                const newDistance = Math.max(5, Math.min(50, distance + delta * zoomSpeed * distance));
+
+                this.camera.position.multiplyScalar(newDistance / distance);
+            }
+
+            onKeyDown(event) {
+                if (this.flightMode) {
+                    if (event.code === 'Space') {
+                        event.preventDefault();
+                        this.thrust = this.maxThrust;
+                    }
+                    if (event.code === 'KeyR') {
+                        this.returnToBuild();
+                    }
+                }
+            }
+
+            onKeyUp(event) {
+                if (this.flightMode && event.code === 'Space') {
+                    this.thrust = 0;
+                }
+            }
+
+            onWindowResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+
+            updatePhysics() {
+                if (!this.flightMode || !this.rocketGroup) return;
+
+                // Apply thrust
+                const thrustVector = new THREE.Vector3(0, this.thrust, 0);
+                this.acceleration.copy(thrustVector);
+
+                // Apply gravity
+                this.acceleration.y -= 0.001;
+
+                // Update velocity
+                this.velocity.add(this.acceleration);
+
+                // Apply drag
+                this.velocity.multiplyScalar(0.99);
+
+                // Update position
+                this.rocketGroup.position.add(this.velocity);
+
+                // Rotate rocket slightly based on velocity
+                if (this.velocity.length() > 0.01) {
+                    this.rocketGroup.rotation.x = Math.sin(Date.now() * 0.001) * 0.05;
+                    this.rocketGroup.rotation.z = Math.cos(Date.now() * 0.001) * 0.05;
+                }
+
+                // Update camera to follow rocket
+                const offset = new THREE.Vector3(0, 5, 15);
+                const targetCameraPos = this.rocketGroup.position.clone().add(offset);
+                this.camera.position.lerp(targetCameraPos, 0.05);
+                this.camera.lookAt(this.rocketGroup.position);
+
+                // Create thrust particles
+                if (this.thrust > 0) {
+                    this.createThrustParticle();
+                }
+
+                // Update thrust particles
+                this.updateThrustParticles();
+            }
+
+            createThrustParticle() {
+                const geometry = new THREE.SphereGeometry(0.2, 8, 8);
+                const material = new THREE.MeshBasicMaterial({
+                    color: 0xff6b35,
+                    transparent: true,
+                    opacity: 1
+                });
+                const particle = new THREE.Mesh(geometry, material);
+                particle.position.copy(this.rocketGroup.position);
+                particle.position.y -= 1;
+                particle.velocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.1,
+                    -0.2,
+                    (Math.random() - 0.5) * 0.1
+                );
+                particle.life = 1.0;
+                this.scene.add(particle);
+                this.thrustParticles.push(particle);
+            }
+
+            updateThrustParticles() {
+                for (let i = this.thrustParticles.length - 1; i >= 0; i--) {
+                    const particle = this.thrustParticles[i];
+                    particle.position.add(particle.velocity);
+                    particle.life -= 0.02;
+                    particle.material.opacity = particle.life;
+                    particle.scale.multiplyScalar(0.95);
+
+                    if (particle.life <= 0) {
+                        this.scene.remove(particle);
+                        particle.geometry.dispose();
+                        particle.material.dispose();
+                        this.thrustParticles.splice(i, 1);
+                    }
+                }
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+
+                // Rotate stars slowly
+                if (this.stars) {
+                    this.stars.rotation.y += 0.0002;
+                    this.stars.rotation.x += 0.0001;
+                }
+
+                // Animate nebula
+                if (this.nebula) {
+                    this.nebula.rotation.y += 0.0001;
+                    this.nebula.rotation.z += 0.00005;
+                }
+
+                // Update flight physics
+                this.updatePhysics();
+
+                // Render
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+        // Initialize game
+        const game = new SpaceSim3D();
+    </script>
+</body>
+
+</html>

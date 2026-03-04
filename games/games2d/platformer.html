@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Neon Platformer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #040010;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #a78bfa;
+            font-size: 1.5rem;
+            text-shadow: 0 0 16px #a78bfa;
+            margin-bottom: 6px
+        }
+
+        canvas {
+            border: 2px solid #a78bfa;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(167, 139, 250, .4)
+        }
+
+        #ui {
+            display: flex;
+            gap: 20px;
+            color: #a78bfa;
+            font-size: .85rem;
+            margin-top: 6px
+        }
+
+        #msg {
+            color: #facc15;
+            font-size: 1rem;
+            min-height: 22px;
+            margin-top: 4px
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🎮 Neon Platformer</h1>
+    <div id="ui"><span>Score: <b id="sc">0</b></span><span>Lives: <b id="lv">3</b></span><span>Level: <b
+                id="lev">1</b></span></div>
+    <canvas id="c" width="600" height="360"></canvas>
+    <div id="msg">Arrow keys / WASD to move. Space or Up to jump!</div>
+    <script>
+        const cv = document.getElementById('c'), cx = cv.getContext('2d');
+        const W = 600, H = 360;
+        let score = 0, lives = 3, level = 1, over = false, won = false;
+        let keys = {};
+        document.addEventListener('keydown', e => { keys[e.code] = true; if (['Space', 'ArrowUp', 'KeyW'].includes(e.code)) e.preventDefault(); });
+        document.addEventListener('keyup', e => { keys[e.code] = false; });
+
+        const COLORS = ['#a78bfa', '#38bdf8', '#4ade80', '#f97316', '#f43f5e'];
+        function makeLevel(l) {
+            const plats = [[0, H - 20, W, 20]]; // ground
+            const n = 4 + l * 2;
+            for (let i = 0; i < n; i++) {
+                const x = 60 + Math.random() * (W - 180), y = 280 - i * 45 - Math.random() * 20, w = 70 + Math.random() * 80;
+                plats.push([x, y, w, 14]);
+            }
+            // Goal
+            const stars = [];
+            for (let i = 0; i < 5 + l * 2; i++)stars.push({ x: 80 + Math.random() * (W - 120), y: 100 + Math.random() * (H - 120), collected: false, w: 14 });
+            return { plats, stars };
+        }
+
+        let lvData = makeLevel(1);
+        let player = { x: 60, y: H - 80, w: 28, h: 36, vx: 0, vy: 0, onGround: false, jumps: 0 };
+        let enemies = [];
+        function resetEnemy() {
+            enemies = [];
+            for (let i = 0; i < level + 1; i++) {
+                enemies.push({ x: 200 + i * 150, y: H - 55, w: 24, h: 24, vx: (1 + level * .3) * (i % 2 ? 1 : -1), dir: 1 });
+            }
+        }
+        resetEnemy();
+
+        function resetPlayer() { player.x = 60; player.y = H - 80; player.vx = 0; player.vy = 0; player.jumps = 0; }
+
+        function update() {
+            if (over || won) return;
+            // Controls
+            if (keys['ArrowLeft'] || keys['KeyA']) player.vx = -5;
+            else if (keys['ArrowRight'] || keys['KeyD']) player.vx = 5;
+            else player.vx *= .75;
+            if ((keys['Space'] || keys['ArrowUp'] || keys['KeyW']) && player.jumps < 2) {
+                player.vy = -11; player.jumps++; keys['Space'] = keys['ArrowUp'] = keys['KeyW'] = false;
+            }
+            player.vy += .55;// gravity
+            player.x += player.vx; player.y += player.vy;
+            // Clamp x
+            player.x = Math.max(0, Math.min(W - player.w, player.x));
+            // Platform collision
+            player.onGround = false;
+            for (const [px, py, pw, ph] of lvData.plats) {
+                if (player.x + player.w > px && player.x < px + pw && player.y + player.h > py && player.y + player.h < py + ph + player.vy + 2 && player.vy >= 0) {
+                    player.y = py - player.h; player.vy = 0; player.onGround = true; player.jumps = 0;
+                }
+            }
+            // Fall off
+            if (player.y > H + 40) { lives--; document.getElementById('lv').textContent = lives; resetPlayer(); if (lives <= 0) { over = true; } }
+            // Stars
+            lvData.stars.forEach(s => {
+                if (!s.collected && Math.abs(player.x - s.x) < 18 && Math.abs(player.y - s.y) < 18) {
+                    s.collected = true; score += 10 * level; document.getElementById('sc').textContent = score;
+                }
+            });
+            if (lvData.stars.every(s => s.collected)) { level++; document.getElementById('lev').textContent = level; if (level > 5) { won = true; return; } lvData = makeLevel(level); resetPlayer(); resetEnemy(); }
+            // Enemies
+            enemies.forEach(e => {
+                e.x += e.vx;
+                // boundary bounce off platforms
+                e.y = H - 55;
+                if (e.x < 0 || e.x > W - e.w) e.vx *= -1;
+                // Collision with player
+                if (player.x + player.w > e.x && player.x < e.x + e.w && player.y + player.h > e.y && player.y < e.y + e.h) {
+                    if (player.vy > 0 && player.y + player.h < e.y + 16) {
+                        // Stomp
+                        enemies = enemies.filter(x => x !== e); score += 20; document.getElementById('sc').textContent = score; player.vy = -8;
+                    } else {
+                        lives--; document.getElementById('lv').textContent = lives; resetPlayer(); if (lives <= 0) over = true;
+                    }
+                }
+            });
+        }
+
+        function draw() {
+            cx.fillStyle = '#040010'; cx.fillRect(0, 0, W, H);
+            // Stars bg
+            cx.fillStyle = 'rgba(255,255,255,.5)';
+            for (let i = 0; i < 50; i++) { cx.fillRect((i * 137) % W, (i * 97) % H, 1, 1); }
+            // Platforms
+            lvData.plats.forEach(([px, py, pw, ph], i) => {
+                const col = COLORS[i % COLORS.length];
+                cx.fillStyle = col + '33'; cx.fillRect(px, py, pw, ph);
+                cx.fillStyle = col; cx.fillRect(px, py, pw, 3);
+            });
+            // Stars
+            lvData.stars.forEach(s => {
+                if (s.collected) return;
+                cx.fillStyle = '#facc15'; cx.font = '14px monospace'; cx.textAlign = 'center'; cx.fillText('⭐', s.x + 7, s.y + 12);
+            });
+            // Player
+            cx.fillStyle = '#a78bfa'; cx.fillRect(player.x, player.y, player.w, player.h);
+            cx.fillStyle = '#e9d5ff'; cx.fillRect(player.x + 6, player.y + 6, 8, 8); // eyes
+            cx.fillRect(player.x + 16, player.y + 6, 8, 8);
+            // Enemies
+            enemies.forEach(e => {
+                cx.fillStyle = '#f43f5e'; cx.fillRect(e.x, e.y, e.w, e.h);
+                cx.fillStyle = '#fff'; cx.fillRect(e.x + 4, e.y + 5, 6, 6); cx.fillRect(e.x + 14, e.y + 5, 6, 6);
+                cx.fillStyle = '#000'; cx.fillRect(e.x + 6, e.y + 7, 3, 3); cx.fillRect(e.x + 16, e.y + 7, 3, 3);
+            });
+            if (over) {
+                cx.fillStyle = 'rgba(0,0,0,.75)'; cx.fillRect(0, 0, W, H);
+                cx.fillStyle = '#f43f5e'; cx.font = 'bold 42px monospace'; cx.textAlign = 'center'; cx.fillText('GAME OVER', W / 2, H / 2 - 20);
+                cx.fillStyle = '#aaa'; cx.font = '18px monospace'; cx.fillText('Score: ' + score + ' | Press R to restart', W / 2, H / 2 + 20);
+            }
+            if (won) {
+                cx.fillStyle = 'rgba(0,0,0,.8)'; cx.fillRect(0, 0, W, H);
+                cx.fillStyle = '#facc15'; cx.font = 'bold 48px monospace'; cx.textAlign = 'center'; cx.fillText('YOU WIN! 🏆', W / 2, H / 2 - 30);
+                cx.fillStyle = '#a78bfa'; cx.font = '22px monospace'; cx.fillText('Score: ' + score, W / 2, H / 2 + 20);
+            }
+        }
+        document.addEventListener('keydown', e => { if ((e.code === 'KeyR') && (over || won)) { over = false; won = false; score = 0; lives = 3; level = 1; lvData = makeLevel(1); resetPlayer(); resetEnemy(); document.getElementById('sc').textContent = 0; document.getElementById('lv').textContent = 3; document.getElementById('lev').textContent = 1; } });
+        function loop() { update(); draw(); requestAnimationFrame(loop); } loop();
+    </script>
+
+    <script src="../mobile_controls.js"></script>
+</body>
+
+</html>

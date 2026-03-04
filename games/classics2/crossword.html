@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Crossword – The Pizza Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0f172a;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Outfit', sans-serif;
+            color: #fff;
+            padding: 20px
+        }
+
+        h1 {
+            color: #fbbf24;
+            font-size: 2rem;
+            margin-bottom: 16px;
+            text-shadow: 0 0 20px rgba(251, 191, 36, 0.5)
+        }
+
+        .layout {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center
+        }
+
+        #grid-container {
+            display: flex;
+            flex-direction: column;
+            gap: 2px
+        }
+
+        .cell-row {
+            display: flex;
+            gap: 2px
+        }
+
+        .cell {
+            width: 36px;
+            height: 36px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            position: relative;
+            cursor: default
+        }
+
+        .cell.black {
+            background: #0f172a;
+            border-color: #0f172a
+        }
+
+        .cell.white {
+            background: #f8fafc;
+            color: #1e293b;
+            cursor: pointer
+        }
+
+        .cell.white:hover {
+            background: #fef9c3
+        }
+
+        .cell.active {
+            background: #fef08a;
+            border-color: #fbbf24
+        }
+
+        .cell.correct {
+            background: #bbf7d0;
+            color: #14532d
+        }
+
+        .cell.wrong {
+            background: #fecaca;
+            color: #7f1d1d
+        }
+
+        .cell-num {
+            position: absolute;
+            top: 1px;
+            left: 2px;
+            font-size: 8px;
+            color: #64748b;
+            line-height: 1
+        }
+
+        .clues {
+            max-width: 260px
+        }
+
+        .clue-section h3 {
+            color: #fbbf24;
+            margin-bottom: 8px;
+            font-size: 1rem
+        }
+
+        .clue-item {
+            padding: 4px 6px;
+            margin: 3px 0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: .85rem;
+            color: #cbd5e1;
+            border-left: 3px solid transparent;
+            transition: all .2s
+        }
+
+        .clue-item:hover {
+            background: rgba(251, 191, 36, 0.08);
+            border-left-color: #fbbf24
+        }
+
+        .clue-item.active {
+            background: rgba(251, 191, 36, 0.15);
+            border-left-color: #fbbf24;
+            color: #fbbf24
+        }
+
+        button {
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #b45309, #d97706);
+            border: none;
+            color: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: .9rem;
+            margin-top: 12px;
+            transition: all .2s
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(217, 119, 6, 0.4)
+        }
+
+        #msg {
+            color: #4ade80;
+            font-size: 1.1rem;
+            margin-top: 10px;
+            font-weight: 600
+        }
+    </style>
+</head>
+
+<body>
+    <h1>📰 Crossword Puzzle</h1>
+    <div class="layout">
+        <div>
+            <div id="grid-container"></div>
+            <div id="msg"></div>
+            <button onclick="checkAll()">Check Answers</button>
+            <button onclick="reveal()">Reveal</button>
+            <button onclick="init()">New Puzzle</button>
+        </div>
+        <div class="clues">
+            <div class="clue-section">
+                <h3>Across</h3>
+                <div id="across-clues"></div>
+            </div>
+            <br>
+            <div class="clue-section">
+                <h3>Down</h3>
+                <div id="down-clues"></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Simple hand-crafted crossword
+        const PUZZLE = {
+            grid: [
+                ['C', 'A', 'T', null, 'D'],
+                [null, null, 'O', null, 'O'],
+                ['D', 'O', 'G', null, 'G'],
+                [null, null, null, null, null],
+                ['S', 'U', 'N', null, 'S'],
+            ],
+            clues: {
+                across: [{ num: 1, row: 0, col: 0, len: 3, clue: 'Feline pet' },
+                { num: 3, row: 0, col: 4, len: 1, clue: 'Female deer (short)' },
+                { num: 4, row: 2, col: 0, len: 3, clue: 'Man\'s best friend' },
+                { num: 6, row: 4, col: 0, len: 3, clue: 'Star in our solar system' },
+                ],
+                down: [{ num: 1, row: 0, col: 2, len: 3, clue: 'Canine' },
+                { num: 2, row: 0, col: 4, len: 3, clue: 'Male deer' },
+                { num: 5, row: 2, col: 4, len: 3, clue: 'Singular of geese' }
+                ],
+            }
+        };
+        let userGrid, active;
+        function init() {
+            const G = PUZZLE.grid;
+            userGrid = G.map(r => r.map(c => c ? '' : null)); active = null;
+            document.getElementById('msg').textContent = '';
+            renderGrid(); renderClues();
+        }
+        function cellId(r, c) { return `cell-${r}-${c}`; }
+        function renderGrid() {
+            const G = PUZZLE.grid; const gc = document.getElementById('grid-container'); gc.innerHTML = '';
+            for (let r = 0; r < G.length; r++) {
+                const row = document.createElement('div'); row.className = 'cell-row';
+                for (let c = 0; c < G[r].length; c++) {
+                    const cell = document.createElement('div'); cell.id = cellId(r, c);
+                    if (G[r][c] === null) { cell.className = 'cell black'; }
+                    else {
+                        cell.className = 'cell white'; cell.tabIndex = 0;
+                        cell.textContent = userGrid[r][c];
+                        cell.addEventListener('click', () => setActive(r, c));
+                        cell.addEventListener('keydown', e => onKey(e, r, c));
+                        // number
+                        const num = getNum(r, c); if (num) { const n = document.createElement('span'); n.className = 'cell-num'; n.textContent = num; cell.appendChild(n); }
+                    }
+                    row.appendChild(cell);
+                }
+                gc.appendChild(row);
+            }
+        }
+        function getNum(r, c) {
+            for (const cl of PUZZLE.clues.across) if (cl.row === r && cl.col === c) return cl.num;
+            for (const cl of PUZZLE.clues.down) if (cl.row === r && cl.col === c) return cl.num;
+            return null;
+        }
+        function setActive(r, c) { active = { r, c }; updateHighlights(); }
+        function updateHighlights() {
+            const G = PUZZLE.grid;
+            for (let r = 0; r < G.length; r++)for (let c = 0; c < G[r].length; c++) { const el = document.getElementById(cellId(r, c)); if (el && G[r][c] !== null) { el.classList.remove('active', 'correct', 'wrong'); el.className = 'cell white'; el.textContent = userGrid[r][c] || ''; const num = getNum(r, c); if (num) { const n = document.createElement('span'); n.className = 'cell-num'; n.textContent = num; el.appendChild(n); } } }
+            if (active) { const el = document.getElementById(cellId(active.r, active.c)); if (el) el.classList.add('active'); }
+        }
+        function onKey(e, r, c) {
+            if (/^[a-zA-Z]$/.test(e.key)) { userGrid[r][c] = e.key.toUpperCase(); updateHighlights(); }
+            else if (e.key === 'Backspace') { userGrid[r][c] = ''; updateHighlights(); }
+            e.preventDefault();
+        }
+        function renderClues() {
+            const ac = document.getElementById('across-clues'); ac.innerHTML = '';
+            PUZZLE.clues.across.forEach(cl => { const d = document.createElement('div'); d.className = 'clue-item'; d.textContent = `${cl.num}. ${cl.clue}`; ac.appendChild(d); });
+            const dc = document.getElementById('down-clues'); dc.innerHTML = '';
+            PUZZLE.clues.down.forEach(cl => { const d = document.createElement('div'); d.className = 'clue-item'; d.textContent = `${cl.num}. ${cl.clue}`; dc.appendChild(d); });
+        }
+        function checkAll() {
+            const G = PUZZLE.grid; let correct = 0, total = 0;
+            for (let r = 0; r < G.length; r++)for (let c = 0; c < (G[r] || []).length; c++) {
+                if (G[r][c] !== null) { total++; const el = document.getElementById(cellId(r, c)); if (el) { el.classList.remove('active'); if (userGrid[r][c] === G[r][c]) { el.classList.add('correct'); correct++; } else if (userGrid[r][c]) { el.classList.add('wrong'); } } }
+            }
+            document.getElementById('msg').textContent = correct === total ? `🎉 Perfect! All ${total} correct!` : `${correct}/${total} correct`;
+            if (correct === total) {
+                const overlay = document.createElement('div');
+                overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,20,40,0.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99;font-family:inherit';
+                overlay.innerHTML = `<div style="font-size:3rem;color:#fbbf24;text-shadow:0 0 30px #fbbf24;margin-bottom:12px">YOU WIN! 🎉</div><div style="font-size:1.2rem;color:#4ade80;margin-bottom:24px">All ${total} letters correct!</div><button onclick="this.parentNode.remove();init()" style="padding:12px 28px;background:linear-gradient(135deg,#b45309,#d97706);border:none;color:#fff;border-radius:10px;cursor:pointer;font-size:1rem;font-family:inherit">New Puzzle</button>`;
+                document.body.appendChild(overlay);
+            }
+        }
+        function reveal() { const G = PUZZLE.grid; for (let r = 0; r < G.length; r++)for (let c = 0; c < (G[r] || []).length; c++)if (G[r][c] !== null) userGrid[r][c] = G[r][c]; updateHighlights(); }
+        init();
+    </script>
+</body>
+
+</html>

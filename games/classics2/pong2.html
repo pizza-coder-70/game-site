@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Pong 2-Player – The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #111;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #22d3ee;
+            font-size: 2rem;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px #22d3ee
+        }
+
+        canvas {
+            border: 2px solid #22d3ee;
+            box-shadow: 0 0 30px rgba(34, 211, 238, 0.4)
+        }
+
+        #ctrl {
+            margin-top: 10px;
+            color: #555;
+            font-size: .8rem
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Pong 2-Player</h1>
+    <canvas id="c" width="700" height="450"></canvas>
+    <div id="ctrl">Player 1: W/S &nbsp;|&nbsp; Player 2: Up/Down &nbsp;|&nbsp; R: restart</div>
+    <script>
+        const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+        const W = 700, H = 450, PW = 12, PH = 80, BALL = 9;
+        let p1, p2, ball, score1, score2, keys, over;
+        function init() {
+            p1 = { x: 20, y: H / 2 - PH / 2 }; p2 = { x: W - 20 - PW, y: H / 2 - PH / 2 };
+            ball = { x: W / 2, y: H / 2, vx: (Math.random() > 0.5 ? 1 : -1) * 4.5, vy: (Math.random() - .5) * 4 };
+            score1 = 0; score2 = 0; over = false; keys = {};
+        }
+        document.addEventListener('keydown', e => { keys[e.key] = true; if (e.key === 'r' || e.key === 'R') init(); });
+        document.addEventListener('keyup', e => { keys[e.key] = false; });
+        function clamp(val, lo, hi) { return Math.max(lo, Math.min(hi, val)); }
+        function update() {
+            if (over) return;
+            if (keys['w'] || keys['W']) p1.y -= 7;
+            if (keys['s'] || keys['S']) p1.y += 7;
+            if (keys['ArrowUp']) p2.y -= 7;
+            if (keys['ArrowDown']) p2.y += 7;
+            p1.y = clamp(p1.y, 0, H - PH); p2.y = clamp(p2.y, 0, H - PH);
+            ball.x += ball.vx; ball.y += ball.vy;
+            if (ball.y <= BALL || ball.y >= H - BALL) ball.vy *= -1;
+            // p1 paddle
+            if (ball.x - BALL <= p1.x + PW && ball.y >= p1.y && ball.y <= p1.y + PH) { ball.vx = Math.abs(ball.vx) + 0.2; ball.vy += (ball.y - p1.y - PH / 2) * 0.1; }
+            // p2 paddle
+            if (ball.x + BALL >= p2.x && ball.y >= p2.y && ball.y <= p2.y + PH) { ball.vx = -(Math.abs(ball.vx) + 0.2); ball.vy += (ball.y - p2.y - PH / 2) * 0.1; }
+            ball.vy = clamp(ball.vy, -7, 7);
+            if (ball.x < 0) { score2++; resetBall(-1); }
+            if (ball.x > W) { score1++; resetBall(1); }
+            if (score1 >= 7 || score2 >= 7) over = true;
+        }
+        function resetBall(dir) { ball = { x: W / 2, y: H / 2, vx: dir * 4.5, vy: (Math.random() - .5) * 4 }; }
+        function draw() {
+            ctx.fillStyle = '#111'; ctx.fillRect(0, 0, W, H);
+            // center line
+            ctx.setLineDash([10, 10]); ctx.strokeStyle = '#333'; ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.stroke(); ctx.setLineDash([]);
+            // paddles
+            ctx.fillStyle = '#22d3ee'; ctx.fillRect(p1.x, p1.y, PW, PH); ctx.fillRect(p2.x, p2.y, PW, PH);
+            // ball
+            ctx.beginPath(); ctx.arc(ball.x, ball.y, BALL, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
+            // score
+            ctx.font = 'bold 48px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#22d3ee';
+            ctx.fillText(score1, W / 4, 60); ctx.fillText(score2, 3 * W / 4, 60);
+            if (over) { ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#22d3ee'; ctx.font = 'bold 32px monospace'; ctx.fillText(score1 >= 7 ? 'Player 1 Wins!' : 'Player 2 Wins!', W / 2, H / 2 - 20); ctx.font = '18px monospace'; ctx.fillText('Press R to restart', W / 2, H / 2 + 20); }
+        }
+        function loop() { update(); draw(); requestAnimationFrame(loop); }
+        init(); loop();
+    </script>
+</body>
+
+</html>

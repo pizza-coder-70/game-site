@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Simon Says | The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: radial-gradient(ellipse at center, #1a0030, #000);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            letter-spacing: 4px;
+            text-shadow: 0 0 20px #c084fc;
+        }
+
+        #hud {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            color: #c084fc;
+        }
+
+        #simon {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 10px auto;
+        }
+
+        .btn {
+            position: absolute;
+            width: 140px;
+            height: 140px;
+            cursor: pointer;
+            border: 4px solid #111;
+            transition: filter .1s;
+        }
+
+        .btn:hover {
+            filter: brightness(1.3);
+        }
+
+        #btn0 {
+            top: 0;
+            left: 0;
+            border-radius: 100% 0 0 0;
+            background: #22c55e;
+        }
+
+        #btn1 {
+            top: 0;
+            right: 0;
+            border-radius: 0 100% 0 0;
+            background: #ef4444;
+        }
+
+        #btn2 {
+            bottom: 0;
+            left: 0;
+            border-radius: 0 0 0 100%;
+            background: #facc15;
+        }
+
+        #btn3 {
+            bottom: 0;
+            right: 0;
+            border-radius: 0 0 100% 0;
+            background: #3b82f6;
+        }
+
+        .btn.active {
+            filter: brightness(2) saturate(1.5);
+        }
+
+        #center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90px;
+            height: 90px;
+            background: #111;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .8rem;
+            font-weight: bold;
+            color: #c084fc;
+            text-align: center;
+            border: 3px solid #333;
+            z-index: 10;
+            cursor: pointer;
+        }
+
+        #msg {
+            margin-top: 20px;
+            font-size: 1.1rem;
+            min-height: 1.5em;
+            color: #fff;
+        }
+
+        #score-disp {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #c084fc;
+            margin: 10px 0;
+        }
+
+        #menuBtn {
+            margin-top: 10px;
+            padding: 10px 32px;
+            background: linear-gradient(135deg, #334155, #1e293b);
+            color: #fff;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            letter-spacing: 2px;
+            display: none;
+        }
+
+        #menuBtn:hover {
+            transform: scale(1.07);
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999;
+        }
+
+        #homeBtn:hover {
+            background: #1e40af;
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>🎮 SIMON SAYS</h1>
+    <div id="hud">LEVEL: <span id="level">0</span></div>
+    <div id="simon">
+        <div class="btn" id="btn0" onclick="playerPress(0)"></div>
+        <div class="btn" id="btn1" onclick="playerPress(1)"></div>
+        <div class="btn" id="btn2" onclick="playerPress(2)"></div>
+        <div class="btn" id="btn3" onclick="playerPress(3)"></div>
+        <div id="center" onclick="startGame()">SIMON<br>SAYS<br>▶ START</div>
+    </div>
+    <div id="score-disp">🏆 BEST: <span id="best">0</span></div>
+    <div id="msg">Press the center button to play!</div>
+    <button id="menuBtn" onclick="window.close()">🏠 Return to Menu</button>
+    <script src="../scripts/scores.js"></script>
+    <script>
+        const SOUNDS = [262, 330, 392, 523];
+        let sequence = [], playerSeq = [], level = 0, playerTurn = false, best = 0;
+        const actx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playTone(freq, dur = 0.3) {
+            const osc = actx.createOscillator(), gain = actx.createGain();
+            osc.connect(gain); gain.connect(actx.destination);
+            osc.frequency.value = freq; osc.type = 'sine';
+            gain.gain.setValueAtTime(0.4, actx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + dur);
+            osc.start(); osc.stop(actx.currentTime + dur);
+        }
+
+        function flash(idx, lit = true) {
+            document.getElementById('btn' + idx).classList.toggle('active', lit);
+        }
+
+        async function showSequence() {
+            playerTurn = false;
+            document.getElementById('msg').textContent = 'Watch...';
+            await sleep(600);
+            for (let i = 0; i < sequence.length; i++) {
+                flash(sequence[i], true); playTone(SOUNDS[sequence[i]]);
+                await sleep(500); flash(sequence[i], false); await sleep(250);
+            }
+            playerTurn = true; playerSeq = [];
+            document.getElementById('msg').textContent = 'Your turn! Repeat the sequence.';
+        }
+
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        function startGame() {
+            document.getElementById('menuBtn').style.display = 'none';
+            sequence = []; level = 0; playerSeq = [];
+            nextRound();
+        }
+
+        function nextRound() {
+            level++;
+            sequence.push(Math.floor(Math.random() * 4));
+            document.getElementById('level').textContent = level;
+            showSequence();
+        }
+
+        async function playerPress(idx) {
+            if (!playerTurn) return;
+            flash(idx, true); playTone(SOUNDS[idx]); await sleep(200); flash(idx, false);
+            playerSeq.push(idx);
+            const step = playerSeq.length - 1;
+            if (playerSeq[step] !== sequence[step]) {
+                playerTurn = false;
+                playTone(110, 0.8);
+                document.getElementById('msg').textContent = `❌ Wrong! You reached level ${level}. Press center to restart.`;
+                if (level > best) { best = level; document.getElementById('best').textContent = best; }
+                document.getElementById('menuBtn').style.display = '';
+                PizzaScores.save('Simon Says', sequence.length - 1, `Round ${sequence.length - 1}`);
+                for (let k = 0; k < 3; k++) {
+                    [0, 1, 2, 3].forEach(i => flash(i, true)); await sleep(300);
+                    [0, 1, 2, 3].forEach(i => flash(i, false)); await sleep(200);
+                }
+                return;
+            }
+            if (playerSeq.length === sequence.length) {
+                playerTurn = false;
+                document.getElementById('msg').textContent = '✅ Correct! Get ready...';
+                await sleep(800);
+                nextRound();
+            }
+        }
+    </script>
+</body>
+
+</html>

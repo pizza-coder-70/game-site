@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Space Fighter 3D</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #000;
+            overflow: hidden;
+            font-family: 'Courier New', monospace
+        }
+
+        canvas {
+            display: block
+        }
+
+        #hud {
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            color: #818cf8;
+            font-size: .85rem;
+            pointer-events: none;
+            text-shadow: 0 0 8px #818cf8
+        }
+
+        #hud b {
+            color: #c7d2fe
+        }
+
+        #cross {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #818cf8;
+            font-size: 24px;
+            pointer-events: none;
+            text-shadow: 0 0 10px #818cf8
+        }
+
+        #msg {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #facc15;
+            font-size: 2rem;
+            font-weight: 700;
+            text-align: center;
+            text-shadow: 0 0 20px #facc15;
+            display: none;
+            pointer-events: none
+        }
+
+        #info {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #475569;
+            font-size: .78rem;
+            pointer-events: none
+        }
+    </style>
+</head>
+
+<body>
+    <div id="hud">⭐ Score: <b id="sc">0</b> &nbsp;|&nbsp; ❤️ HP: <b id="hp">100</b> &nbsp;|&nbsp; 🌊 Wave: <b
+            id="wv">1</b> &nbsp;|&nbsp; 🎯 Kills: <b id="kl">0</b>/<b id="kn">8</b></div>
+    <div id="cross">+</div>
+    <div id="msg" id="msg"></div>
+    <div id="info">WASD=fly | Mouse=aim | Click=shoot | R=restart</div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        const W = innerWidth, H = innerHeight;
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(W, H); renderer.shadowMap.enabled = true; document.body.appendChild(renderer.domElement);
+        const scene = new THREE.Scene(); scene.background = new THREE.Color(0x000208); scene.fog = new THREE.Fog(0x000208, 60, 200);
+        const camera = new THREE.PerspectiveCamera(75, W / H, .1, 500); camera.position.set(0, 0, 0);
+
+        // Lighting
+        scene.add(new THREE.AmbientLight(0x1a1a3a, .8));
+        const dl = new THREE.DirectionalLight(0x818cf8, 1.5); dl.position.set(10, 20, 10); scene.add(dl);
+
+        // Stars
+        const starGeo = new THREE.BufferGeometry(); const starPos = [];
+        for (let i = 0; i < 2000; i++)starPos.push((Math.random() - .5) * 400, (Math.random() - .5) * 400, (Math.random() - .5) * 400);
+        starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
+        scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: .5 })));
+
+        // Ship geometry (visual only, camera IS the ship)
+        let shipPitch = 0, shipYaw = 0, shipRoll = 0;
+        let vel = new THREE.Vector3();
+        let keys = {};
+        document.addEventListener('keydown', e => keys[e.code] = true);
+        document.addEventListener('keyup', e => keys[e.code] = false);
+        let mouseX = 0, mouseY = 0, mouseLocked = false;
+        renderer.domElement.addEventListener('click', () => { if (!mouseLocked) renderer.domElement.requestPointerLock(); else shoot(); });
+        document.addEventListener('pointerlockchange', () => mouseLocked = document.pointerLockElement === renderer.domElement);
+        document.addEventListener('mousemove', e => { if (!mouseLocked) return; shipYaw -= e.movementX * .002; shipPitch -= e.movementY * .002; shipPitch = Math.max(-1.2, Math.min(1.2, shipPitch)); });
+
+        // Laser gun
+        let bullets = [], cooldown = 0;
+        function shoot() {
+            if (cooldown > 0 || over || won) return;
+            const dir = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
+            const b = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 2), new THREE.MeshBasicMaterial({ color: 0xc4b5fd }));
+            b.position.copy(camera.position); b.quaternion.copy(camera.quaternion);
+            b.rotateX(Math.PI / 2); scene.add(b);
+            bullets.push({ mesh: b, vel: dir.multiplyScalar(3), life: 60 }); cooldown = 8;
+        }
+
+        // Asteroids
+        let asteroids = [], kills = 0, wave = 1, waveCount = 8, score = 0, hp = 100, over = false, won = false;
+        function makeAsteroid(i) {
+            const r = 2 + Math.random() * 2;
+            const geo = new THREE.DodecahedronGeometry(r, 0);
+            const mat = new THREE.MeshLambertMaterial({ color: new THREE.Color().setHSL(.7 + Math.random() * .2, .6, .4), wireframe: false });
+            const m = new THREE.Mesh(geo, mat);
+            const angle = Math.random() * Math.PI * 2, dist = 40 + Math.random() * 40;
+            m.position.set(Math.cos(angle) * dist, (Math.random() - .5) * 30, Math.sin(angle) * dist - 10);
+            m.userData = { r, hp: Math.ceil(r), maxHp: Math.ceil(r), rx: Math.random() * .03, ry: Math.random() * .03, vel: new THREE.Vector3((Math.random() - .5) * .08, (Math.random() - .5) * .04, (Math.random() - .5) * .08) };
+            scene.add(m); return m;
+        }
+        function spawnWave(w) { asteroids.forEach(a => scene.remove(a.mesh || a)); asteroids = []; kills = 0; waveCount = 6 + w * 2; for (let i = 0; i < waveCount; i++)asteroids.push(makeAsteroid(i)); document.getElementById('kn').textContent = waveCount; }
+        spawnWave(1);
+
+        // HUD helpers
+        const msgEl = document.getElementById('msg');
+        function showMsg(txt) { msgEl.textContent = txt; msgEl.style.display = 'block'; }
+        function update() {
+            if (over || won) return;
+            cooldown--;
+            // Camera rotation
+            camera.rotation.order = 'YXZ'; camera.rotation.y = shipYaw; camera.rotation.x = shipPitch;
+            // Movement
+            const speed = .25;
+            const fwd = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
+            const right = new THREE.Vector3(1, 0, 0).applyEuler(camera.rotation);
+            if (keys['KeyW'] || keys['ArrowUp']) vel.addScaledVector(fwd, speed);
+            if (keys['KeyS'] || keys['ArrowDown']) vel.addScaledVector(fwd, -speed);
+            if (keys['KeyA'] || keys['ArrowLeft']) vel.addScaledVector(right, -speed);
+            if (keys['KeyD'] || keys['ArrowRight']) vel.addScaledVector(right, speed);
+            if (keys['Space']) vel.addScaledVector(new THREE.Vector3(0, 1, 0), speed);
+            if (keys['ShiftLeft']) vel.addScaledVector(new THREE.Vector3(0, 1, 0), -speed);
+            vel.multiplyScalar(.88); camera.position.addScaledVector(vel, 1);
+            // Bullets
+            bullets = bullets.filter(b => {
+                b.mesh.position.addScaledVector(b.vel, 1); b.life--;
+                if (b.life <= 0) { scene.remove(b.mesh); return false; }
+                for (const a of [...asteroids]) {
+                    if (b.mesh.position.distanceTo(a.position) < a.userData.r + 1) {
+                        a.userData.hp--;
+                        if (a.userData.hp <= 0) { scene.remove(a); asteroids = asteroids.filter(x => x !== a); kills++; score += 50 * wave; document.getElementById('kl').textContent = kills; document.getElementById('sc').textContent = score; }
+                        scene.remove(b.mesh); return false;
+                    }
+                } return true;
+            });
+            // Asteroids move & damage player
+            asteroids.forEach(a => {
+                a.rotation.x += a.userData.rx; a.rotation.y += a.userData.ry;
+                a.position.add(a.userData.vel);
+                if (camera.position.distanceTo(a.position) < a.userData.r + 1.5) { hp -= 2; document.getElementById('hp').textContent = Math.max(0, hp); if (hp <= 0) { over = true; showMsg('DESTROYED 💀\nScore: ' + score + '\nPress R to restart'); return; } }
+            });
+            // Wave clear
+            if (kills >= waveCount) { wave++; document.getElementById('wv').textContent = wave; if (wave > 5) { won = true; showMsg('YOU WIN! 🏆\nScore: ' + score); return; } spawnWave(wave); }
+        }
+        document.addEventListener('keydown', e => { if (e.code === 'KeyR' && (over || won)) { hp = 100; score = 0; wave = 1; over = false; won = false; msgEl.style.display = 'none'; vel.set(0, 0, 0); camera.position.set(0, 0, 0); camera.rotation.set(0, 0, 0); shipPitch = 0; shipYaw = 0; bullets.forEach(b => scene.remove(b.mesh)); bullets = []; spawnWave(1); document.getElementById('hp').textContent = 100; document.getElementById('sc').textContent = 0; document.getElementById('wv').textContent = 1; } });
+        function animate() { requestAnimationFrame(animate); update(); renderer.render(scene, camera); } animate();
+        window.addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+    </script>
+
+    <script src="../mobile_controls.js"></script>
+</body>
+
+</html>

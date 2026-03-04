@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Typing Speed | The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: radial-gradient(ellipse at center, #1a0d2e, #000);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #e2e8f0;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            letter-spacing: 4px;
+            text-shadow: 0 0 20px #a78bfa;
+        }
+
+        #hud {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 16px;
+            font-size: 1rem;
+            color: #a78bfa;
+        }
+
+        #prompt {
+            background: #0f0a1e;
+            border: 2px solid #4c1d95;
+            border-radius: 12px;
+            padding: 20px;
+            font-size: 1.1rem;
+            line-height: 2;
+            max-width: 680px;
+            width: 100%;
+            min-height: 80px;
+            margin-bottom: 14px;
+            position: relative;
+        }
+
+        .char {
+            display: inline;
+            transition: color .05s;
+        }
+
+        .char.correct {
+            color: #4ade80;
+        }
+
+        .char.wrong {
+            color: #ef4444;
+            text-decoration: underline;
+        }
+
+        .char.current {
+            border-left: 2px solid #a78bfa;
+            animation: blink .7s infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                border-left-color: #a78bfa
+            }
+
+            50% {
+                border-left-color: transparent
+            }
+        }
+
+        #input {
+            position: fixed;
+            left: -9999px;
+            opacity: 0;
+            width: 1px;
+            height: 1px;
+        }
+
+        #prompt {
+            cursor: text;
+        }
+
+        #prompt.focused {
+            border-color: #a78bfa;
+            box-shadow: 0 0 12px #a78bfa44;
+        }
+
+        #stats {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 14px 0;
+        }
+
+        .stat {
+            background: #1e1040;
+            border-radius: 12px;
+            padding: 14px 24px;
+            text-align: center;
+            border: 1px solid #4c1d95;
+        }
+
+        .stat-val {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #a78bfa;
+        }
+
+        .stat-label {
+            font-size: .8rem;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        #timer-bar {
+            width: 100%;
+            max-width: 680px;
+            height: 8px;
+            background: #1e1040;
+            border-radius: 4px;
+            margin-bottom: 12px;
+        }
+
+        #timer-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #a78bfa, #60a5fa);
+            border-radius: 4px;
+            transition: width .5s;
+        }
+
+        button {
+            padding: 10px 32px;
+            background: linear-gradient(135deg, #a78bfa, #7c3aed);
+            color: #fff;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            letter-spacing: 2px;
+        }
+
+        button:hover {
+            transform: scale(1.07);
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999;
+        }
+
+        #homeBtn:hover {
+            background: #1e40af;
+        }
+
+        #difficulty {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .diff-btn {
+            padding: 6px 18px;
+            background: #1e1040;
+            color: #a78bfa;
+            border: 1px solid #4c1d95;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: .9rem;
+        }
+
+        .diff-btn.active {
+            background: #4c1d95;
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>⌨️ TYPING SPEED</h1>
+    <div id="hud"><span>WPM: <b id="wpm">0</b></span><span>ACC: <b id="acc">100</b>%</span><span>TIME: <b
+                id="time">60</b>s</span></div>
+    <div id="timer-bar">
+        <div id="timer-fill" style="width:100%"></div>
+    </div>
+    <div id="difficulty">
+        <button class="diff-btn active" onclick="setDiff(60,'easy',this)">60s Easy</button>
+        <button class="diff-btn" onclick="setDiff(30,'medium',this)">30s Medium</button>
+        <button class="diff-btn" onclick="setDiff(60,'hard',this)">60s Hard</button>
+    </div>
+    <div id="prompt"></div>
+    <input id="input" type="text" placeholder="Start typing to begin..." autocomplete="off" spellcheck="false">
+    <div id="stats">
+        <div class="stat">
+            <div class="stat-val" id="finalWpm">-</div>
+            <div class="stat-label">WPM</div>
+        </div>
+        <div class="stat">
+            <div class="stat-val" id="finalAcc">-</div>
+            <div class="stat-label">ACCURACY</div>
+        </div>
+        <div class="stat">
+            <div class="stat-val" id="finalChars">-</div>
+            <div class="stat-label">CHARS</div>
+        </div>
+        <div class="stat">
+            <div class="stat-val" id="bestWpm">0</div>
+            <div class="stat-label">BEST WPM</div>
+        </div>
+    </div>
+    <button onclick="startGame()">NEW TEST</button>
+    <script src="../scripts/scores.js"></script>
+    <script>
+        const TEXTS = {
+            easy: [
+                "The quick brown fox jumps over the lazy dog.",
+                "Pack my box with five dozen liquor jugs.",
+                "How vexingly quick daft zebras jump!",
+                "The five boxing wizards jump quickly.",
+                "Sphinx of black quartz judge my vow.",
+            ],
+            medium: [
+                "Programming is the art of telling another human what one wants the computer to do.",
+                "Any fool can write code that a computer can understand. Good programmers write code that humans can understand.",
+                "First, solve the problem. Then, write the code. Simple is better than complex.",
+                "Code is like humor. When you have to explain it, it is bad.",
+                "Experience is the name everyone gives to their mistakes in programming.",
+            ],
+            hard: [
+                "Asynchronous JavaScript allows you to execute code while waiting for long-running tasks, improving performance significantly.",
+                "The fundamental theorem of software engineering states that any problem can be solved by adding a layer of indirection.",
+                "Recursion is the process where a function calls itself directly or indirectly, solving problems by breaking them into sub-problems.",
+                "Quantum computing utilizes quantum-mechanical phenomena such as superposition and entanglement to perform computation.",
+                "Dynamic programming is both a mathematical optimization method and a computer programming method developed by Bellman.",
+            ]
+        };
+
+        let text, chars = [], pos = 0, errors = 0, startTime, timeLeft, maxTime = 60, timerInt, started = false, difficulty = 'easy', bestWpm = 0;
+
+        function setDiff(t, d, btn) {
+            maxTime = t; difficulty = d;
+            document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            startGame();
+        }
+
+        function startGame() {
+            const pool = TEXTS[difficulty];
+            text = pool[Math.floor(Math.random() * pool.length)];
+            if (difficulty !== 'easy') text += (' ' + pool[Math.floor(Math.random() * pool.length)]).slice(0, 200);
+            chars = text.split('').map(c => ({ char: c, state: '' }));
+            pos = 0; errors = 0; started = false; timeLeft = maxTime;
+            clearInterval(timerInt);
+            document.getElementById('wpm').textContent = 0;
+            document.getElementById('acc').textContent = 100;
+            document.getElementById('time').textContent = maxTime;
+            document.getElementById('timer-fill').style.width = '100%';
+            document.getElementById('input').focus();
+            renderPrompt();
+        }
+
+        // Click the prompt to (re)focus
+        document.getElementById('prompt').addEventListener('click', () => document.getElementById('input').focus());
+        const inp = document.getElementById('input');
+        inp.addEventListener('focus', () => document.getElementById('prompt').classList.add('focused'));
+        inp.addEventListener('blur', () => document.getElementById('prompt').classList.remove('focused'));
+
+        function renderPrompt() {
+            const el = document.getElementById('prompt');
+            el.innerHTML = chars.map((c, i) => {
+                let cls = 'char';
+                if (c.state === 'correct') cls += ' correct';
+                else if (c.state === 'wrong') cls += ' wrong';
+                if (i === pos) cls += ' current';
+                return `<span class="${cls}">${c.char === '  ' ? ' ' : c.char}</span>`;
+            }).join('');
+        }
+
+        document.getElementById('input').addEventListener('keydown', e => {
+            if (e.key === 'Backspace') {
+                e.preventDefault();
+                if (pos > 0) { pos--; chars[pos].state = ''; renderPrompt(); }
+                return;
+            }
+            // Ignore modifier/control keys
+            if (e.key.length !== 1) return;
+            if (!started) {
+                started = true; startTime = Date.now();
+                timerInt = setInterval(() => {
+                    timeLeft--;
+                    document.getElementById('time').textContent = timeLeft;
+                    document.getElementById('timer-fill').style.width = (timeLeft / maxTime * 100) + '%';
+                    updateWPM();
+                    if (timeLeft <= 0) { clearInterval(timerInt); endGame(); }
+                }, 1000);
+            }
+            if (pos >= chars.length) return;
+            chars[pos].state = e.key === chars[pos].char ? 'correct' : 'wrong';
+            if (chars[pos].state === 'wrong') errors++;
+            pos++;
+            updateWPM();
+            renderPrompt();
+            if (pos >= chars.length) { clearInterval(timerInt); endGame(); }
+        });
+
+        function updateWPM() {
+            const elapsed = (Date.now() - startTime) / 60000;
+            const wpm = elapsed > 0 ? Math.round((pos / 5) / elapsed) : 0;
+            const acc = pos > 0 ? Math.round((1 - errors / pos) * 100) : 100;
+            document.getElementById('wpm').textContent = wpm;
+            document.getElementById('acc').textContent = Math.max(0, acc);
+        }
+
+        function endGame() {
+            const elapsed = (Date.now() - startTime) / 60000;
+            const wpm = elapsed > 0 ? Math.round((chars.filter(c => c.state === 'correct').length / 5) / elapsed) : 0;
+            const acc = pos > 0 ? Math.max(0, Math.round((1 - errors / pos) * 100)) : 100;
+            if (wpm > bestWpm) { bestWpm = wpm; document.getElementById('bestWpm').textContent = wpm; }
+            document.getElementById('finalWpm').textContent = wpm;
+            document.getElementById('finalAcc').textContent = acc + '%';
+            document.getElementById('finalChars').textContent = chars.filter(c => c.state === 'correct').length;
+            PizzaScores.save('Typing Speed', wpm, acc + '% accuracy');
+        }
+
+        startGame();
+    </script>
+</body>
+
+</html>

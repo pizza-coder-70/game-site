@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Space Invaders 2 – The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #0f0
+        }
+
+        h1 {
+            color: #0f0;
+            font-size: 2rem;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px #0f0
+        }
+
+        canvas {
+            border: 2px solid #0f0;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.4)
+        }
+
+        #hud {
+            margin-top: 10px
+        }
+
+        #ctrl {
+            margin-top: 6px;
+            color: #555;
+            font-size: .8rem
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Space Invaders II</h1>
+    <canvas id="c" width="600" height="500"></canvas>
+    <div id="hud">Score: <span id="sc">0</span> &nbsp; Lives: <span id="li">3</span> &nbsp; Level: <span
+            id="lv">1</span></div>
+    <div id="ctrl">Arrow Keys / A,D to move | Space to shoot | R: restart</div>
+    <script>
+        const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+        const W = 600, H = 500;
+        let ship, aliens, bullets, aBullets, shields, score, lives, level, over, won, keys, frame = 0, alienDir, alienDropping;
+        const ALIEN_ROWS = 4, ALIEN_COLS = 9, AW = 44, AH = 30;
+        function initAliens(lvl) {
+            const a = [];
+            for (let r = 0; r < ALIEN_ROWS; r++)for (let c = 0; c < ALIEN_COLS; c++) {
+                a.push({ x: 60 + c * (AW + 6), y: 60 + r * (AH + 8), alive: true, row: r, type: r < 1 ? 2 : r < 2 ? 1 : 0 });
+            }
+            return a;
+        }
+        function initShields() {
+            return [100, 250, 400].map(sx => ({ x: sx, y: 360, health: 12 }));
+        }
+        function init() {
+            ship = { x: W / 2 - 18, y: 460, w: 36, h: 20 };
+            level = 1; score = 0; lives = 3; over = false; won = false;
+            aliens = initAliens(level); bullets = []; aBullets = [];
+            shields = initShields(); alienDir = 1; alienDropping = false; keys = {};
+            document.getElementById('sc').textContent = 0; document.getElementById('li').textContent = 3; document.getElementById('lv').textContent = 1;
+        }
+        document.addEventListener('keydown', e => { keys[e.key] = true; if (e.key === 'r' || e.key === 'R') init(); e.preventDefault(); });
+        document.addEventListener('keyup', e => { keys[e.key] = false; });
+        let shotCool = 0, alienMoveTimer = 0;
+        function update() {
+            if (over || won) return;
+            frame++;
+            if (keys['ArrowLeft'] || keys['a']) { ship.x = Math.max(0, ship.x - 4); }
+            if (keys['ArrowRight'] || keys['d']) { ship.x = Math.min(W - ship.w, ship.x + 4); }
+            shotCool--;
+            if (keys[' '] && shotCool <= 0) { bullets.push({ x: ship.x + ship.w / 2, y: ship.y, vy: -7 }); shotCool = 20; }
+            bullets = bullets.filter(b => { b.y += b.vy; return b.y > 0; });
+            // alien movement
+            alienMoveTimer++;
+            const aliveCount = aliens.filter(a => a.alive).length;
+            const moveInterval = Math.max(8, 40 - level * 3 - Math.floor((ALIEN_ROWS * ALIEN_COLS - aliveCount) / 4));
+            if (alienMoveTimer >= moveInterval) {
+                alienMoveTimer = 0;
+                let edge = false;
+                aliens.forEach(a => { if (!a.alive) return; a.x += alienDir * 12; if (a.x < 20 || a.x + AW > W - 20) edge = true; });
+                if (edge) { alienDir *= -1; aliens.forEach(a => { if (a.alive) a.y += 20; }); }
+                // alien shoot
+                const cols = new Map(); aliens.forEach(a => { if (!a.alive) return; const c = a.x; if (!cols.has(c) || cols.get(c).y < a.y) cols.set(c, a); });
+                cols.forEach(a => { if (Math.random() < 0.08 + level * 0.01) aBullets.push({ x: a.x + AW / 2, y: a.y + AH, vy: 3 + level * 0.4 }); });
+            }
+            aBullets = aBullets.filter(b => { b.y += b.vy; return b.y < H; });
+            // bullets vs aliens
+            for (let bi = bullets.length - 1; bi >= 0; bi--) {
+                for (let ai = aliens.length - 1; ai >= 0; ai--) {
+                    const b = bullets[bi], a = aliens[ai];
+                    if (!a.alive) continue;
+                    if (b.x > a.x && b.x < a.x + AW && b.y > a.y && b.y < a.y + AH) {
+                        a.alive = false; bullets.splice(bi, 1); score += [10, 20, 40][a.type]; document.getElementById('sc').textContent = score; break;
+                    }
+                }
+            }
+            // shield interactions
+            const allBullets = [...bullets.map(b => ({ ...b, player: true })), ...aBullets.map(b => ({ ...b, player: false }))];
+            shields.forEach(sh => {
+                for (const b of (bullets)) { if (b.x > sh.x && b.x < sh.x + 60 && b.y > sh.y && b.y < sh.y + 20) { sh.health = Math.max(0, sh.health - 1); } }
+                for (const b of aBullets) { if (b.x > sh.x && b.x < sh.x + 60 && b.y > sh.y && b.y < sh.y + 20) { sh.health = Math.max(0, sh.health - 1); } }
+            });
+            // abullets vs ship
+            for (let bi = aBullets.length - 1; bi >= 0; bi--) {
+                const b = aBullets[bi];
+                if (b.x > ship.x && b.x < ship.x + ship.w && b.y > ship.y && b.y < ship.y + ship.h) {
+                    aBullets.splice(bi, 1); lives--; document.getElementById('li').textContent = lives; if (lives <= 0) over = true;
+                }
+            }
+            // aliens reached bottom
+            if (aliens.some(a => a.alive && a.y + AH > ship.y)) over = true;
+            if (!aliens.some(a => a.alive)) { level++; document.getElementById('lv').textContent = level; aliens = initAliens(level); alienDir = 1; alienMoveTimer = 0; }
+        }
+        const ALIEN_SHAPES = [
+            [[0, 1, 0], [1, 1, 1], [0, 1, 0], [1, 0, 1]],
+            [[1, 0, 1], [0, 1, 0], [1, 0, 1], [1, 1, 1]],
+            [[0, 1, 0], [1, 1, 1], [1, 0, 1], [0, 1, 0]],
+        ];
+        function drawAlien(a) {
+            const colors = ['#22d3ee', '#a855f7', '#ef4444'];
+            const shape = ALIEN_SHAPES[a.type];
+            const px = a.x, py = a.y, bw = AW / 4, bh = AH / 4;
+            ctx.fillStyle = colors[a.type];
+            shape.forEach((row, ri) => row.forEach((cell, ci) => { if (cell) ctx.fillRect(px + ci * bw + 2, py + ri * bh, bw - 1, bh - 1); }));
+        }
+        function draw() {
+            ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+            for (let i = 0; i < 100; i++) { ctx.fillStyle = `rgba(255,255,255,${0.1 + Math.random() * 0.2})`; ctx.fillRect((i * 137 + frame) % W, (i * 53) % H, 1, 1); }
+            aliens.forEach(a => { if (a.alive) drawAlien(a); });
+            bullets.forEach(b => { ctx.fillStyle = '#0f0'; ctx.fillRect(b.x - 2, b.y, 4, 12); });
+            aBullets.forEach(b => { ctx.fillStyle = '#f97316'; ctx.fillRect(b.x - 2, b.y, 4, 10); });
+            shields.forEach(sh => { if (sh.health <= 0) return; ctx.fillStyle = `rgba(0,200,0,${sh.health / 12})`; ctx.beginPath(); ctx.roundRect(sh.x, sh.y, 60, 20, 4); ctx.fill(); });
+            // ship
+            ctx.fillStyle = '#0f0'; ctx.beginPath(); ctx.moveTo(ship.x + ship.w / 2, ship.y); ctx.lineTo(ship.x, ship.y + ship.h); ctx.lineTo(ship.x + ship.w, ship.y + ship.h); ctx.closePath(); ctx.fill();
+            ctx.fillRect(ship.x + ship.w / 2 - 4, ship.y - 8, 8, 10);
+            if (over) { ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#0f0'; ctx.font = 'bold 36px monospace'; ctx.textAlign = 'center'; ctx.fillText('GAME OVER', W / 2, H / 2 - 20); ctx.font = '18px monospace'; ctx.fillText(`Score: ${score} | Press R`, W / 2, H / 2 + 20); }
+            if (won) { ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#0f0'; ctx.font = 'bold 48px monospace'; ctx.textAlign = 'center'; ctx.fillText('YOU WIN!', W / 2, H / 2 - 40); ctx.font = 'bold 24px monospace'; ctx.fillStyle = '#facc15'; ctx.fillText(`🏆 Score: ${score}`, W / 2, H / 2 + 10); ctx.font = '18px monospace'; ctx.fillStyle = '#aaa'; ctx.fillText('Press R to play again', W / 2, H / 2 + 50); }
+        }
+        function loop() { update(); draw(); requestAnimationFrame(loop); }
+        init(); loop();
+    </script>
+</body>
+
+</html>

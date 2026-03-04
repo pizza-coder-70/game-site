@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Paint | The Pizza Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0a0a15;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Outfit', sans-serif;
+            color: #e2e8f0;
+            padding: 10px;
+            gap: 8px;
+            overflow: hidden
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, #f97316, #ec4899, #8b5cf6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent
+        }
+
+        #toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+            background: #0d0d20;
+            border: 1px solid #1e1e3f;
+            border-radius: 12px;
+            padding: 8px 14px;
+            width: 100%;
+            max-width: 700px
+        }
+
+        .tool-btn {
+            padding: 5px 12px;
+            border: 1px solid #334155;
+            border-radius: 7px;
+            background: #1e293b;
+            color: #e2e8f0;
+            font-family: 'Outfit', sans-serif;
+            font-size: .82rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all .15s
+        }
+
+        .tool-btn:hover,
+        .tool-btn.active {
+            background: #7c3aed;
+            border-color: #8b5cf6
+        }
+
+        .sep {
+            width: 1px;
+            height: 24px;
+            background: #1e1e3f
+        }
+
+        #palette {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap
+        }
+
+        .swatch {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform .15s
+        }
+
+        .swatch:hover,
+        .swatch.sel {
+            transform: scale(1.25);
+            border-color: #fff
+        }
+
+        #sizeSlider {
+            width: 80px;
+            accent-color: #7c3aed
+        }
+
+        canvas {
+            border: 2px solid #1e1e3f;
+            border-radius: 8px;
+            cursor: crosshair;
+            touch-action: none;
+            flex-shrink: 0
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            padding: 6px 14px;
+            background: rgba(13, 13, 32, 0.9);
+            color: #fff;
+            font-size: .8rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>🎨 PIZZA PAINT</h1>
+    <div id="toolbar">
+        <button class="tool-btn active" id="pencilBtn" onclick="setTool('pencil',this)">✏️ Pencil</button>
+        <button class="tool-btn" id="brushBtn" onclick="setTool('brush',this)">🖌️ Brush</button>
+        <button class="tool-btn" id="eraserBtn" onclick="setTool('eraser',this)">🧹 Eraser</button>
+        <button class="tool-btn" id="fillBtn" onclick="setTool('fill',this)">🪣 Fill</button>
+        <button class="tool-btn" id="lineBtn" onclick="setTool('line',this)">📏 Line</button>
+        <button class="tool-btn" id="rectBtn" onclick="setTool('rect',this)">▭ Rect</button>
+        <div class="sep"></div>
+        <div id="palette"></div>
+        <div class="sep"></div>
+        <label style="font-size:.78rem;color:#64748b">Size:</label>
+        <input id="sizeSlider" type="range" min="1" max="40" value="6" oninput="brushSize=+this.value">
+        <button class="tool-btn" onclick="clearCanvas()">🗑️ Clear</button>
+    </div>
+    <canvas id="c"></canvas>
+    <script>
+        const C = document.getElementById('c'), ctx = C.getContext('2d');
+        // Fit canvas to remaining space
+        C.width = Math.min(window.innerWidth - 20, 700);
+        C.height = Math.min(window.innerHeight - 130, 500);
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, C.width, C.height);
+
+        const PALETTE = ['#000000', '#ffffff', '#ef4444', '#f97316', '#fbbf24', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#78350f', '#374151', '#64748b', '#e2e8f0'];
+        let color = '#000000', brushSize = 6, tool = 'pencil', drawing = false, lastX = 0, lastY = 0, snapshot;
+
+        // Build palette
+        const palDiv = document.getElementById('palette');
+        PALETTE.forEach(c => {
+            const s = document.createElement('div'); s.className = 'swatch' + (c === color ? ' sel' : '');
+            s.style.background = c; s.onclick = () => { color = c; palDiv.querySelectorAll('.swatch').forEach(el => el.classList.remove('sel')); s.classList.add('sel'); };
+            palDiv.appendChild(s);
+        });
+
+        function setTool(t, btn) {
+            tool = t; document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
+        }
+        function clearCanvas() { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, C.width, C.height); }
+
+        function getPos(e) {
+            const rect = C.getBoundingClientRect();
+            const src = e.touches ? e.touches[0] : e;
+            return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+        }
+
+        function floodFill(sx, sy, fillColor) {
+            const imageData = ctx.getImageData(0, 0, C.width, C.height);
+            const d = imageData.data;
+            const idx = (x, y) => (y * C.width + x) * 4;
+            const si = idx(Math.round(sx), Math.round(sy));
+            const tr = d[si], tg = d[si + 1], tb = d[si + 2];
+            const fc = fillColor.match(/\w\w/g).map(h => parseInt(h, 16));
+            if (tr === fc[0] && tg === fc[1] && tb === fc[2]) return;
+            const stack = [[Math.round(sx), Math.round(sy)]];
+            while (stack.length) {
+                const [x, y] = stack.pop();
+                if (x < 0 || x >= C.width || y < 0 || y >= C.height) continue;
+                const i = idx(x, y);
+                if (d[i] !== tr || d[i + 1] !== tg || d[i + 2] !== tb) continue;
+                d[i] = fc[0]; d[i + 1] = fc[1]; d[i + 2] = fc[2]; d[i + 3] = 255;
+                stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+            }
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        C.addEventListener('mousedown', e => {
+            drawing = true; const { x, y } = getPos(e); lastX = x; lastY = y;
+            if (tool === 'fill') { floodFill(x, y, color); return; }
+            if (tool === 'line' || tool === 'rect') { snapshot = ctx.getImageData(0, 0, C.width, C.height); }
+            ctx.beginPath(); ctx.moveTo(x, y);
+        });
+        C.addEventListener('mousemove', e => {
+            if (!drawing) return; const { x, y } = getPos(e);
+            if (tool === 'pencil' || tool === 'brush' || tool === 'eraser') {
+                ctx.lineWidth = tool === 'brush' ? brushSize * 2 : brushSize;
+                ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                ctx.strokeStyle = tool === 'eraser' ? '#fff' : color;
+                ctx.lineTo(x, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y);
+            } else if (tool === 'line') {
+                ctx.putImageData(snapshot, 0, 0);
+                ctx.strokeStyle = color; ctx.lineWidth = brushSize; ctx.lineCap = 'round';
+                ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(x, y); ctx.stroke();
+            } else if (tool === 'rect') {
+                ctx.putImageData(snapshot, 0, 0);
+                ctx.strokeStyle = color; ctx.lineWidth = brushSize;
+                ctx.strokeRect(lastX, lastY, x - lastX, y - lastY);
+            }
+        });
+        C.addEventListener('mouseup', () => { drawing = false; snapshot = null; });
+        C.addEventListener('touchstart', e => { e.preventDefault(); C.dispatchEvent(new MouseEvent('mousedown', { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })); });
+        C.addEventListener('touchmove', e => { e.preventDefault(); C.dispatchEvent(new MouseEvent('mousemove', { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })); });
+        C.addEventListener('touchend', e => { e.preventDefault(); C.dispatchEvent(new MouseEvent('mouseup', {})); });
+    </script>
+</body>
+
+</html>

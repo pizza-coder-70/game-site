@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Code Factory – The Pizza Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #030712;
+            min-height: 100vh;
+            font-family: 'Outfit', sans-serif;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px
+        }
+
+        h1 {
+            color: #34d399;
+            font-size: 2rem;
+            text-shadow: 0 0 20px #34d399;
+            margin-bottom: 4px
+        }
+
+        #counter {
+            font-size: 1.2rem;
+            color: #6ee7b7;
+            margin-bottom: 4px
+        }
+
+        #cps {
+            font-size: .85rem;
+            color: #374151;
+            margin-bottom: 8px
+        }
+
+        /* Bug reports */
+        #bugs-wrap {
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 8px
+        }
+
+        .bug-card {
+            background: rgba(239, 68, 68, .12);
+            border: 2px solid #ef4444;
+            border-radius: 12px;
+            padding: 8px 12px;
+            cursor: pointer;
+            text-align: center;
+            transition: all .2s;
+            min-width: 120px
+        }
+
+        .bug-card:hover {
+            background: rgba(239, 68, 68, .25);
+            transform: scale(1.05)
+        }
+
+        .bug-icon {
+            font-size: 1.5rem
+        }
+
+        .bug-name {
+            font-size: .75rem;
+            font-weight: 700;
+            color: #fca5a5
+        }
+
+        .bug-sev {
+            font-size: .7rem;
+            color: #f87171
+        }
+
+        .bug-time {
+            font-size: .68rem;
+            color: #4b5563
+        }
+
+        #no-bugs {
+            color: #374151;
+            font-size: .82rem
+        }
+
+        /* Code terminal */
+        #terminal {
+            font-family: 'Courier New', monospace;
+            font-size: .65rem;
+            color: #34d399;
+            background: #0f172a;
+            border-radius: 10px;
+            padding: 8px;
+            width: 100%;
+            max-width: 400px;
+            height: 64px;
+            overflow: hidden;
+            border: 1px solid rgba(52, 211, 153, .2);
+            margin-bottom: 8px
+        }
+
+        #ver-display {
+            font-size: .82rem;
+            color: #34d399;
+            margin-bottom: 8px;
+            text-align: center
+        }
+
+        .layout {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            max-width: 900px
+        }
+
+        #click-zone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px
+        }
+
+        #keyboard {
+            width: 150px;
+            height: 120px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #0f172a, #030712);
+            border: 2px solid #34d399;
+            cursor: pointer;
+            font-size: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 4px;
+            box-shadow: 0 0 30px rgba(52, 211, 153, .3);
+            user-select: none;
+            transition: transform .1s
+        }
+
+        #keyboard:active {
+            transform: scale(.93)
+        }
+
+        #shop {
+            flex: 1;
+            min-width: 260px;
+            background: rgba(255, 255, 255, .03);
+            border: 1px solid rgba(52, 211, 153, .2);
+            border-radius: 20px;
+            padding: 20px;
+            max-height: 70vh;
+            overflow-y: auto
+        }
+
+        #shop h2 {
+            color: #34d399;
+            font-size: 1.1rem;
+            margin-bottom: 14px
+        }
+
+        .upg {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(52, 211, 153, .06);
+            border: 1px solid rgba(52, 211, 153, .18);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background .15s
+        }
+
+        .upg:hover {
+            background: rgba(52, 211, 153, .16)
+        }
+
+        .upg.locked {
+            opacity: .4;
+            cursor: not-allowed
+        }
+
+        .ui {
+            font-size: 1.6rem;
+            flex-shrink: 0
+        }
+
+        .inf {
+            flex: 1
+        }
+
+        .un {
+            font-weight: 700;
+            font-size: .9rem
+        }
+
+        .ud {
+            font-size: .72rem;
+            color: #6b7280
+        }
+
+        .uc {
+            font-size: .78rem;
+            color: #6ee7b7;
+            margin-top: 2px
+        }
+
+        .uo {
+            font-size: .72rem;
+            color: #38bdf8
+        }
+
+        #toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(52, 211, 153, .9);
+            color: #1a2e1a;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-weight: 700;
+            opacity: 0;
+            transition: opacity .3s;
+            pointer-events: none;
+            z-index: 99
+        }
+    </style>
+</head>
+
+<body>
+    <h1>💻 Code Factory</h1>
+    <div id="counter">0 lines of code</div>
+    <div id="cps">0 lines/sec</div>
+    <div id="ver-display">v0.1.0 alpha · 0 commits</div>
+    <div style="color:#fca5a5;font-size:.78rem;margin-bottom:4px">🐛 Bug reports drain output — click to fix!</div>
+    <div id="bugs-wrap">
+        <div id="no-bugs">No bugs... yet.</div>
+    </div>
+    <div id="terminal">// Your code...<br>&gt; _</div>
+    <div class="layout">
+        <div id="click-zone">
+            <div id="keyboard" onclick="typeCode()">⌨️<div style="font-size:.7rem;color:#34d399">type code!</div>
+            </div>
+        </div>
+        <div id="shop">
+            <h2>🧑‍💻 Team</h2>
+            <div id="upgrades"></div>
+        </div>
+    </div>
+    <div id="toast"></div>
+    <script>
+        let loc = 0, lps = 0, cp = 1, commits = 0, version = 0, bugs = [];
+        const SNIPPETS = ['console.log("hi");', 'for(let i=0;i<n;i++)', 'async function load(){', 'return res.json(data);', 'const x=arr.filter(v=>v>0);', 'await Promise.all(tasks);', 'Object.entries(map).forEach(', 'class DataStore extends Store{'];
+        const VERSIONS = ['0.1.0 alpha', '0.5.0 beta', '1.0.0 stable', '2.0.0', '3.5 LTS', '4.0 Enterprise', '5.0 Pro', '10.0 Legendary'];
+        const BUG_TYPES = [
+            { name: 'Null Pointer', icon: '💥', sev: 'Critical', drain: .8, time: 12 },
+            { name: 'Memory Leak', icon: '🔴', sev: 'High', drain: .5, time: 18 },
+            { name: 'Off-by-One', icon: '🟡', sev: 'Medium', drain: .2, time: 25 },
+            { name: 'UI Glitch', icon: '🟠', sev: 'Low', drain: .1, time: 30 },
+            { name: 'Race Condition', icon: '⚡', sev: 'Critical', drain: 1, time: 10 },
+        ];
+        function fmt(n) { if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B'; if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M'; if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K'; return Math.floor(n) + '' }
+        function cost(u) { return Math.floor(u.base * Math.pow(1.15, u.own)) }
+        function typeCode() {
+            loc += cp; commits++;
+            if (commits % 100 === 0) version = Math.min(7, version + 1);
+            const sn = SNIPPETS[Math.floor(Math.random() * SNIPPETS.length)];
+            const term = document.getElementById('terminal');
+            term.innerHTML += `<br>> ${sn}`; term.scrollTop = term.scrollHeight;
+            const el = document.createElement('div');
+            el.textContent = '📝+' + cp; el.style.cssText = 'position:fixed;color:#6ee7b7;font-weight:700;pointer-events:none;z-index:50';
+            const r = document.getElementById('keyboard').getBoundingClientRect();
+            el.style.left = (r.left + r.width / 2 + (Math.random() - .5) * 40) + 'px'; el.style.top = r.top + 'px';
+            el.animate([{ opacity: 1, transform: 'translateY(0)' }, { opacity: 0, transform: 'translateY(-55px)' }], { duration: 700, fill: 'forwards' });
+            document.body.appendChild(el); setTimeout(() => el.remove(), 700);
+        }
+        // Bug system — bugs cut lps until fixed
+        function actualLps() {
+            const bugDrain = bugs.reduce((a, b) => a + b.drain, 0);
+            return Math.max(0, lps - bugDrain);
+        }
+        function spawnBug() {
+            if (bugs.length >= 3) return;
+            const b = BUG_TYPES[Math.floor(Math.random() * BUG_TYPES.length)];
+            const id = Date.now(); const drain = b.drain * Math.max(.1, lps * .15);
+            bugs.push({ ...b, id, timer: b.time, drain });
+            renderBugs();
+            setTimeout(() => { const i = bugs.findIndex(x => x.id === id); if (i >= 0) { bugs.splice(i, 1); renderBugs(); } }, b.time * 1000);
+        }
+        function fixBug(id) {
+            const i = bugs.findIndex(b => b.id === id); if (i < 0) return;
+            loc += Math.floor(cp * 3); bugs.splice(i, 1); renderBugs();
+            toast('🐛 Bug fixed! +' + fmt(cp * 3) + ' bonus lines!');
+        }
+        function renderBugs() {
+            const w = document.getElementById('bugs-wrap'); w.innerHTML = '';
+            if (bugs.length === 0) { w.innerHTML = '<div id="no-bugs">No bugs... yet. 😌</div>'; return; }
+            bugs.forEach(b => {
+                const div = document.createElement('div'); div.className = 'bug-card';
+                div.innerHTML = `<div class="bug-icon">${b.icon}</div><div class="bug-name">${b.name}</div><div class="bug-sev">${b.sev} · -${b.drain.toFixed(1)}/s</div><div class="bug-time">⏱ ${b.timer}s</div>`;
+                div.addEventListener('click', () => fixBug(b.id));
+                w.appendChild(div);
+            });
+        }
+        setInterval(() => {
+            bugs.forEach(b => b.timer--);
+            if (lps > .5 && Math.random() < .2) spawnBug();
+            renderBugs();
+        }, 1000);
+        const UPS = [
+            { n: 'Intern', i: '🧑', d: '+0.3/s lines', base: 30, own: 0, rate: .3 },
+            { n: 'Junior Dev', i: '👨‍💻', d: '+1.5/s lines', base: 150, own: 0, rate: 1.5 },
+            { n: 'Senior Dev', i: '🧑‍💻', d: '+7/s lines', base: 700, own: 0, rate: 7 },
+            { n: '10x Engineer', i: '🚀', d: '+4/click', base: 300, own: 0, rate: 0, cp: 4 },
+            { n: 'AI Copilot', i: '🤖', d: '+25/s lines', base: 3500, own: 0, rate: 25 },
+            { n: 'Dev Team', i: '👥', d: '+90/s lines', base: 18000, own: 0, rate: 90 },
+            { n: 'Tech Lead', i: '🏆', d: '+350/s lines', base: 100000, own: 0, rate: 350 },
+        ];
+        function buy(u) {
+            const co = cost(u); if (loc < co) return;
+            loc -= co; u.own++;
+            if (u.rate) lps += u.rate; if (u.cp) cp += u.cp;
+            renderUpgrades(); toast('✅ ' + u.n + ' hired!');
+        }
+        function toast(msg) {
+            const t = document.getElementById('toast'); t.textContent = msg; t.style.opacity = 1;
+            clearTimeout(t._t); t._t = setTimeout(() => t.style.opacity = 0, 2200);
+        }
+        function renderUpgrades() {
+            const d = document.getElementById('upgrades'); d.innerHTML = '';
+            UPS.forEach(u => {
+                const co = cost(u), div = document.createElement('div');
+                div.className = 'upg' + (loc < co ? ' locked' : '');
+                div.innerHTML = `<div class="ui">${u.i}</div><div class="inf"><div class="un">${u.n}</div><div class="ud">${u.d}</div><div class="uc">💻 ${fmt(co)}</div><div class="uo">Hired: ${u.own}</div></div>`;
+                div.addEventListener('click', () => buy(u));
+                d.appendChild(div);
+            });
+        }
+        let last = 0, lastR = 0;
+        function loop(ts) {
+            if (last) loc += actualLps() * (ts - last) / 1000;
+            last = ts;
+            document.getElementById('counter').textContent = fmt(loc) + ' lines';
+            document.getElementById('cps').textContent = actualLps().toFixed(1) + '/sec (base ' + lps.toFixed(1) + ')';
+            document.getElementById('ver-display').textContent = 'v' + VERSIONS[version] + ' · ' + commits + ' commits';
+            if (ts - lastR > 500) { lastR = ts; renderUpgrades(); }
+            requestAnimationFrame(loop);
+        }
+        renderUpgrades(); requestAnimationFrame(loop);
+    </script>
+</body>
+
+</html>

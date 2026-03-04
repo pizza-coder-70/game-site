@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Pac-Man | The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0f;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #FFD700;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px #FFD700;
+            letter-spacing: 4px;
+        }
+
+        #score-board {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        canvas {
+            border: 3px solid #1a6fff;
+            box-shadow: 0 0 30px #1a6fff55;
+            border-radius: 4px;
+            display: block;
+        }
+
+        #msg {
+            margin-top: 14px;
+            font-size: 1.2rem;
+            min-height: 1.5em;
+            color: #fff;
+        }
+
+        #startBtn {
+            margin-top: 12px;
+            padding: 10px 32px;
+            background: linear-gradient(135deg, #FFD700, #FF8C00);
+            color: #000;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            letter-spacing: 2px;
+        }
+
+        #startBtn:hover {
+            transform: scale(1.07);
+        }
+
+        #menuBtn {
+            margin-top: 10px;
+            padding: 10px 32px;
+            background: linear-gradient(135deg, #334155, #1e293b);
+            color: #fff;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            letter-spacing: 2px;
+            display: none;
+        }
+
+        #menuBtn:hover {
+            transform: scale(1.07);
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999;
+        }
+
+        #homeBtn:hover {
+            background: #1e40af;
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>🟡 PAC-MAN</h1>
+    <div id="score-board">
+        <span>SCORE: <b id="score">0</b></span>
+        <span>LIVES: <b id="lives">3</b></span>
+        <span>LEVEL: <b id="level">1</b></span>
+    </div>
+    <canvas id="c"></canvas>
+    <div id="msg">Press START or Space to begin!</div>
+    <button id="startBtn" onclick="startGame()">START</button>
+    <button id="menuBtn" onclick="window.close()">🏠 Return to Menu</button>
+    <script src="../scripts/scores.js"></script>
+    <script>
+        const C = document.getElementById('c'), ctx = C.getContext('2d');
+
+        // Cell size and grid
+        const CS = 24; // cell size in pixels
+        // 21-column × 23-row classic-style map
+        // # = wall, . = dot, o = power dot, space = empty corridor
+        const MAP_RAW = [
+            "#####################",
+            "#........#...........#",  // NOTE: fixed below — we use exact-width rows
+            "#.##.###.#.###.##.#",
+            "#o##.###.#.###.##o#",
+            "#.................#",
+            "#.##.#.#####.#.##.#",
+            "#....#...#...#....#",
+            "####.###.#.###.####",
+            "####.#         #.####",
+            "####.# ##=## #.####",
+            "     .         .     ",
+            "####.# ####### #.####",
+            "####.#         #.####",
+            "####.#.#######.#.####",
+            "#........#........#",
+            "#.##.###.#.###.##.#",
+            "#o..#.....P....#..o#",
+            "##.#.#.#####.#.#.##",
+            "#....#...#...#....#",
+            "#.########.########.#",
+            "#...................#",
+            "#.##.###.###.###.##.#",
+            "#####################"
+        ];
+
+        // Use a verified, well-known 21×23 Pac-Man style map
+        // Rows: 23, Cols: 21
+        const ROWS = 23, COLS = 21;
+        const MAP = [
+            "#####################",
+            "#........#...........#",
+            "#.##.###.#.###.##.##",
+            "#o##.           .##o#",
+            "#.####.#####.####.#",
+            "#.................#",
+            "#.##.#.#####.#.##.#",
+            "#....#.......#....#",
+            "####.###.#.###.####",
+            "####.#.......#.####",
+            "####.#.##-##.#.####",
+            ".....#.#   #.#.....",
+            "####.#.#####.#.####",
+            "####.#.......#.####",
+            "####.#.#####.#.####",
+            "#........#........#",
+            "#.##.###.#.###.##.#",
+            "#o..#.....P....#.o#",
+            "##.#.#.#####.#.#.##",
+            "#....#...#...#....#",
+            "#.##.###.#.###.##.#",
+            "#...................#",
+            "#####################"
+        ];
+
+        // Enforce COLS width on every row
+        function fixRow(row) {
+            if (row.length < COLS) return row.padEnd(COLS, '#');
+            if (row.length > COLS) return row.slice(0, COLS);
+            return row;
+        }
+        const GRID = MAP.map(fixRow);
+
+        C.width = COLS * CS;
+        C.height = ROWS * CS;
+
+        let score = 0, lives = 3, level = 1, running = false, gameOver = false, won = false;
+        let pacX, pacY, pacDir = 0, pacNextDir = 0, pacMouth = 0.25, pacOpen = true;
+        let ghosts = [], dots = [], powerDots = [];
+        let powered = false, powerTimer = 0, animId;
+
+        // Direction vectors: 0=right,1=left,2=up,3=down
+        const DX = [1, -1, 0, 0], DY = [0, 0, -1, 1];
+
+        function isWall(r, c) {
+            if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return true;
+            const ch = GRID[r][c];
+            return ch === '#' || ch === '-';
+        }
+
+        function buildDots() {
+            dots = []; powerDots = [];
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const ch = GRID[r][c];
+                    if (ch === '.') dots.push({ r, c });
+                    else if (ch === 'o') powerDots.push({ r, c });
+                }
+            }
+        }
+
+        // Find Pac-Man start position from 'P' in map
+        function findStart() {
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    if (GRID[r][c] === 'P') return { r, c };
+                }
+            }
+            return { r: 17, c: 10 }; // fallback = row 17, center
+        }
+
+        function initGhosts() {
+            // Place ghosts in the ghost house (center area around rows 10-12, cols 9-11)
+            const houseR = 10, houseC = 10;
+            const colors = ['#FF0000', '#FFB8FF', '#00FFFF', '#FFB852'];
+            ghosts = [
+                { r: houseR, c: houseC - 1, x: 0, y: 0, dir: 0, color: colors[0], scared: false, speed: 1.2 },
+                { r: houseR, c: houseC + 1, x: 0, y: 0, dir: 1, color: colors[1], scared: false, speed: 1.0 },
+                { r: houseR + 1, c: houseC - 1, x: 0, y: 0, dir: 2, color: colors[2], scared: false, speed: 1.1 },
+                { r: houseR + 1, c: houseC + 1, x: 0, y: 0, dir: 3, color: colors[3], scared: false, speed: 0.9 },
+            ];
+            ghosts.forEach(g => {
+                g.x = g.c * CS + CS / 2;
+                g.y = g.r * CS + CS / 2;
+            });
+        }
+
+        function startGame() {
+            score = 0; lives = 3; level = 1; running = true; gameOver = false; won = false;
+            pacDir = 0; pacNextDir = 0; pacMouth = 0.25; pacOpen = true; powered = false; powerTimer = 0;
+            document.getElementById('score').textContent = 0;
+            document.getElementById('lives').textContent = 3;
+            document.getElementById('level').textContent = 1;
+            buildDots();
+            const s = findStart();
+            pacX = s.c * CS + CS / 2;
+            pacY = s.r * CS + CS / 2;
+            initGhosts();
+            document.getElementById('msg').textContent = 'Go! Use Arrow Keys';
+            document.getElementById('menuBtn').style.display = 'none';
+            if (animId) cancelAnimationFrame(animId);
+            loop();
+        }
+
+        // Smooth movement: try to move entity by pixels, returns new position
+        function tryMove(px, py, dir, speed) {
+            const nx = px + DX[dir] * speed;
+            const ny = py + DY[dir] * speed;
+            // Check all 4 corners of a radius-slightly-less-than-half-cell
+            const r2 = CS * 0.45;
+            const offsets = [[r2, 0], [-r2, 0], [0, r2], [0, -r2]];
+            for (const [ox, oy] of offsets) {
+                const cr = Math.floor((ny + oy) / CS);
+                const cc = Math.floor((nx + ox) / CS);
+                if (isWall(cr, cc)) return { x: px, y: py, moved: false };
+            }
+            return { x: nx, y: ny, moved: true };
+        }
+
+        function update() {
+            if (!running) return;
+
+            // Animate mouth
+            if (pacOpen) { pacMouth += 0.07; if (pacMouth >= 0.4) pacOpen = false; }
+            else { pacMouth -= 0.07; if (pacMouth <= 0.05) pacOpen = true; }
+
+            // Move Pac-Man
+            const speed = 1.8;
+            let res = tryMove(pacX, pacY, pacNextDir, speed);
+            if (res.moved) { pacX = res.x; pacY = res.y; pacDir = pacNextDir; }
+            else {
+                res = tryMove(pacX, pacY, pacDir, speed);
+                if (res.moved) { pacX = res.x; pacY = res.y; }
+            }
+            // Tunnel wrap
+            if (pacX < 0) pacX = COLS * CS;
+            if (pacX > COLS * CS) pacX = 0;
+
+            // Eat dots — snap pac position to nearest cell center for reliable eating
+            const pr = Math.round((pacY - CS / 2) / CS);
+            const pc = Math.round((pacX - CS / 2) / CS);
+            dots = dots.filter(d => {
+                if (d.r === pr && d.c === pc) { score += 10; document.getElementById('score').textContent = score; return false; }
+                return true;
+            });
+            powerDots = powerDots.filter(d => {
+                if (d.r === pr && d.c === pc) {
+                    score += 50; powered = true; powerTimer = 400;
+                    ghosts.forEach(g => g.scared = true);
+                    document.getElementById('score').textContent = score;
+                    return false;
+                }
+                return true;
+            });
+            if (powered) { powerTimer--; if (powerTimer <= 0) { powered = false; ghosts.forEach(g => g.scared = false); } }
+
+            // Move ghosts
+            ghosts.forEach(g => {
+                const sp = g.scared ? g.speed * 0.6 : g.speed;
+                // Try preferred direction first, then random
+                let moved = false;
+                const preferred = pacDir; // simple: chase
+                const shuffled = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
+                // avoid reversing
+                const reverse = g.dir === 0 ? 1 : g.dir === 1 ? 0 : g.dir === 2 ? 3 : 2;
+                const tryDirs = [g.dir, ...shuffled].filter((d, i, a) => a.indexOf(d) === i && d !== reverse);
+                for (const d of tryDirs) {
+                    const r2 = tryMove(g.x, g.y, d, sp);
+                    if (r2.moved) { g.x = r2.x; g.y = r2.y; g.dir = d; moved = true; break; }
+                }
+                if (!moved) {
+                    // forced reversal
+                    const r2 = tryMove(g.x, g.y, reverse, sp);
+                    if (r2.moved) { g.x = r2.x; g.y = r2.y; g.dir = reverse; }
+                }
+                // Tunnel wrap
+                if (g.x < 0) g.x = COLS * CS;
+                if (g.x > COLS * CS) g.x = 0;
+
+                // Collision with Pac-Man
+                if (Math.hypot(g.x - pacX, g.y - pacY) < CS * 0.75) {
+                    if (g.scared) {
+                        score += 200; document.getElementById('score').textContent = score;
+                        // send ghost back to house
+                        const s = findStart();
+                        g.x = (COLS / 2) * CS + CS / 2; g.y = 10 * CS + CS / 2;
+                        g.scared = false;
+                    } else {
+                        lives--; document.getElementById('lives').textContent = lives;
+                        if (lives <= 0) {
+                            running = false; gameOver = true;
+                            document.getElementById('msg').textContent = 'GAME OVER! Press Start.';
+                            document.getElementById('menuBtn').style.display = '';
+                            PizzaScores.save('Pac-Man', score);
+                        } else {
+                            // Respawn pac
+                            const s = findStart();
+                            pacX = s.c * CS + CS / 2; pacY = s.r * CS + CS / 2; pacDir = 0; pacNextDir = 0;
+                        }
+                    }
+                }
+            });
+
+            if (dots.length === 0 && powerDots.length === 0) {
+                running = false; won = true;
+                document.getElementById('msg').textContent = 'YOU WIN! 🎉 Press Start for next level.';
+                document.getElementById('menuBtn').style.display = '';
+                PizzaScores.save('Pac-Man', score, 'WIN');
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = '#000'; ctx.fillRect(0, 0, C.width, C.height);
+
+            // Draw grid
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const ch = GRID[r][c];
+                    if (ch === '#') {
+                        ctx.fillStyle = '#1a1aff';
+                        ctx.fillRect(c * CS, r * CS, CS, CS);
+                        // Inner highlight
+                        ctx.fillStyle = '#3333ff';
+                        ctx.fillRect(c * CS + 1, r * CS + 1, CS - 2, CS - 2);
+                    } else if (ch === '-') {
+                        // Ghost house door
+                        ctx.fillStyle = '#ffb8ff';
+                        ctx.fillRect(c * CS, r * CS + CS * 0.4, CS, CS * 0.2);
+                    }
+                }
+            }
+
+            // Draw dots
+            dots.forEach(d => {
+                ctx.fillStyle = '#FFD700'; ctx.beginPath();
+                ctx.arc(d.c * CS + CS / 2, d.r * CS + CS / 2, 2.5, 0, Math.PI * 2); ctx.fill();
+            });
+            powerDots.forEach(d => {
+                const pulse = 0.7 + 0.3 * Math.sin(Date.now() / 200);
+                ctx.fillStyle = '#FFD700'; ctx.beginPath();
+                ctx.arc(d.c * CS + CS / 2, d.r * CS + CS / 2, 6 * pulse, 0, Math.PI * 2); ctx.fill();
+            });
+
+            // Draw Pac-Man
+            const angle = [0, Math.PI, -Math.PI / 2, Math.PI / 2][pacDir];
+            ctx.fillStyle = '#FFD700'; ctx.beginPath();
+            ctx.moveTo(pacX, pacY);
+            ctx.arc(pacX, pacY, CS / 2 - 1, angle + pacMouth, angle + Math.PI * 2 - pacMouth);
+            ctx.closePath(); ctx.fill();
+
+            // Draw ghosts
+            ghosts.forEach(g => {
+                const col = g.scared ? (powerTimer > 100 ? '#0000FF' : (Math.floor(Date.now() / 150) % 2 === 0 ? '#fff' : '#0000FF')) : g.color;
+                ctx.fillStyle = col;
+                const gx = g.x - CS / 2 + 2, gy = g.y - CS / 2 + 2, gw = CS - 4, gh = CS - 4;
+                ctx.beginPath();
+                // round top
+                ctx.arc(gx + gw / 2, gy + gh * 0.45, gw / 2, Math.PI, 0);
+                ctx.lineTo(gx + gw, gy + gh);
+                // wavy bottom
+                const waves = 3;
+                for (let i = waves; i >= 0; i--) {
+                    const waveX = gx + (i / waves) * gw;
+                    const waveY = gy + gh - (i % 2 === 0 ? gh * 0.25 : 0);
+                    ctx.lineTo(waveX, waveY);
+                }
+                ctx.closePath(); ctx.fill();
+
+                // Eyes (only when not scared)
+                if (!g.scared) {
+                    // whites
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath(); ctx.ellipse(gx + gw * 0.3, gy + gh * 0.38, gw * 0.14, gw * 0.18, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.ellipse(gx + gw * 0.7, gy + gh * 0.38, gw * 0.14, gw * 0.18, 0, 0, Math.PI * 2); ctx.fill();
+                    // pupils (look toward movement direction)
+                    const pdx = DX[g.dir] * gw * 0.07, pdy = DY[g.dir] * gw * 0.07;
+                    ctx.fillStyle = '#00f';
+                    ctx.beginPath(); ctx.arc(gx + gw * 0.3 + pdx, gy + gh * 0.38 + pdy, gw * 0.08, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(gx + gw * 0.7 + pdx, gy + gh * 0.38 + pdy, gw * 0.08, 0, Math.PI * 2); ctx.fill();
+                }
+            });
+        }
+
+        function loop() {
+            update(); draw();
+            if (running) animId = requestAnimationFrame(loop);
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'ArrowRight') pacNextDir = 0;
+            else if (e.key === 'ArrowLeft') pacNextDir = 1;
+            else if (e.key === 'ArrowUp') pacNextDir = 2;
+            else if (e.key === 'ArrowDown') pacNextDir = 3;
+            else if (e.key === ' ' && !running) {
+                startGame();
+                document.getElementById('menuBtn').style.display = 'none';
+            }
+            if (['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown', ' '].includes(e.key)) e.preventDefault();
+        });
+
+        // Draw initial board
+        buildDots();
+        const s0 = findStart();
+        pacX = s0.c * CS + CS / 2; pacY = s0.r * CS + CS / 2;
+        initGhosts();
+        draw();
+    </script>
+</body>
+
+</html>

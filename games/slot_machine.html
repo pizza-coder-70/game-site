@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Slot Machine | The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: radial-gradient(ellipse at center, #1a0000, #000);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fcd34d;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            letter-spacing: 4px;
+            text-shadow: 0 0 20px #fcd34d;
+        }
+
+        #machine {
+            background: linear-gradient(135deg, #7f1d1d, #991b1b);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 0 60px #ef444444, inset 0 2px 4px rgba(255, 255, 255, 0.1);
+            border: 3px solid #dc2626;
+        }
+
+        #reels {
+            display: flex;
+            gap: 12px;
+            background: #000;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 2px solid #fcd34d;
+        }
+
+        .reel {
+            width: 100px;
+            height: 100px;
+            background: #111;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3.5rem;
+            border: 2px solid #444;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .reel.spinning {
+            animation: spin .1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: translateY(0)
+            }
+
+            50% {
+                transform: translateY(-5px)
+            }
+
+            100% {
+                transform: translateY(0)
+            }
+        }
+
+        #credits {
+            font-size: 1.3rem;
+            text-align: center;
+            margin-bottom: 16px;
+            color: #fbbf24;
+        }
+
+        #result {
+            font-size: 1.2rem;
+            min-height: 1.8em;
+            text-align: center;
+            color: #fff;
+            margin-bottom: 12px;
+        }
+
+        #paytable {
+            font-size: .8rem;
+            color: #f87171;
+            text-align: center;
+            margin-bottom: 12px;
+            line-height: 1.8;
+        }
+
+        #bet-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+            justify-content: center;
+        }
+
+        .bet-btn {
+            padding: 6px 18px;
+            background: #fcd34d;
+            color: #000;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        #spin-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #fcd34d, #f59e0b);
+            color: #000;
+            font-size: 1.3rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            letter-spacing: 3px;
+            box-shadow: 0 4px 16px rgba(252, 211, 77, .4);
+        }
+
+        #spin-btn:hover {
+            transform: scale(1.03);
+        }
+
+        #spin-btn:disabled {
+            opacity: 0.5;
+            transform: none;
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999;
+        }
+
+        #homeBtn:hover {
+            background: #1e40af;
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>🎰 SLOT MACHINE</h1>
+    <div id="machine">
+        <div id="reels">
+            <div class="reel" id="r0">🍒</div>
+            <div class="reel" id="r1">🍒</div>
+            <div class="reel" id="r2">🍒</div>
+        </div>
+        <div id="credits">💰 Credits: <b id="cred">100</b></div>
+        <div id="result">Good luck!</div>
+        <div id="bet-area">
+            BET: <button class="bet-btn" onclick="changeBet(-1)">-</button>
+            <b id="bet">5</b>
+            <button class="bet-btn" onclick="changeBet(1)">+</button>
+        </div>
+        <div id="paytable">
+            🎰🎰🎰 = x50 | 💎💎💎 = x30 | ⭐⭐⭐ = x20<br>
+            🍋🍋🍋 = x15 | 🍊🍊🍊 = x10 | 🍒🍒🍒 = x5<br>
+            Any 2 match = x2 | 🍒🍒 = x1.5
+        </div>
+        <button id="spin-btn" onclick="spin()">SPIN 🎰</button>
+    </div>
+    <script src="../scripts/scores.js"></script>
+    <script>
+        const SYMBOLS = ['🍒', '🍒', '🍒', '🍊', '🍊', '🍋', '🍋', '⭐', '⭐', '💎', '🎰'];
+        let credits = 100, bet = 5, spinning = false;
+
+        function changeBet(d) {
+            bet = Math.max(1, Math.min(credits, bet + d));
+            document.getElementById('bet').textContent = bet;
+        }
+
+        function getRandom() { return SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]; }
+
+        async function spin() {
+            if (spinning || credits < bet) return;
+            spinning = true; credits -= bet; updateCredits();
+            document.getElementById('result').textContent = '🎲 Spinning...';
+            document.getElementById('spin-btn').disabled = true;
+            const reelEls = [document.getElementById('r0'), document.getElementById('r1'), document.getElementById('r2')];
+            reelEls.forEach(r => r.classList.add('spinning'));
+            const results = [];
+            // Spin each reel with delay
+            for (let i = 0; i < 3; i++) {
+                await new Promise(res => setTimeout(res, 400 + i * 300));
+                const sym = getRandom(); results.push(sym);
+                reelEls[i].classList.remove('spinning');
+                reelEls[i].textContent = sym;
+            }
+            // Calculate win
+            let win = 0, msg = '';
+            if (results[0] === results[1] && results[1] === results[2]) {
+                const mult = { '🎰': 50, '💎': 30, '⭐': 20, '🍋': 15, '🍊': 10, '🍒': 5 }[results[0]] || 5;
+                win = bet * mult; msg = `💥 JACKPOT! ${results[0]}${results[0]}${results[0]} × ${mult} = +${win}!`;
+            } else if (results[0] === results[1] || results[1] === results[2]) {
+                win = Math.floor(bet * 2); msg = `✨ Two of a kind! +${win}`;
+            } else if (results[0] === results[2]) {
+                win = Math.floor(bet * 1.5); msg = `✨ Pair! +${win}`;
+            } else if (results.includes('🍒') && results.filter(s => s === '🍒').length >= 2) {
+                win = Math.floor(bet * 1.5); msg = `🍒🍒 Cherries! +${win}`;
+            } else {
+                msg = '😞 No win. Try again!';
+            }
+            credits += win; updateCredits();
+            document.getElementById('result').textContent = msg;
+            if (credits <= 0) { PizzaScores.save('Slot Machine', credits, 'Out of credits'); document.getElementById('result').textContent = '💸 Out of credits! Resetting...'; setTimeout(() => { credits = 100; bet = 5; updateCredits(); document.getElementById('result').textContent = 'New game!'; }, 1500); }
+            spinning = false; document.getElementById('spin-btn').disabled = false;
+        }
+
+        function updateCredits() { document.getElementById('cred').textContent = credits; document.getElementById('bet').textContent = Math.min(bet, credits); }
+    </script>
+</body>
+
+</html>

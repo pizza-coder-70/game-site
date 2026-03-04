@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Sliding Puzzle – The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0f172a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #38bdf8;
+            font-size: 2rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px #38bdf8
+        }
+
+        #board {
+            display: grid;
+            gap: 4px;
+            padding: 8px;
+            background: rgba(56, 189, 248, 0.08);
+            border: 2px solid rgba(56, 189, 248, 0.2);
+            border-radius: 12px
+        }
+
+        .tile {
+            width: 90px;
+            height: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            font-weight: 800;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all .15s;
+            user-select: none;
+            color: #fff
+        }
+
+        .tile.empty {
+            background: transparent;
+            cursor: default
+        }
+
+        .tile:not(.empty) {
+            background: linear-gradient(135deg, #0c4a6e, #0369a1);
+            border: 2px solid rgba(56, 189, 248, 0.3)
+        }
+
+        .tile:not(.empty):hover {
+            border-color: #38bdf8;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
+            transform: scale(1.04)
+        }
+
+        .tile.correct {
+            background: linear-gradient(135deg, #14532d, #166534);
+            border-color: rgba(74, 222, 128, 0.3)
+        }
+
+        #hud {
+            margin-top: 12px;
+            color: #38bdf8
+        }
+
+        #msg {
+            color: #4ade80;
+            font-size: 1.1rem;
+            margin-top: 8px;
+            font-weight: 700;
+            min-height: 28px
+        }
+
+        button {
+            margin-top: 8px;
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            border: none;
+            color: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: .9rem;
+            transition: all .2s
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(2, 132, 199, 0.4)
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔀 Sliding Puzzle</h1>
+    <div id="board"></div>
+    <div id="hud">Moves: <span id="mv">0</span> &nbsp; Best: <span id="bs">∞</span></div>
+    <div id="msg"></div>
+    <button onclick="init()">Shuffle</button>
+    <script>
+        const N = 4;
+        let tiles, empty, moves, best = Infinity, won;
+        function goal(i) { return i; }
+        function init() {
+            tiles = Array.from({ length: N * N }, (_, i) => i); won = false; moves = 0;
+            // shuffle
+            for (let i = tiles.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[tiles[i], tiles[j]] = [tiles[j], tiles[i]]; }
+            empty = tiles.indexOf(0); document.getElementById('mv').textContent = 0; document.getElementById('msg').textContent = '';
+            render();
+        }
+        function canMove(idx) { const er = Math.floor(empty / N), ec = empty % N, ir = Math.floor(idx / N), ic = idx % N; return (er === ir && Math.abs(ec - ic) === 1) || (ec === ic && Math.abs(er - ir) === 1); }
+        function click(idx) {
+            if (!canMove(idx) || won) return;
+            [tiles[empty], tiles[idx]] = [tiles[idx], tiles[empty]]; empty = idx; moves++; document.getElementById('mv').textContent = moves;
+            if (tiles.every((v, i) => v === i || (i === N * N - 1 && v === 0))) { won = true; if (moves < best) { best = moves; document.getElementById('bs').textContent = best; } document.getElementById('msg').textContent = `🎉 Solved in ${moves} moves!`; }
+            render();
+        }
+        const EMOJIS = ['', '🔥', '💧', '🌊', '⭐', '🌙', '☀️', '🌈', '🎮', '🎯', '🎪', '💎', '🏆', '🦁', '🐲', '🚀'];
+        function render() {
+            const board = document.getElementById('board'); board.style.gridTemplateColumns = `repeat(${N},90px)`; board.innerHTML = '';
+            tiles.forEach((v, i) => {
+                const tile = document.createElement('div'); tile.className = 'tile';
+                if (v === 0) { tile.classList.add('empty'); tile.textContent = ''; }
+                else { tile.textContent = EMOJIS[v] || v; if (v === i) tile.classList.add('correct'); }
+                tile.addEventListener('click', () => click(i)); board.appendChild(tile);
+            });
+        }
+        init();
+    </script>
+</body>
+
+</html>

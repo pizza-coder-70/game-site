@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Breakout | The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0d001a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #c084fc;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px #c084fc;
+            letter-spacing: 4px;
+        }
+
+        #hud {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+
+        canvas {
+            border: 2px solid #c084fc;
+            box-shadow: 0 0 30px #c084fc44;
+            cursor: none;
+        }
+
+        #msg {
+            margin-top: 12px;
+            font-size: 1.2rem;
+            min-height: 1.5em;
+            color: #fff;
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 10px 32px;
+            background: linear-gradient(135deg, #c084fc, #7c3aed);
+            color: #fff;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            letter-spacing: 2px;
+        }
+
+        button:hover {
+            transform: scale(1.07);
+        }
+
+        #menuBtn {
+            background: linear-gradient(135deg, #334155, #1e293b);
+            display: none;
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999;
+        }
+
+        #homeBtn:hover {
+            background: #1e40af;
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>🧱 BREAKOUT</h1>
+    <div id="hud"><span>SCORE: <b id="score">0</b></span><span>LIVES: <b id="lives">3</b></span><span>LEVEL: <b
+                id="level">1</b></span></div>
+    <canvas id="c" width="560" height="480"></canvas>
+    <div id="msg">Move mouse to aim. Click or press Space to launch!</div>
+    <button onclick="startGame()">START</button>
+    <button id="menuBtn" onclick="window.close()">🏠 Return to Menu</button>
+    <script src="../scripts/scores.js"></script>
+    <script>
+        const C = document.getElementById('c'), ctx = C.getContext('2d');
+        const W = 560, H = 480;
+        let score = 0, lives = 3, level = 1, running = false, launched = false, animId;
+        let paddle, ball, bricks;
+
+        const COLORS = ['#ff4d6d', '#ff9a3c', '#ffdd59', '#6be585', '#4dabf7', '#c084fc'];
+
+        function makeBricks(lvl) {
+            const b = [];
+            const rows = Math.min(4 + lvl, 8), cols = 10;
+            const bw = 48, bh = 18, pad = 4, offX = 16, offY = 50;
+            for (let r = 0; r < rows; r++)
+                for (let c = 0; c < cols; c++)
+                    b.push({ x: offX + c * (bw + pad), y: offY + r * (bh + pad), w: bw, h: bh, alive: true, color: COLORS[r % COLORS.length], hp: r < 2 ? 1 : r < 4 ? 2 : 3 });
+            return b;
+        }
+
+        function startGame() {
+            score = 0; lives = 3; level = 1; running = true; launched = false;
+            paddle = { x: W / 2 - 50, y: H - 30, w: 100, h: 12 };
+            ball = { x: W / 2, y: H - 50, r: 9, vx: 0, vy: 0 };
+            bricks = makeBricks(level);
+            document.getElementById('score').textContent = 0;
+            document.getElementById('lives').textContent = 3;
+            document.getElementById('level').textContent = 1;
+            document.getElementById('msg').textContent = 'Move mouse. Click to launch!';
+            if (animId) cancelAnimationFrame(animId);
+            loop();
+        }
+
+        C.addEventListener('mousemove', e => {
+            const rect = C.getBoundingClientRect();
+            paddle.x = Math.max(0, Math.min(W - paddle.w, e.clientX - rect.left - paddle.w / 2));
+            if (!launched) { ball.x = paddle.x + paddle.w / 2; }
+        });
+
+        C.addEventListener('click', launch);
+        document.addEventListener('keydown', e => {
+            if (e.key === ' ') { launch(); if (!running) startGame(); }
+            if (e.key === 'ArrowLeft') paddle.x = Math.max(0, paddle.x - 20);
+            if (e.key === 'ArrowRight') paddle.x = Math.min(W - paddle.w, paddle.x + 20);
+        });
+
+        function launch() {
+            if (!launched && running) {
+                launched = true;
+                const spd = 5 + level;
+                ball.vx = (Math.random() - 0.5) * 4;
+                ball.vy = -spd;
+                document.getElementById('msg').textContent = '';
+            }
+        }
+
+        function resetBall() {
+            launched = false;
+            ball.x = paddle.x + paddle.w / 2; ball.y = H - 50; ball.vx = 0; ball.vy = 0;
+        }
+
+        function update() {
+            if (!running || !launched) return;
+            ball.x += ball.vx; ball.y += ball.vy;
+            // Wall bounce
+            if (ball.x - ball.r < 0) { ball.x = ball.r; ball.vx *= -1; }
+            if (ball.x + ball.r > W) { ball.x = W - ball.r; ball.vx *= -1; }
+            if (ball.y - ball.r < 0) { ball.y = ball.r; ball.vy *= -1; }
+            // Bottom
+            if (ball.y + ball.r > H) {
+                lives--; document.getElementById('lives').textContent = lives;
+                if (lives <= 0) { running = false; document.getElementById('msg').textContent = 'GAME OVER! Press Start.'; document.getElementById('menuBtn').style.display = ''; PizzaScores.save('Breakout', score); }
+                else { resetBall(); }
+                return;
+            }
+            // Paddle
+            if (ball.y + ball.r >= paddle.y && ball.y - ball.r <= paddle.y + paddle.h && ball.x >= paddle.x && ball.x <= paddle.x + paddle.w) {
+                ball.vy = -Math.abs(ball.vy);
+                ball.vx += ((ball.x - (paddle.x + paddle.w / 2)) / (paddle.w / 2)) * 3;
+                const spd = Math.hypot(ball.vx, ball.vy);
+                const maxSpd = 10 + level;
+                if (spd > maxSpd) { ball.vx = ball.vx / spd * maxSpd; ball.vy = ball.vy / spd * maxSpd; }
+            }
+            // Bricks
+            bricks.filter(b => b.alive).forEach(b => {
+                if (ball.x + ball.r > b.x && ball.x - ball.r < b.x + b.w && ball.y + ball.r > b.y && ball.y - ball.r < b.y + b.h) {
+                    b.hp--; if (b.hp <= 0) { b.alive = false; score += 10 * (level); document.getElementById('score').textContent = score; }
+                    const overlapL = ball.x + ball.r - b.x, overlapR = b.x + b.w - ball.x + ball.r;
+                    const overlapT = ball.y + ball.r - b.y, overlapB = b.y + b.h - ball.y + ball.r;
+                    if (Math.min(overlapL, overlapR) < Math.min(overlapT, overlapB)) ball.vx *= -1;
+                    else ball.vy *= -1;
+                }
+            });
+            if (bricks.every(b => !b.alive)) {
+                level++; bricks = makeBricks(level); resetBall();
+                document.getElementById('level').textContent = level;
+                document.getElementById('msg').textContent = `Level ${level}! Click to continue.`;
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = '#0d001a'; ctx.fillRect(0, 0, W, H);
+            // Bricks
+            bricks.filter(b => b.alive).forEach(b => {
+                const alpha = b.hp / 3;
+                ctx.fillStyle = b.color; ctx.globalAlpha = 0.4 + alpha * 0.6;
+                ctx.beginPath(); ctx.roundRect(b.x, b.y, b.w, b.h, 4); ctx.fill();
+                ctx.globalAlpha = 1; ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                ctx.strokeRect(b.x, b.y, b.w, b.h);
+                if (b.hp > 1) { ctx.fillStyle = '#fff'; ctx.font = 'bold 10px monospace'; ctx.fillText(b.hp, b.x + b.w / 2 - 4, b.y + b.h / 2 + 4); }
+            });
+            // Paddle
+            const grad = ctx.createLinearGradient(paddle.x, paddle.y, paddle.x, paddle.y + paddle.h);
+            grad.addColorStop(0, '#c084fc'); grad.addColorStop(1, '#7c3aed');
+            ctx.fillStyle = grad; ctx.beginPath(); ctx.roundRect(paddle.x, paddle.y, paddle.w, paddle.h, 6); ctx.fill();
+            // Ball
+            const bg = ctx.createRadialGradient(ball.x - 3, ball.y - 3, 1, ball.x, ball.y, ball.r);
+            bg.addColorStop(0, '#fff'); bg.addColorStop(1, '#c084fc');
+            ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); ctx.fill();
+            // Glow
+            ctx.shadowColor = '#c084fc'; ctx.shadowBlur = 16;
+            ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+
+        function loop() { update(); draw(); if (running) animId = requestAnimationFrame(loop); }
+        paddle = { x: W / 2 - 50, y: H - 30, w: 100, h: 12 };
+        ball = { x: W / 2, y: H - 50, r: 9, vx: 0, vy: 0 };
+        bricks = makeBricks(1);
+        draw();
+    </script>
+</body>
+
+</html>

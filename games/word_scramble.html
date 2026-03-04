@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Word Scramble | The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: radial-gradient(ellipse at center, #0c1a0c, #000);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #4ade80;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            letter-spacing: 4px;
+            text-shadow: 0 0 20px #4ade80;
+        }
+
+        #hud {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 16px;
+            font-size: 1rem;
+            color: #86efac;
+        }
+
+        #scrambled {
+            font-size: 3rem;
+            font-weight: bold;
+            letter-spacing: 10px;
+            color: #facc15;
+            text-shadow: 0 0 20px #facc1588;
+            margin: 10px 0;
+            min-height: 70px;
+            text-align: center;
+        }
+
+        #hint-text {
+            font-size: .95rem;
+            color: #94a3b8;
+            margin-bottom: 8px;
+            min-height: 1.4em;
+        }
+
+        #input-area {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        #answer {
+            padding: 12px 20px;
+            font-size: 1.2rem;
+            background: #0f2a0f;
+            border: 2px solid #4ade80;
+            border-radius: 8px;
+            color: #4ade80;
+            outline: none;
+            letter-spacing: 3px;
+            width: 260px;
+            text-transform: uppercase;
+        }
+
+        #answer:focus {
+            border-color: #86efac;
+            box-shadow: 0 0 10px #4ade8044;
+        }
+
+        #msg {
+            font-size: 1.2rem;
+            min-height: 1.8em;
+            color: #fff;
+            margin: 8px 0;
+            text-align: center;
+        }
+
+        #timer-bar {
+            width: 400px;
+            height: 10px;
+            background: #1a3a1a;
+            border-radius: 5px;
+            margin: 8px 0;
+        }
+
+        #timer-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ade80, #facc15);
+            border-radius: 5px;
+            transition: width .5s;
+        }
+
+        .action-btn {
+            padding: 10px 24px;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            letter-spacing: 2px;
+        }
+
+        .action-btn:hover {
+            transform: scale(1.07);
+        }
+
+        #submitBtn {
+            background: linear-gradient(135deg, #4ade80, #16a34a);
+            color: #000;
+        }
+
+        #skipBtn {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #000;
+        }
+
+        #newBtn {
+            background: linear-gradient(135deg, #60a5fa, #2563eb);
+            color: #fff;
+        }
+
+        #letters-left {
+            font-size: .9rem;
+            color: #6ee7b7;
+            margin-bottom: 4px;
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999;
+        }
+
+        #homeBtn:hover {
+            background: #1e40af;
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>🔤 WORD SCRAMBLE</h1>
+    <div id="hud"><span>SCORE: <b id="score">0</b></span><span>STREAK: <b id="streak">0</b>🔥</span><span>ROUND: <b
+                id="round">1</b>/10</span></div>
+    <div id="timer-bar">
+        <div id="timer-fill" style="width:100%"></div>
+    </div>
+    <div id="scrambled">?????</div>
+    <div id="hint-text"></div>
+    <div id="letters-left"></div>
+    <div id="input-area">
+        <input id="answer" type="text" placeholder="Type your answer..." autocomplete="off" maxlength="15">
+        <button class="action-btn" id="submitBtn" onclick="checkAnswer()">✓</button>
+    </div>
+    <div id="msg">Press New Game to start!</div>
+    <div style="display:flex;gap:12px;margin-top:8px;">
+        <button class="action-btn" id="skipBtn" onclick="skipWord()">SKIP</button>
+        <button class="action-btn" id="newBtn" onclick="startGame()">NEW GAME</button>
+        <a id="menuLink" href="../index.html" class="action-btn"
+            style="background:linear-gradient(135deg,#334155,#1e293b);color:#fff;text-decoration:none;display:none;">🏠
+            Menu</a>
+    </div>
+    <script>
+        const WORDS = [
+            { w: 'SAFARI', h: 'African adventure' },
+            { w: 'ECLIPSE', h: 'Sun or moon blocked' },
+            { w: 'TORNADO', h: 'Spinning storm' },
+            { w: 'CRYSTAL', h: 'Sparkling mineral' },
+            { w: 'DOLPHIN', h: 'Smart ocean mammal' },
+            { w: 'PYRAMID', h: 'Ancient wonder' },
+            { w: 'LANTERN', h: 'Old-fashioned light' },
+            { w: 'MERMAID', h: 'Half-fish myth' },
+            { w: 'COMPASS', h: 'Navigation tool' },
+            { w: 'GLACIER', h: 'Slow-moving ice' },
+            { w: 'THUNDER', h: 'Storm sound' },
+            { w: 'PUMPKIN', h: 'Halloween veggie' },
+            { w: 'FEATHER', h: 'Bird covering' },
+            { w: 'CAPTAIN', h: 'Ship leader' },
+            { w: 'SCIENCE', h: 'Knowledge via experiment' },
+            { w: 'BALLOON', h: 'Floats in the sky' },
+            { w: 'MONSTER', h: 'Scary creature' },
+            { w: 'CHICKEN', h: 'Clucking farm bird' },
+            { w: 'CABINET', h: 'Furniture with doors' },
+            { w: 'PENGUIN', h: 'Tuxedoed Antarctic bird' },
+        ];
+
+        let current, score, streak, round, timeLeft, timerInt, gameWords, maxTime = 20;
+
+        function shuffle(str) { return str.split('').sort(() => Math.random() - 0.5).join(''); }
+        function scrambleWord(w) { let s = shuffle(w); while (s === w && w.length > 2) s = shuffle(w); return s; }
+
+        function startGame() {
+            score = 0; streak = 0; round = 0;
+            gameWords = [...WORDS].sort(() => Math.random() - 0.5).slice(0, 10);
+            document.getElementById('score').textContent = 0;
+            document.getElementById('streak').textContent = 0;
+            document.getElementById('msg').textContent = '';
+            nextWord();
+        }
+
+        function nextWord() {
+            if (round >= 10) {
+                clearInterval(timerInt);
+                document.getElementById('msg').textContent = `🎉 Game Over! Final Score: ${score}`;
+                document.getElementById('scrambled').textContent = '🏆';
+                document.getElementById('hint-text').textContent = '';
+                document.getElementById('letters-left').textContent = '';
+                document.getElementById('menuLink').style.display = '';
+                PizzaScores.save('Word Scramble', score);
+                return;
+            }
+            current = gameWords[round]; round++;
+            document.getElementById('round').textContent = round;
+            document.getElementById('scrambled').textContent = scrambleWord(current.w);
+            document.getElementById('hint-text').textContent = `Hint: ${current.h}`;
+            document.getElementById('letters-left').textContent = `Letters: ${current.w.length}`;
+            document.getElementById('answer').value = '';
+            document.getElementById('answer').focus();
+            document.getElementById('msg').textContent = '';
+            // Timer
+            clearInterval(timerInt); timeLeft = maxTime;
+            document.getElementById('timer-fill').style.width = '100%';
+            timerInt = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer-fill').style.width = (timeLeft / maxTime * 100) + '%';
+                if (timeLeft <= 0) {
+                    clearInterval(timerInt);
+                    document.getElementById('msg').textContent = `⏰ Time's up! Word was: ${current.w}`;
+                    streak = 0; document.getElementById('streak').textContent = 0;
+                    setTimeout(nextWord, 1800);
+                }
+            }, 1000);
+        }
+
+        function checkAnswer() {
+            const ans = document.getElementById('answer').value.toUpperCase().trim();
+            if (!ans) return;
+            if (ans === current.w) {
+                clearInterval(timerInt);
+                streak++; const pts = 10 + streak * 2 + timeLeft; score += pts;
+                document.getElementById('score').textContent = score; document.getElementById('streak').textContent = streak;
+                document.getElementById('msg').textContent = `✅ Correct! +${pts} pts`;
+                setTimeout(nextWord, 1200);
+            } else {
+                document.getElementById('msg').textContent = '❌ Wrong! Try again.';
+                document.getElementById('answer').value = '';
+                document.getElementById('answer').focus();
+                streak = 0; document.getElementById('streak').textContent = 0;
+            }
+        }
+
+        function skipWord() {
+            clearInterval(timerInt);
+            document.getElementById('msg').textContent = `Skipped! Word was: ${current.w}`;
+            streak = 0; document.getElementById('streak').textContent = 0;
+            setTimeout(nextWord, 1500);
+        }
+
+        document.getElementById('answer').addEventListener('keydown', e => { if (e.key === 'Enter') checkAnswer(); });
+    </script>
+</body>
+
+</html>

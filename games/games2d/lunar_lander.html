@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Lunar Lander</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #000208;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #facc15;
+            font-size: 1.5rem;
+            text-shadow: 0 0 16px #facc15;
+            margin-bottom: 6px
+        }
+
+        canvas {
+            border: 2px solid #facc15;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(250, 204, 21, .4)
+        }
+
+        #ui {
+            display: flex;
+            gap: 16px;
+            color: #facc15;
+            font-size: .82rem;
+            margin-top: 6px
+        }
+
+        #msg {
+            color: #a5b4fc;
+            font-size: .9rem;
+            min-height: 20px;
+            margin-top: 4px
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🚀 Lunar Lander</h1>
+    <div id="ui"><span>Fuel: <b id="fl">100</b></span><span>VY: <b id="vy">0</b></span><span>VX: <b
+                id="vx">0</b></span><span>Altitude: <b id="al">0</b></span><span>Score: <b id="sc">0</b></span></div>
+    <canvas id="c" width="500" height="440"></canvas>
+    <div id="msg">↑/W=thrust | ←/→ or A/D=tilt! Land softly on the 🟡 pad!</div>
+    <script>
+        const cv = document.getElementById('c'), cx = cv.getContext('2d');
+        const W = 500, H = 440;
+        let ship, fuel, over, won, score, pad, terrain;
+        let keys = {};
+        document.addEventListener('keydown', e => { keys[e.code] = true; if (e.code.startsWith('Arrow')) e.preventDefault(); if (e.code === 'KeyR' && (over || won)) init(); });
+        document.addEventListener('keyup', e => keys[e.code] = false);
+        function genTerrain() {
+            const pts = []; let y = H - 100;
+            for (let x = 0; x <= W; x += 30) { y += Math.random() * 40 - 20; y = Math.max(240, Math.min(H - 50, y)); pts.push({ x, y }); }
+            pts[0].y = H - 80; pts[pts.length - 1].y = H - 80;
+            // Landing pad
+            const pi = 4 + Math.floor(Math.random() * 8); const px = pts[pi].x; const py = Math.max(240, Math.min(H - 100, pts[pi].y - 10));
+            pts[pi].y = py; pts[pi + 1] = { x: px + 60, y: py };
+            pad = { x: px, y: py, w: 60 };
+            return pts;
+        }
+        function init() {
+            ship = { x: Math.random() * (W - 100) + 50, y: 60, vx: (Math.random() - .5) * 2, vy: .5, angle: 0, thrust: false };
+            fuel = 100; over = false; won = false; score = 0; terrain = genTerrain();
+        }
+        init();
+        function terrainY(x) {
+            for (let i = 0; i < terrain.length - 1; i++) { const a = terrain[i], b = terrain[i + 1]; if (x >= a.x && x <= b.x) { const t = (x - a.x) / (b.x - a.x); return a.y + t * (b.y - a.y); } } return H;
+        }
+        function update() {
+            if (over || won) return;
+            // Thrust
+            const thrusting = (keys['ArrowUp'] || keys['KeyW']) && fuel > 0;
+            if (thrusting) { const a = ship.angle; ship.vx += Math.sin(a) * .3; ship.vy -= Math.cos(a) * .4; fuel = Math.max(0, fuel - .5); document.getElementById('fl').textContent = Math.floor(fuel); }
+            ship.thrust = thrusting;
+            if (keys['ArrowLeft'] || keys['KeyA']) ship.angle -= .05;
+            if (keys['ArrowRight'] || keys['KeyD']) ship.angle += .05;
+            ship.angle = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, ship.angle));
+            ship.vy += .04; // gravity
+            ship.x += ship.vx; ship.y += ship.vy;
+            ship.x = Math.max(10, Math.min(W - 10, ship.x));
+            document.getElementById('vy').textContent = Math.abs(ship.vy).toFixed(1);
+            document.getElementById('vx').textContent = Math.abs(ship.vx).toFixed(1);
+            const ty = terrainY(ship.x);
+            document.getElementById('al').textContent = Math.max(0, Math.floor(ty - ship.y - 20));
+            // Land check
+            if (ship.y + 22 >= ty) {
+                const onPad = ship.x >= pad.x + 5 && ship.x <= pad.x + pad.w - 5;
+                const safe = Math.abs(ship.vy) < 2.5 && Math.abs(ship.vx) < 2 && Math.abs(ship.angle) < .3;
+                if (onPad && safe) { won = true; score = Math.floor(fuel * 10 + 1000); document.getElementById('sc').textContent = score; }
+                else over = true;
+            }
+        }
+        function draw() {
+            cx.fillStyle = '#000208'; cx.fillRect(0, 0, W, H);
+            // Stars
+            for (let i = 0; i < 100; i++) { cx.fillStyle = `rgba(255,255,255,${.2 + .6 * (i % 3 / 3)})`; cx.fillRect((i * 137) % W, (i * 89) % 200, 1, 1); }
+            // Earth circle top right
+            cx.fillStyle = 'rgba(56,189,248,.15)'; cx.beginPath(); cx.arc(W - 50, 50, 60, 0, Math.PI * 2); cx.fill();
+            cx.strokeStyle = 'rgba(56,189,248,.4)'; cx.lineWidth = 3; cx.stroke();
+            // Terrain
+            cx.beginPath(); cx.moveTo(terrain[0].x, terrain[0].y); terrain.forEach(p => cx.lineTo(p.x, p.y)); cx.lineTo(W, H); cx.lineTo(0, H); cx.closePath(); cx.fillStyle = '#1a1a2e'; cx.fill(); cx.strokeStyle = 'rgba(147,197,253,.4)'; cx.lineWidth = 2; cx.stroke();
+            // Pad
+            cx.fillStyle = '#facc15'; cx.fillRect(pad.x, pad.y, pad.w, 4); cx.font = '12px monospace'; cx.textAlign = 'center'; cx.fillText('🟡 LAND HERE', pad.x + pad.w / 2, pad.y - 8);
+            // Ship
+            cx.save(); cx.translate(ship.x, ship.y); cx.rotate(ship.angle);
+            cx.fillStyle = '#c7d2fe'; cx.beginPath(); cx.moveTo(0, -20); cx.lineTo(-12, 12); cx.lineTo(12, 12); cx.closePath(); cx.fill();
+            cx.fillStyle = 'rgba(131,191,253,.8)'; cx.fillRect(-4, -8, 8, 8);// window
+            // Legs
+            cx.strokeStyle = '#94a3b8'; cx.lineWidth = 2; cx.beginPath(); cx.moveTo(-10, 12); cx.lineTo(-18, 22); cx.stroke(); cx.beginPath(); cx.moveTo(10, 12); cx.lineTo(18, 22); cx.stroke();
+            // Thrust flame
+            if (ship.thrust && fuel > 0) { cx.fillStyle = '#f97316'; cx.beginPath(); cx.moveTo(-6, 13); cx.lineTo(0, 28 + Math.random() * 10); cx.lineTo(6, 13); cx.fill(); cx.fillStyle = '#facc15'; cx.beginPath(); cx.moveTo(-3, 13); cx.lineTo(0, 20 + Math.random() * 8); cx.lineTo(3, 13); cx.fill(); }
+            cx.restore();
+            // Fuel bar
+            cx.fillStyle = 'rgba(250,204,21,.2)'; cx.fillRect(10, 10, 100, 10); cx.fillStyle = fuel > 30 ? '#facc15' : '#f43f5e'; cx.fillRect(10, 10, fuel, 10); cx.font = '9px monospace'; cx.textAlign = 'left'; cx.fillStyle = '#fff'; cx.fillText('FUEL', 12, 9);
+            // Speed indicators
+            const vspd = Math.abs(ship.vy), hspd = Math.abs(ship.vx);
+            const vsafe = vspd < 2.5, hsafe = hspd < 2;
+            cx.fillStyle = vsafe ? '#4ade80' : '#f43f5e'; cx.font = '11px monospace'; cx.textAlign = 'left'; cx.fillText('VSpeed:' + (vspd).toFixed(1) + (vsafe ? '✓' : '✗'), 10, 160);
+            cx.fillStyle = hsafe ? '#4ade80' : '#f43f5e'; cx.fillText('HSpeed:' + (hspd).toFixed(1) + (hsafe ? '✓' : '✗'), 10, 174);
+            const asafe = Math.abs(ship.angle) < .3; cx.fillStyle = asafe ? '#4ade80' : '#f43f5e'; cx.fillText('Tilt:' + (ship.angle * 57 | 0) + '°' + (asafe ? '✓' : '✗'), 10, 188);
+            if (over) { cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#f43f5e'; cx.font = 'bold 36px monospace'; cx.textAlign = 'center'; cx.fillText('CRASHED! 💥', W / 2, H / 2 - 20); cx.fillStyle = '#aaa'; cx.font = '16px monospace'; cx.fillText('Too fast or off-pad | R restart', W / 2, H / 2 + 18); }
+            if (won) { cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#facc15'; cx.font = 'bold 36px monospace'; cx.textAlign = 'center'; cx.fillText('PERFECT LANDING! 🏆', W / 2, H / 2 - 20); cx.fillStyle = '#a5b4fc'; cx.font = '20px monospace'; cx.fillText('Score: ' + score, W / 2, H / 2 + 20); cx.fillStyle = '#aaa'; cx.font = '14px monospace'; cx.fillText('R for new mission', W / 2, H / 2 + 50); }
+        }
+        function loop() { update(); draw(); requestAnimationFrame(loop); } loop();
+    </script>
+
+    <script src="../mobile_controls.js"></script>
+</body>
+
+</html>

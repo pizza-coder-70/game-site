@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Math Blaster | The Pizza Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #050510;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Outfit', sans-serif;
+            color: #e2e8f0;
+            padding: 20px
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: 3px;
+            margin-bottom: 4px;
+            background: linear-gradient(135deg, #22c55e, #06b6d4);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent
+        }
+
+        .panel {
+            background: #0d0d20;
+            border: 1px solid #1e1e3f;
+            border-radius: 20px;
+            padding: 30px;
+            width: 100%;
+            max-width: 500px;
+            text-align: center
+        }
+
+        #question {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #fbbf24;
+            margin: 16px 0;
+            min-height: 3.5rem;
+            letter-spacing: 2px
+        }
+
+        #options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 14px 0
+        }
+
+        .opt {
+            padding: 18px;
+            border: 2px solid #1e1e3f;
+            border-radius: 12px;
+            background: #13132a;
+            font-size: 1.5rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all .2s;
+            color: #e2e8f0
+        }
+
+        .opt:hover {
+            border-color: #22c55e;
+            background: rgba(34, 197, 94, 0.1)
+        }
+
+        .opt.correct {
+            background: rgba(34, 197, 94, 0.2);
+            border-color: #22c55e;
+            color: #22c55e
+        }
+
+        .opt.wrong {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: #ef4444;
+            color: #ef4444
+        }
+
+        #hud {
+            display: flex;
+            justify-content: space-between;
+            font-size: .9rem;
+            color: #64748b;
+            margin-bottom: 10px
+        }
+
+        #hud b {
+            color: #06b6d4
+        }
+
+        #timer-bar {
+            width: 100%;
+            height: 6px;
+            background: #1e1e3f;
+            border-radius: 3px;
+            margin-bottom: 14px;
+            overflow: hidden
+        }
+
+        #timer-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #22c55e, #06b6d4);
+            border-radius: 3px;
+            transition: width .1s linear
+        }
+
+        #feedback {
+            font-size: 1rem;
+            font-weight: 700;
+            min-height: 1.4em;
+            margin: 8px 0
+        }
+
+        #controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 14px
+        }
+
+        button {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Outfit', sans-serif;
+            font-size: .9rem;
+            font-weight: 700;
+            cursor: pointer
+        }
+
+        #startBtn {
+            background: linear-gradient(135deg, #22c55e, #06b6d4);
+            color: #fff
+        }
+
+        #menuBtn {
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            border: 1px solid #475569;
+            display: none
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(13, 13, 32, 0.9);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999
+        }
+
+        #diff {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 10px
+        }
+
+        .dbtn {
+            padding: 6px 14px;
+            border: 1px solid #334155;
+            border-radius: 7px;
+            background: #1e293b;
+            color: #94a3b8;
+            font-size: .82rem;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: 'Outfit', sans-serif
+        }
+
+        .dbtn.on {
+            background: #06b6d4;
+            color: #fff;
+            border-color: #06b6d4
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>🧮 MATH BLASTER</h1>
+    <div class="panel">
+        <div id="diff">
+            <button class="dbtn on" onclick="setDiff('easy',this)">Easy</button>
+            <button class="dbtn" onclick="setDiff('medium',this)">Medium</button>
+            <button class="dbtn" onclick="setDiff('hard',this)">Hard</button>
+        </div>
+        <div id="hud"><span>Q: <b id="qnum">0</b>/15</span><span>SCORE: <b id="score">0</b></span><span>STREAK: <b
+                    id="streak">0</b>🔥</span></div>
+        <div id="timer-bar">
+            <div id="timer-fill" style="width:100%"></div>
+        </div>
+        <div id="question">Ready?</div>
+        <div id="options"></div>
+        <div id="feedback"></div>
+        <div id="controls">
+            <button id="startBtn" onclick="startGame()">START</button>
+            <button id="menuBtn" onclick="window.close()">🏠 Return to Menu</button>
+        </div>
+    </div>
+    <script src="../scripts/scores.js"></script>
+    <script>
+        let diff = 'easy', qnum, score, streak, timerInt, answered, total = 15;
+        function setDiff(d, btn) { diff = d; document.querySelectorAll('.dbtn').forEach(b => b.classList.remove('on')); btn.classList.add('on'); }
+        function rnd(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
+        function makeQ() {
+            const ops = diff === 'easy' ? ['+', '-'] : diff === 'medium' ? ['+', '-', 'x'] : ['x', '/', '+', '-'];
+            const op = ops[Math.floor(Math.random() * ops.length)];
+            let a, b, ans;
+            if (diff === 'easy') { a = rnd(1, 20); b = rnd(1, 20); }
+            else if (diff === 'medium') { a = rnd(2, 50); b = rnd(2, 15); }
+            else { a = rnd(2, 25); b = rnd(2, 12); }
+            if (op === '+') { ans = a + b; }
+            else if (op === '-') { const s = a + b; a = s; ans = a - b; }
+            else if (op === 'x') { ans = a * b; }
+            else { ans = b * rnd(1, 12); a = ans * b; ans = a / b; }
+            return { q: `${a} ${op} ${b} = ?`, ans: Math.round(ans) };
+        }
+        function startGame() {
+            qnum = 0; score = 0; streak = 0;
+            document.getElementById('menuBtn').style.display = 'none';
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('feedback').textContent = '';
+            nextQ();
+        }
+        function nextQ() {
+            if (qnum >= total) { endGame(); return; }
+            qnum++; answered = false;
+            document.getElementById('qnum').textContent = qnum;
+            document.getElementById('score').textContent = score;
+            document.getElementById('streak').textContent = streak;
+            const { q, ans } = makeQ();
+            document.getElementById('question').textContent = q;
+            const opts = new Set([ans]);
+            while (opts.size < 4) { const d = Math.max(1, Math.abs(ans) || 3); opts.add(ans + rnd(-d, d)); }
+            const arr = [...opts].sort(() => Math.random() - .5);
+            document.getElementById('options').innerHTML = arr.map(o => `<button class="opt" onclick="answer(${o},${ans})">${o}</button>`).join('');
+            const TIME = diff === 'easy' ? 10 : diff === 'medium' ? 8 : 6;
+            clearInterval(timerInt); let t = TIME;
+            document.getElementById('timer-fill').style.width = '100%';
+            timerInt = setInterval(() => { t -= 0.1; document.getElementById('timer-fill').style.width = (t / TIME * 100) + '%'; if (t <= 0) { clearInterval(timerInt); if (!answered) timeOut(); } }, 100);
+        }
+        function answer(chosen, correct) {
+            if (answered) return; answered = true; clearInterval(timerInt);
+            document.querySelectorAll('.opt').forEach(o => {
+                if (+o.textContent === correct) o.classList.add('correct');
+                else if (+o.textContent === chosen) o.classList.add('wrong');
+                o.onclick = null;
+            });
+            if (chosen === correct) { streak++; score += 10 + streak * 2; document.getElementById('feedback').textContent = `✅ +${10 + streak * 2}`; }
+            else { streak = 0; document.getElementById('feedback').textContent = `❌ Answer was ${correct}`; }
+            setTimeout(nextQ, 900);
+        }
+        function timeOut() { answered = true; streak = 0; document.getElementById('feedback').textContent = '⏱️ Time up!'; document.querySelectorAll('.opt').forEach(o => o.onclick = null); setTimeout(nextQ, 700); }
+        function endGame() {
+            document.getElementById('question').textContent = '🏆 Done!';
+            document.getElementById('options').innerHTML = '';
+            document.getElementById('feedback').textContent = `Final: ${score} pts`;
+            document.getElementById('startBtn').style.display = '';
+            document.getElementById('menuBtn').style.display = '';
+            PizzaScores.save('Math Blaster', score, diff + ' mode');
+        }
+    </script>
+</body>
+
+</html>

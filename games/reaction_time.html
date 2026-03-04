@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Reaction Time | The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0f;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff;
+            user-select: none;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            letter-spacing: 4px;
+            text-shadow: 0 0 20px #38bdf8;
+        }
+
+        #arena {
+            width: 500px;
+            height: 400px;
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin: 16px;
+            transition: background .3s;
+            border: 3px solid #1e293b;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #arena.waiting {
+            background: #1e293b;
+        }
+
+        #arena.ready {
+            background: #dc2626;
+        }
+
+        #arena.go {
+            background: #16a34a;
+        }
+
+        #arena.too-early {
+            background: #7f1d1d;
+        }
+
+        #arena-text {
+            font-size: 2rem;
+            font-weight: bold;
+            text-align: center;
+            pointer-events: none;
+            line-height: 1.4;
+        }
+
+        #results {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 10px 0;
+        }
+
+        .result-box {
+            background: #1e293b;
+            border-radius: 10px;
+            padding: 12px 20px;
+            text-align: center;
+            border: 1px solid #334155;
+            min-width: 100px;
+        }
+
+        .result-val {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #38bdf8;
+        }
+
+        .result-label {
+            font-size: .75rem;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        #rounds {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .round-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #334155;
+        }
+
+        .round-dot.done {
+            background: #38bdf8;
+        }
+
+        .round-dot.fail {
+            background: #ef4444;
+        }
+
+        button {
+            padding: 10px 32px;
+            background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+            color: #000;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            letter-spacing: 2px;
+            margin-top: 8px;
+        }
+
+        button:hover {
+            transform: scale(1.07);
+        }
+
+        #menuBtn {
+            background: linear-gradient(135deg, #334155, #1e293b);
+            color: #fff;
+            display: none;
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999;
+        }
+
+        #homeBtn:hover {
+            background: #1e40af;
+        }
+
+        #progress {
+            color: #94a3b8;
+            font-size: .9rem;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>⚡ REACTION TIME</h1>
+    <div id="rounds"></div>
+    <div id="progress">Click the arena when it turns GREEN!</div>
+    <div id="arena" class="waiting" onclick="handleClick()">
+        <div id="arena-text">Click to Start!</div>
+    </div>
+    <div id="results">
+        <div class="result-box">
+            <div class="result-val" id="lastMs">-</div>
+            <div class="result-label">LAST (ms)</div>
+        </div>
+        <div class="result-box">
+            <div class="result-val" id="bestMs">-</div>
+            <div class="result-label">BEST (ms)</div>
+        </div>
+        <div class="result-box">
+            <div class="result-val" id="avgMs">-</div>
+            <div class="result-label">AVERAGE (ms)</div>
+        </div>
+        <div class="result-box">
+            <div class="result-val" id="rank">-</div>
+            <div class="result-label">RANK</div>
+        </div>
+    </div>
+    <button onclick="resetGame()">TRY AGAIN</button>
+    <button id="menuBtn" onclick="window.close()">🏠 Return to Menu</button>
+    <script src="../scripts/scores.js"></script>
+    <script>
+        const TOTAL = 5;
+        let state = 'idle', startTime, toId, round = 0, times = [], bestAll = Infinity;
+
+        function getRank(ms) {
+            if (ms < 150) return '🔥 Elite'; if (ms < 200) return '⚡ Pro'; if (ms < 250) return '🌟 Fast';
+            if (ms < 300) return '👍 Good'; if (ms < 400) return '😊 Avg'; return '🐢 Slow';
+        }
+
+        function resetGame() {
+            clearTimeout(toId); state = 'idle'; round = 0; times = [];
+            document.getElementById('arena').className = 'waiting';
+            document.getElementById('arena-text').textContent = 'Click to Start!';
+            document.getElementById('lastMs').textContent = '-';
+            document.getElementById('avgMs').textContent = '-';
+            document.getElementById('rank').textContent = '-';
+            document.getElementById('progress').textContent = 'Click the arena when it turns GREEN!';
+            renderRounds();
+        }
+
+        function renderRounds() {
+            const el = document.getElementById('rounds'); el.innerHTML = '';
+            for (let i = 0; i < TOTAL; i++) {
+                const d = document.createElement('div'); d.className = 'round-dot';
+                if (i < times.length) d.classList.add('done');
+                el.appendChild(d);
+            }
+        }
+
+        function handleClick() {
+            if (state === 'idle') { startRound(); }
+            else if (state === 'waiting') { tooEarly(); }
+            else if (state === 'go') { success(); }
+            else if (state === 'too-early') { startRound(); }
+            else if (state === 'done') { resetGame(); }
+        }
+
+        function startRound() {
+            state = 'waiting';
+            document.getElementById('arena').className = 'arena waiting';
+            document.getElementById('arena').style.background = '#7c3aed';
+            document.getElementById('arena-text').textContent = 'Wait for green...';
+            const delay = 1500 + Math.random() * 3000;
+            toId = setTimeout(() => { state = 'go'; startTime = Date.now(); document.getElementById('arena').style.background = ''; document.getElementById('arena').className = 'arena go'; document.getElementById('arena-text').textContent = 'CLICK NOW!'; }, delay);
+        }
+
+        function tooEarly() {
+            clearTimeout(toId); state = 'too-early';
+            document.getElementById('arena').className = 'arena too-early';
+            document.getElementById('arena').style.background = '';
+            document.getElementById('arena-text').textContent = 'Too early! ❌ Click to try again.';
+        }
+
+        function success() {
+            const ms = Date.now() - startTime;
+            times.push(ms); if (ms < bestAll) bestAll = ms;
+            state = 'idle'; round++;
+            document.getElementById('arena').className = 'arena waiting';
+            document.getElementById('arena').style.background = '#1e293b';
+            document.getElementById('lastMs').textContent = ms;
+            document.getElementById('bestMs').textContent = bestAll;
+            const avg = Math.round(times.reduce((a, b) => a + b, 0) / times.length);
+            document.getElementById('avgMs').textContent = avg;
+            document.getElementById('rank').textContent = getRank(avg);
+            renderRounds();
+            if (times.length >= TOTAL) {
+                state = 'done';
+                document.getElementById('arena-text').textContent = `Done! Avg: ${avg}ms 🏆\nClick to reset!`;
+                document.getElementById('progress').textContent = `${getRank(avg)} - ${avg}ms average!`;
+                document.getElementById('menuBtn').style.display = '';
+                PizzaScores.save('Reaction Time', avg, `${avg}ms avg`);
+            } else {
+                document.getElementById('arena-text').textContent = `${ms}ms! Round ${times.length}/${TOTAL}. Click for next!`;
+            }
+        }
+        renderRounds();
+    </script>
+</body>
+
+</html>

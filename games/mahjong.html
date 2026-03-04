@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Mah-Jong Solitaire | The Pizza Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #050510;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Outfit', sans-serif;
+            color: #e2e8f0;
+            padding: 16px
+        }
+
+        h1 {
+            font-size: 1.7rem;
+            font-weight: 800;
+            letter-spacing: 3px;
+            margin-bottom: 4px;
+            background: linear-gradient(135deg, #f97316, #ef4444);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent
+        }
+
+        #hud {
+            display: flex;
+            gap: 24px;
+            font-size: .9rem;
+            color: #94a3b8;
+            margin-bottom: 10px
+        }
+
+        #hud b {
+            color: #fbbf24
+        }
+
+        #board {
+            position: relative;
+            width: 540px;
+            height: 360px;
+            margin: 0 auto
+        }
+
+        .tile {
+            position: absolute;
+            width: 46px;
+            height: 60px;
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border: 1px solid #334155;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            cursor: pointer;
+            user-select: none;
+            box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            transition: all .15s
+        }
+
+        .tile:hover:not(.blocked) {
+            border-color: #7c3aed;
+            box-shadow: 3px 3px 8px rgba(124, 58, 237, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08)
+        }
+
+        .tile.selected {
+            background: linear-gradient(135deg, #3730a3, #1e40af);
+            border-color: #818cf8;
+            box-shadow: 0 0 16px rgba(129, 140, 248, 0.6)
+        }
+
+        .tile.blocked {
+            opacity: .55;
+            cursor: not-allowed
+        }
+
+        .tile.removed {
+            display: none
+        }
+
+        #msg {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #fbbf24;
+            min-height: 1.4em;
+            text-align: center;
+            margin: 8px 0
+        }
+
+        #controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 8px
+        }
+
+        button {
+            padding: 9px 22px;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Outfit', sans-serif;
+            font-size: .9rem;
+            font-weight: 700;
+            cursor: pointer
+        }
+
+        #newBtn {
+            background: linear-gradient(135deg, #f97316, #ef4444);
+            color: #fff
+        }
+
+        #menuBtn {
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            border: 1px solid #475569;
+            display: none
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(13, 13, 32, 0.9);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>🀄 MAH-JONG SOLITAIRE</h1>
+    <div id="hud"><span>TILES: <b id="tileCount">0</b></span><span>MATCHES: <b id="matches">0</b></span><span>SCORE: <b
+                id="score">0</b></span></div>
+    <div id="board"></div>
+    <div id="msg">Match pairs of free tiles to clear the board!</div>
+    <div id="controls">
+        <button id="newBtn" onclick="newGame()">NEW GAME</button>
+        <button id="menuBtn" onclick="window.close()">🏠 Return to Menu</button>
+    </div>
+    <script src="../scripts/scores.js"></script>
+    <script>
+        // Simplified Mah-Jong solitaire — 3D turtle layout, match by emoji
+        const SYMBOLS = ['🀇', '🀈', '🀉', '🀊', '🀋', '🀌', '🀍', '🀎', '🀏', '🀙', '🀚', '🀛', '🀜', '🀝', '🀞', '🀟', '🀠', '🀡', '🀐', '🀑', '🀒', '🀓', '🀔', '🀕', '🀖', '🀗', '🀘', '🉐', '🀄', '🎴'];
+        // Layout: array of {c:col, r:row, l:layer}
+        function genLayout() {
+            const layout = [];
+            // Simple pyramid layout: 5 layers
+            const layers = [
+                // Layer 0 (base) - 8x4 grid
+                { cols: 8, rows: 4, offC: 0, offR: 0 },
+                // Layer 1 - 6x3
+                { cols: 6, rows: 3, offC: 1, offR: 0.5 },
+                // Layer 2 - 4x2
+                { cols: 4, rows: 2, offC: 2, offR: 1 },
+                // Layer 3 - 2x1
+                { cols: 2, rows: 1, offC: 3, offR: 1.5 },
+                // Layer 4 - 1x1
+                { cols: 1, rows: 1, offC: 3.5, offR: 2 },
+            ];
+            layers.forEach((lay, li) => {
+                for (let r = 0; r < lay.rows; r++)for (let c = 0; c < lay.cols; c++) {
+                    layout.push({ c: lay.offC + c, r: lay.offR + r, l: li });
+                }
+            });
+            return layout;
+        }
+
+        let tiles, selected, score, matchCount;
+
+        function newGame() {
+            const layout = genLayout();
+            // Shuffle pairs of symbols
+            const n = layout.length;
+            const syms = [];
+            const pool = [...SYMBOLS];
+            for (let i = 0; i < Math.ceil(n / 2); i++)syms.push(pool[i % pool.length], pool[i % pool.length]);
+            syms.sort(() => Math.random() - .5);
+            tiles = layout.map((pos, i) => ({ ...pos, sym: syms[i] || '🀄', id: i, removed: false }));
+            selected = null; score = 0; matchCount = 0;
+            document.getElementById('score').textContent = 0;
+            document.getElementById('matches').textContent = 0;
+            document.getElementById('menuBtn').style.display = 'none';
+            document.getElementById('msg').textContent = 'Match pairs of free tiles!';
+            render();
+        }
+
+        function isFree(t) {
+            if (t.removed) return false;
+            // Not blocked by tile above
+            const above = tiles.filter(o => !o.removed && o.l > t.l && Math.abs(o.c - t.c) < 1 && Math.abs(o.r - t.r) < 1);
+            if (above.length > 0) return false;
+            // Check left or right is clear (one side free)
+            const leftBlock = tiles.filter(o => !o.removed && o.l === t.l && Math.abs(o.c - (t.c - 1)) < 0.5 && Math.abs(o.r - t.r) < 1);
+            const rightBlock = tiles.filter(o => !o.removed && o.l === t.l && Math.abs(o.c - (t.c + 1)) < 0.5 && Math.abs(o.r - t.r) < 1);
+            return leftBlock.length === 0 || rightBlock.length === 0;
+        }
+
+        function render() {
+            const board = document.getElementById('board'); board.innerHTML = '';
+            const sorted = [...tiles].sort((a, b) => a.l - b.l);
+            sorted.forEach(t => {
+                if (t.removed) return;
+                const el = document.createElement('div');
+                el.className = 'tile' + (selected && selected.id === t.id ? ' selected' : '') + (isFree(t) ? '' : ' blocked');
+                el.style.left = (t.c * 52 + t.l * 4) + 'px';
+                el.style.top = (t.r * 66 + t.l * 4) + 'px';
+                el.style.zIndex = t.l * 10 + (10 - t.c);
+                el.textContent = t.sym;
+                el.onclick = () => clickTile(t);
+                board.appendChild(el);
+            });
+            document.getElementById('tileCount').textContent = tiles.filter(t => !t.removed).length;
+        }
+
+        function clickTile(t) {
+            if (t.removed || !isFree(t)) return;
+            if (!selected) { selected = t; render(); return; }
+            if (selected.id === t.id) { selected = null; render(); return; }
+            if (selected.sym === t.sym) {
+                t.removed = true; selected.removed = true;
+                matchCount++; score += 100;
+                document.getElementById('matches').textContent = matchCount;
+                document.getElementById('score').textContent = score;
+                selected = null;
+                const remaining = tiles.filter(t => !t.removed).length;
+                if (remaining === 0) {
+                    document.getElementById('msg').textContent = '🎉 Board cleared! Perfect game!';
+                    document.getElementById('menuBtn').style.display = '';
+                    PizzaScores.save('Mah-Jong Solitaire', score, 'Board cleared!');
+                } else if (!tiles.some(t => !t.removed && isFree(t))) {
+                    document.getElementById('msg').textContent = 'No more moves! Game over.';
+                    document.getElementById('menuBtn').style.display = '';
+                    PizzaScores.save('Mah-Jong Solitaire', score, matchCount + ' matches');
+                } else {
+                    document.getElementById('msg').textContent = 'Match! Keep going...';
+                }
+            } else {
+                selected = t; document.getElementById('msg').textContent = 'Wrong pair! Try another.';
+            }
+            render();
+        }
+
+        newGame();
+    </script>
+</body>
+
+</html>

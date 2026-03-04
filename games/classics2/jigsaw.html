@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Jigsaw Puzzle – The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0a0018;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff;
+            padding: 16px
+        }
+
+        h1 {
+            color: #c084fc;
+            font-size: 2rem;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px #c084fc
+        }
+
+        .game {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center
+        }
+
+        #puzzle-board {
+            position: relative;
+            width: 360px;
+            height: 360px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(192, 132, 252, 0.3);
+            border-radius: 12px
+        }
+
+        #piece-pool {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            max-width: 300px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(192, 132, 252, 0.2);
+            border-radius: 12px;
+            align-content: flex-start
+        }
+
+        .piece {
+            border-radius: 6px;
+            cursor: grab;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: transform .15s, box-shadow .15s;
+            image-rendering: pixelated
+        }
+
+        .piece:hover {
+            transform: scale(1.08);
+            box-shadow: 0 0 12px rgba(192, 132, 252, 0.5);
+            border-color: #c084fc
+        }
+
+        .piece.dragging {
+            opacity: 0.6;
+            cursor: grabbing
+        }
+
+        .slot {
+            position: absolute;
+            border: 2px dashed rgba(192, 132, 252, 0.3);
+            border-radius: 6px
+        }
+
+        .slot.has-piece {
+            border-color: rgba(74, 222, 128, 0.5)
+        }
+
+        .slot.correct {
+            border-color: #4ade80;
+            background: rgba(74, 222, 128, 0.08)
+        }
+
+        #msg {
+            margin-top: 10px;
+            color: #4ade80;
+            font-size: 1rem
+        }
+
+        #hud {
+            color: #c084fc;
+            font-size: .9rem;
+            margin-bottom: 8px
+        }
+
+        button {
+            margin-top: 8px;
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            border: none;
+            color: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: .9rem
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🧩 Jigsaw Puzzle</h1>
+    <div id="hud">Placed: <span id="placed">0</span> / <span id="total">9</span></div>
+    <div class="game">
+        <div>
+            <div id="puzzle-board"></div>
+            <div id="msg">Drag pieces to the board!</div>
+        </div>
+        <div id="piece-pool"></div>
+    </div>
+    <button onclick="init()">New Puzzle</button>
+    <script>
+        const GRID = 3, SLOT = 120;
+        // Emoji "image" - 3x3 grid of emoji that form a picture
+        const IMAGES = [
+            ['🌊', '🐳', '🌊', '🌈', '🐠', '🌈', '🌊', '🐙', '🌊'],
+            ['🌲', '⛺', '🌲', '🌙', '🔥', '🌙', '🌲', '🦔', '🌲'],
+            ['🏔', '🌟', '🏔', '❄️', '🎿', '❄️', '🏔', '🐺', '🏔'],
+            ['🌸', '🦋', '🌸', '☀️', '🌻', '☀️', '🌸', '🐝', '🌸'],
+        ];
+        let image, slots, placed;
+        function init() {
+            image = IMAGES[Math.floor(Math.random() * IMAGES.length)];
+            placed = 0; slots = [];
+            document.getElementById('placed').textContent = 0;
+            document.getElementById('total').textContent = GRID * GRID;
+            document.getElementById('msg').textContent = 'Drag pieces to the correct slot!';
+            const board = document.getElementById('puzzle-board'); board.innerHTML = '';
+            const pool = document.getElementById('piece-pool'); pool.innerHTML = '';
+            const order = [...Array(GRID * GRID).keys()].sort(() => Math.random() - .5);
+            // create slots
+            for (let i = 0; i < GRID * GRID; i++) {
+                const r = Math.floor(i / GRID), c = i % GRID;
+                const slot = document.createElement('div'); slot.className = 'slot'; slot.style.left = c * SLOT + 'px'; slot.style.top = r * SLOT + 'px'; slot.style.width = SLOT + 'px'; slot.style.height = SLOT + 'px'; slot.dataset.idx = i;
+                slot.addEventListener('dragover', e => e.preventDefault());
+                slot.addEventListener('drop', e => {
+                    e.preventDefault(); const pi = +e.dataTransfer.getData('text'); const pidx = e.currentTarget.dataset.idx;
+                    if (+pidx === pi) { const piece = document.getElementById('piece-' + pi); slot.appendChild(piece); piece.style.position = 'static'; piece.style.width = '100%'; piece.style.height = '100%'; piece.style.fontSize = '55px'; slot.classList.add('correct', 'has-piece'); placed++; document.getElementById('placed').textContent = placed; if (placed === GRID * GRID) document.getElementById('msg').textContent = '🎉 Puzzle Complete!'; }
+                });
+                board.appendChild(slot); slots.push(slot);
+            }
+            // create pieces (shuffled)
+            order.forEach(i => {
+                const r = Math.floor(i / GRID), c = i % GRID;
+                const piece = document.createElement('div'); piece.className = 'piece'; piece.id = 'piece-' + i; piece.textContent = image[i]; piece.draggable = true; piece.style.cssText = 'width:72px;height:72px;display:flex;align-items:center;justify-content:center;font-size:44px;background:rgba(192,132,252,0.1);';
+                piece.addEventListener('dragstart', e => { e.dataTransfer.setData('text', i); piece.classList.add('dragging'); });
+                piece.addEventListener('dragend', () => piece.classList.remove('dragging'));
+                pool.appendChild(piece);
+            });
+        }
+        init();
+    </script>
+</body>
+
+</html>

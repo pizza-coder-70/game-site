@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Crypto 2048 – The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;800&display=swap');
+
+        body {
+            background: #0f0a1e;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Outfit', sans-serif;
+            color: #fff;
+            padding: 20px
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #a78bfa;
+            text-shadow: 0 0 20px rgba(167, 139, 250, 0.5);
+            margin-bottom: 16px
+        }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(4, 100px);
+            gap: 8px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 16px;
+            border: 1px solid rgba(167, 139, 250, 0.2)
+        }
+
+        .tile {
+            width: 100px;
+            height: 100px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            transition: all .1s;
+            font-size: 1.8rem
+        }
+
+        .empty {
+            background: rgba(255, 255, 255, 0.04)
+        }
+
+        .t2 {
+            background: #4c1d95;
+            color: #c4b5fd;
+            font-size: 2.2rem
+        }
+
+        .t4 {
+            background: #5b21b6;
+            color: #ddd6fe
+        }
+
+        .t8 {
+            background: #6d28d9;
+            color: #ede9fe
+        }
+
+        .t16 {
+            background: #7c3aed;
+            color: #fff;
+            font-size: 1.6rem
+        }
+
+        .t32 {
+            background: #8b5cf6;
+            color: #fff
+        }
+
+        .t64 {
+            background: #a78bfa;
+            color: #1e1b4b
+        }
+
+        .t128 {
+            background: #c4b5fd;
+            color: #1e1b4b;
+            font-size: 1.4rem
+        }
+
+        .t256 {
+            background: #ddd6fe;
+            color: #4c1d95;
+            font-size: 1.2rem
+        }
+
+        .t512 {
+            background: #f3e8ff;
+            color: #6d28d9;
+            font-size: 1.1rem
+        }
+
+        .t1024 {
+            background: #e9d5ff;
+            color: #5b21b6;
+            font-size: 1rem
+        }
+
+        .t2048 {
+            background: linear-gradient(135deg, #fbbf24, #f97316);
+            color: #fff;
+            font-size: .9rem;
+            animation: pulse 1s infinite
+        }
+
+        .big {
+            background: linear-gradient(135deg, #22d3ee, #3b82f6);
+            color: #fff;
+            font-size: .8rem
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 20px rgba(251, 191, 36, 0.5)
+            }
+
+            50% {
+                box-shadow: 0 0 40px rgba(249, 115, 22, 0.8)
+            }
+        }
+
+        #hud {
+            display: flex;
+            gap: 24px;
+            margin: 12px 0;
+            font-size: 1.1rem;
+            color: #a78bfa
+        }
+
+        #hud span {
+            font-weight: 700
+        }
+
+        #ctrl {
+            color: #555;
+            font-size: .8rem;
+            margin-top: 8px
+        }
+
+        button {
+            margin-top: 12px;
+            padding: 10px 24px;
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            border: none;
+            color: #fff;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all .2s
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(124, 58, 237, 0.4)
+        }
+    </style>
+</head>
+
+<body>
+    <h1>2048 Neon</h1>
+    <div id="hud">Score: <span id="sc">0</span> &nbsp; Best: <span id="bs">0</span> &nbsp; Moves: <span id="mv">0</span>
+    </div>
+    <div id="board"></div>
+    <div id="ctrl">Arrow Keys to merge tiles | Get to 2048!</div>
+    <button onclick="init()">New Game</button>
+    <script>
+        let grid, score, best = 0, moves, over, won2048 = false;
+        function init() { grid = Array.from({ length: 4 }, () => Array(4).fill(0)); score = 0; moves = 0; over = false; won2048 = false; addTile(); addTile(); document.getElementById('sc').textContent = 0; document.getElementById('mv').textContent = 0; render(); }
+        function addTile() { const empties = []; for (let r = 0; r < 4; r++)for (let c = 0; c < 4; c++)if (!grid[r][c]) empties.push([r, c]); if (!empties.length) return; const [r, c] = empties[Math.floor(Math.random() * empties.length)]; grid[r][c] = Math.random() < 0.9 ? 2 : 4; }
+        function render() {
+            const b = document.getElementById('board'); b.innerHTML = '';
+            for (let r = 0; r < 4; r++)for (let c = 0; c < 4; c++) {
+                const v = grid[r][c], d = document.createElement('div');
+                if (!v) { d.className = 'tile empty'; }
+                else { const cls = v >= 4096 ? 'big' : `t${v}`; d.className = `tile ${cls}`; d.textContent = v; }
+                b.appendChild(d);
+            }
+            if (score > best) { best = score; document.getElementById('bs').textContent = best; }
+        }
+        function slide(row) { const f = row.filter(v => v); const merged = []; let skip = false; for (let i = 0; i < f.length; i++) { if (!skip && i + 1 < f.length && f[i] === f[i + 1]) { merged.push(f[i] * 2); score += f[i] * 2; document.getElementById('sc').textContent = score; skip = true; } else if (!skip) { merged.push(f[i]); } else { skip = false; } } while (merged.length < 4) merged.push(0); return merged; }
+        function move(dir) {
+            let moved = false; const g = grid.map(r => [...r]);
+            if (dir === 'left') { for (let r = 0; r < 4; r++) { const s = slide(grid[r]); if (!s.every((v, i) => v === g[r][i])) { grid[r] = s; moved = true; } } }
+            else if (dir === 'right') { for (let r = 0; r < 4; r++) { const s = slide([...grid[r]].reverse()).reverse(); if (!s.every((v, i) => v === g[r][i])) { grid[r] = s; moved = true; } } }
+            else if (dir === 'up') { for (let c = 0; c < 4; c++) { const col = grid.map(r => r[c]); const s = slide(col); s.forEach((v, r) => { if (v !== g[r][c]) { grid[r][c] = v; moved = true; } }); } }
+            else { for (let c = 0; c < 4; c++) { const col = grid.map(r => r[c]).reverse(); const s = slide(col).reverse(); s.forEach((v, r) => { if (v !== g[r][c]) { grid[r][c] = v; moved = true; } }); } }
+            if (moved) {
+                moves++; document.getElementById('mv').textContent = moves; addTile(); render();
+                // Check for 2048 win
+                if (!won2048 && grid.some(row => row.some(v => v >= 2048))) {
+                    won2048 = true;
+                    setTimeout(() => {
+                        const overlay = document.createElement('div');
+                        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,10,30,0.93);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99;font-family:inherit';
+                        overlay.innerHTML = `<div style="font-size:3.5rem;color:#a78bfa;text-shadow:0 0 40px #a78bfa;margin-bottom:12px;animation:pulse 1s infinite">YOU WIN!</div><div style="font-size:1.4rem;color:#facc15;margin-bottom:8px">🏆 2048 Reached!</div><div style="font-size:1rem;color:#64748b;margin-bottom:24px">Score: ${score}</div><div style="display:flex;gap:12px"><button onclick="won2048=false;this.closest('[style]').remove()" style="padding:12px 24px;background:#1e293b;border:1px solid #a78bfa;color:#a78bfa;border-radius:10px;cursor:pointer;font-size:1rem">Keep Playing</button><button onclick="this.closest('[style]').remove();won2048=false;init()" style="padding:12px 24px;background:linear-gradient(135deg,#7c3aed,#6d28d9);border:none;color:#fff;border-radius:10px;cursor:pointer;font-size:1rem">New Game</button></div>`;
+                        document.body.appendChild(overlay);
+                    }, 300);
+                }
+            }
+        }
+        document.addEventListener('keydown', e => {
+            const map = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
+            if (map[e.key]) { move(map[e.key]); e.preventDefault(); }
+        });
+        init();
+    </script>
+</body>
+
+</html>

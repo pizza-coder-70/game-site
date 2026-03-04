@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Snake Vs Mouse – The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0a1a0a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #4ade80;
+            font-size: 2rem;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px #4ade80
+        }
+
+        canvas {
+            border: 2px solid #4ade80;
+            box-shadow: 0 0 30px rgba(74, 222, 128, 0.4)
+        }
+
+        #hud {
+            margin-top: 10px;
+            color: #4ade80
+        }
+
+        #ctrl {
+            margin-top: 6px;
+            color: #555;
+            font-size: .8rem
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Snake vs Mouse</h1>
+    <canvas id="c" width="500" height="500"></canvas>
+    <div id="hud">Score: <span id="sc">0</span> &nbsp; Level: <span id="lv">1</span></div>
+    <div id="ctrl">Arrow Keys / WASD to move | Eat mice, avoid the cat! | R: restart</div>
+    <script>
+        const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+        const CS = 20, COLS = 25, ROWS = 25;
+        let snake, dir, mice, cat, catTarget, score, level, over, interval, speed;
+        function rand(n) { return Math.floor(Math.random() * n); }
+        function placeMouse() { return { x: rand(COLS), y: rand(ROWS) }; }
+        function init() {
+            snake = [{ x: 12, y: 12 }, { x: 11, y: 12 }, { x: 10, y: 12 }];
+            dir = { x: 1, y: 0 }; mice = [placeMouse(), placeMouse(), placeMouse()];
+            cat = { x: 0, y: 0 }; catTarget = 0; score = 0; level = 1; over = false; speed = 200;
+            clearInterval(interval); interval = setInterval(tick, speed);
+            document.getElementById('sc').textContent = 0; document.getElementById('lv').textContent = 1;
+        }
+        document.addEventListener('keydown', e => {
+            if (e.key === 'r' || e.key === 'R') { init(); return; }
+            if (e.key === 'ArrowLeft' && dir.x !== 1) dir = { x: -1, y: 0 };
+            else if (e.key === 'ArrowRight' && dir.x !== -1) dir = { x: 1, y: 0 };
+            else if (e.key === 'ArrowUp' && dir.y !== 1) dir = { x: 0, y: -1 };
+            else if (e.key === 'ArrowDown' && dir.y !== -1) dir = { x: 0, y: 1 };
+            else if ((e.key === 'a') && dir.x !== 1) dir = { x: -1, y: 0 };
+            else if ((e.key === 'd') && dir.x !== -1) dir = { x: 1, y: 0 };
+            else if ((e.key === 'w') && dir.y !== 1) dir = { x: 0, y: -1 };
+            else if ((e.key === 's') && dir.y !== -1) dir = { x: 0, y: 1 };
+            e.preventDefault();
+        });
+        function tick() {
+            if (over) return;
+            const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+            if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) { endGame(); return; }
+            if (snake.some(s => s.x === head.x && s.y === head.y)) { endGame(); return; }
+            snake.unshift(head);
+            let ate = false;
+            mice = mice.filter(m => { if (m.x === head.x && m.y === head.y) { score += 10 * level; ate = true; mice.push(placeMouse()); return false; } return true; });
+            if (!ate) snake.pop();
+            document.getElementById('sc').textContent = score;
+            level = Math.floor(score / 100) + 1; document.getElementById('lv').textContent = level;
+            // move cat towards snake head (simplified AI)
+            if (snake.length % 3 === 0) {
+                const dx = Math.sign(snake[0].x - cat.x), dy = Math.sign(snake[0].y - cat.y);
+                if (Math.random() < 0.5) cat.x = Math.max(0, Math.min(COLS - 1, cat.x + dx));
+                else cat.y = Math.max(0, Math.min(ROWS - 1, cat.y + dy));
+                if (snake.some(s => s.x === cat.x && s.y === cat.y)) { endGame(); }
+            }
+            draw();
+        }
+        function endGame() { over = true; clearInterval(interval); draw(); }
+        function draw() {
+            ctx.fillStyle = '#0a1a0a'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // mice
+            mice.forEach(m => { ctx.font = `${CS - 2}px monospace`; ctx.textAlign = 'center'; ctx.fillText('🐭', m.x * CS + CS / 2, m.y * CS + CS - 1); });
+            // cat
+            ctx.font = `${CS}px monospace`; ctx.textAlign = 'center'; ctx.fillText('🐱', cat.x * CS + CS / 2, cat.y * CS + CS - 1);
+            // snake
+            snake.forEach((s, i) => {
+                ctx.fillStyle = i === 0 ? '#4ade80' : `hsl(${140 - i * 2},70%,${45 - i}%)`;
+                ctx.beginPath(); ctx.roundRect(s.x * CS + 1, s.y * CS + 1, CS - 2, CS - 2, 4); ctx.fill();
+            });
+            if (over) { ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#4ade80'; ctx.font = 'bold 28px monospace'; ctx.textAlign = 'center'; ctx.fillText('GAME OVER', 250, 220); ctx.font = '20px monospace'; ctx.fillText(`Score: ${score}`, 250, 260); ctx.font = '15px monospace'; ctx.fillStyle = '#aaa'; ctx.fillText('Press R to restart', 250, 295); }
+        }
+        init();
+    </script>
+</body>
+
+</html>

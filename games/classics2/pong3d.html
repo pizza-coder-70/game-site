@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Pong 3D – The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #a78bfa;
+            font-size: 2rem;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px #a78bfa
+        }
+
+        canvas {
+            border: 2px solid #a78bfa;
+            box-shadow: 0 0 30px rgba(167, 139, 250, 0.4)
+        }
+
+        #ctrl {
+            margin-top: 10px;
+            color: #555;
+            font-size: .8rem
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Pong 3D</h1>
+    <canvas id="c" width="700" height="500"></canvas>
+    <div id="ctrl">W/S: Player 1 | Up/Down: Player 2 | R: restart | The ball moves in 3D!</div>
+    <script>
+        const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+        const W = 700, H = 500;
+        let p1, p2, ball, score, keys, over;
+        const PH = 80, PW = 12;
+        function init() {
+            p1 = { x: 20, y: H / 2 - PH / 2 }; p2 = { x: W - 20 - PW, y: H / 2 - PH / 2 };
+            ball = { x: W / 2, y: H / 2, z: 0, vx: 4.5, vy: (Math.random() - .5) * 4, vz: 0.8, r: 10 };
+            score = [0, 0]; keys = {}; over = false;
+        }
+        document.addEventListener('keydown', e => { keys[e.key] = true; if (e.key === 'r' || e.key === 'R') init(); e.preventDefault(); });
+        document.addEventListener('keyup', e => { keys[e.key] = false; });
+        function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+        function update() {
+            if (over) return;
+            if (keys['w'] || keys['W']) p1.y -= 7; if (keys['s'] || keys['S']) p1.y += 7;
+            if (keys['ArrowUp']) p2.y -= 7; if (keys['ArrowDown']) p2.y += 7;
+            p1.y = clamp(p1.y, 0, H - PH); p2.y = clamp(p2.y, 0, H - PH);
+            ball.x += ball.vx; ball.y += ball.vy; ball.z += ball.vz;
+            // z bounce (depth)
+            if (Math.abs(ball.z) > 60) { ball.vz *= -1; }
+            if (ball.y <= ball.r || ball.y >= H - ball.r) ball.vy *= -1;
+            // 3D perspective radius
+            ball.r = 10 + ball.z * 0.15;
+            // p1 hit
+            if (ball.x - ball.r <= p1.x + PW && ball.y >= p1.y && ball.y <= p1.y + PH) { ball.vx = Math.abs(ball.vx) + 0.2; ball.vy += (ball.y - p1.y - PH / 2) * 0.1; ball.vz = (Math.random() - .5) * 2; }
+            // p2 hit
+            if (ball.x + ball.r >= p2.x && ball.y >= p2.y && ball.y <= p2.y + PH) { ball.vx = -(Math.abs(ball.vx) + 0.2); ball.vy += (ball.y - p2.y - PH / 2) * 0.1; ball.vz = (Math.random() - .5) * 2; }
+            ball.vy = clamp(ball.vy, -8, 8);
+            if (ball.x < 0) { score[1]++; resetBall(-1); }
+            if (ball.x > W) { score[0]++; resetBall(1); }
+            if (score[0] >= 7 || score[1] >= 7) over = true;
+        }
+        function resetBall(dir) { ball = { x: W / 2, y: H / 2, z: 0, vx: dir * 4.5, vy: (Math.random() - .5) * 4, vz: 0.8, r: 10 }; }
+        function draw() {
+            // 3D field
+            ctx.fillStyle = '#0a0016'; ctx.fillRect(0, 0, W, H);
+            // perspective lines
+            const vx = W / 2, vy = H / 2; ctx.strokeStyle = 'rgba(167,139,250,0.1)'; ctx.lineWidth = 1;
+            for (let i = 0; i < 8; i++) { ctx.beginPath(); ctx.moveTo(0, i * H / 7); ctx.lineTo(W, i * H / 7); ctx.stroke(); }
+            ctx.setLineDash([12, 12]); ctx.strokeStyle = 'rgba(167,139,250,0.2)'; ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.stroke(); ctx.setLineDash([]);
+            // shadow
+            ctx.beginPath(); ctx.ellipse(ball.x, H - 10, ball.r * 0.8, 5, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fill();
+            // ball
+            const depth = (ball.z + 60) / 120; const br = ball.r;
+            const grad = ctx.createRadialGradient(ball.x - br * 0.3, ball.y - br * 0.3, 1, ball.x, ball.y, br); grad.addColorStop(0, 'rgba(255,255,255,0.9)'); grad.addColorStop(0.4, `hsl(${260 + depth * 60},80%,${60 + depth * 20}%)`); grad.addColorStop(1, 'rgba(80,0,120,0.8)');
+            ctx.beginPath(); ctx.arc(ball.x, ball.y, br, 0, Math.PI * 2); ctx.fillStyle = grad; ctx.fill();
+            // paddles
+            const p1grad = ctx.createLinearGradient(p1.x, 0, p1.x + PW, 0); p1grad.addColorStop(0, '#7c3aed'); p1grad.addColorStop(1, '#a78bfa'); ctx.fillStyle = p1grad; ctx.beginPath(); ctx.roundRect(p1.x, p1.y, PW, PH, 4); ctx.fill();
+            const p2grad = ctx.createLinearGradient(p2.x, 0, p2.x + PW, 0); p2grad.addColorStop(0, '#a78bfa'); p2grad.addColorStop(1, '#7c3aed'); ctx.fillStyle = p2grad; ctx.beginPath(); ctx.roundRect(p2.x, p2.y, PW, PH, 4); ctx.fill();
+            // score
+            ctx.font = 'bold 48px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#a78bfa'; ctx.globalAlpha = 0.8;
+            ctx.fillText(score[0], W / 4, 60); ctx.fillText(score[1], 3 * W / 4, 60); ctx.globalAlpha = 1;
+            if (over) { ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#a78bfa'; ctx.font = 'bold 32px monospace'; ctx.fillText(score[0] >= 7 ? 'Player 1 Wins!' : 'Player 2 Wins!', W / 2, H / 2 - 20); ctx.font = '18px monospace'; ctx.fillStyle = '#aaa'; ctx.fillText('Press R to restart', W / 2, H / 2 + 20); }
+        }
+        function loop() { update(); draw(); requestAnimationFrame(loop); }
+        init(); loop();
+    </script>
+</body>
+
+</html>

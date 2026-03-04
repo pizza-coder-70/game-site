@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Word Search – The Pizza Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0f172a;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Outfit', sans-serif;
+            color: #fff;
+            padding: 20px
+        }
+
+        h1 {
+            color: #38bdf8;
+            font-size: 2rem;
+            margin-bottom: 12px;
+            text-shadow: 0 0 20px rgba(56, 189, 248, 0.5)
+        }
+
+        .layout {
+            display: flex;
+            gap: 24px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            justify-content: center
+        }
+
+        #grid {
+            display: inline-grid;
+            gap: 1px;
+            padding: 8px;
+            background: rgba(56, 189, 248, 0.08);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 12px
+        }
+
+        .letter-cell {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all .15s;
+            user-select: none
+        }
+
+        .letter-cell:hover {
+            background: rgba(56, 189, 248, 0.15)
+        }
+
+        .letter-cell.selected {
+            background: rgba(56, 189, 248, 0.3);
+            color: #38bdf8
+        }
+
+        .letter-cell.found {
+            background: rgba(74, 222, 128, 0.25);
+            color: #4ade80;
+            cursor: default
+        }
+
+        #words-panel h3 {
+            color: #38bdf8;
+            margin-bottom: 10px;
+            font-size: 1rem
+        }
+
+        #words-list div {
+            padding: 4px 8px;
+            margin: 3px 0;
+            border-radius: 6px;
+            font-size: .9rem;
+            color: #cbd5e1;
+            border-left: 3px solid transparent;
+            transition: all .2s
+        }
+
+        .found-word {
+            text-decoration: line-through;
+            color: #64748b !important;
+            border-left-color: #4ade80 !important
+        }
+
+        #msg {
+            margin-top: 12px;
+            color: #4ade80;
+            font-size: 1.1rem;
+            font-weight: 700
+        }
+
+        button {
+            margin-top: 8px;
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #0284c7, #0ea5e9);
+            border: none;
+            color: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: .9rem;
+            transition: all .2s
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(14, 165, 233, 0.4)
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔍 Word Search</h1>
+    <div class="layout">
+        <div>
+            <div id="grid"></div>
+            <div id="msg"></div>
+            <button onclick="init()">New Puzzle</button>
+        </div>
+        <div id="words-panel">
+            <h3>Find these words:</h3>
+            <div id="words-list"></div><br>
+            <div id="found-count" style="color:#64748b;font-size:.85rem">Found: 0 / 0</div>
+        </div>
+    </div>
+    <script>
+        const WORDS = ['PIZZA', 'GAME', 'SNAKE', 'TETRIS', 'SPACE', 'LASER', 'PIXEL', 'QUEST', 'SCORE', 'BONUS', 'LEVEL', 'POWER', 'HERO', 'STAR', 'JUMP', 'FIRE'];
+        const GRID_SIZE = 14;
+        let grid, placed, found, selecting, selStart;
+        function init() {
+            const chosen = WORDS.slice().sort(() => Math.random() - .5).slice(0, 10);
+            grid = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(''));
+            placed = []; found = new Set(); selecting = false;
+            // place words
+            for (const word of chosen) {
+                let placed2 = false;
+                for (let attempt = 0; attempt < 200 && !placed2; attempt++) {
+                    const dir = [{ dr: 0, dc: 1 }, { dr: 1, dc: 0 }, { dr: 1, dc: 1 }, { dr: -1, dc: 1 }][Math.floor(Math.random() * 4)];
+                    const r = Math.floor(Math.random() * GRID_SIZE), c = Math.floor(Math.random() * GRID_SIZE);
+                    let fits = true; const cells = [];
+                    for (let i = 0; i < word.length; i++) { const nr = r + i * dir.dr, nc = c + i * dir.dc; if (nr < 0 || nr >= GRID_SIZE || nc < 0 || nc >= GRID_SIZE || (grid[nr][nc] && grid[nr][nc] !== word[i])) { fits = false; break; } cells.push([nr, nc]); }
+                    if (fits) { cells.forEach(([nr, nc], i) => grid[nr][nc] = word[i]); placed.push({ word, cells }); placed2 = true; }
+                }
+            }
+            // fill blanks
+            for (let r = 0; r < GRID_SIZE; r++)for (let c = 0; c < GRID_SIZE; c++)if (!grid[r][c]) grid[r][c] = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
+            renderGrid(); renderWords(chosen);
+        }
+        let selCells = [];
+        function renderGrid() {
+            const g = document.getElementById('grid'); g.innerHTML = ''; g.style.gridTemplateColumns = `repeat(${GRID_SIZE},32px)`;
+            for (let r = 0; r < GRID_SIZE; r++)for (let c = 0; c < GRID_SIZE; c++) {
+                const el = document.createElement('div'); el.className = 'letter-cell'; el.textContent = grid[r][c]; el.dataset.r = r; el.dataset.c = c;
+                if (found.has(`${r},${c}`)) el.classList.add('found');
+                el.addEventListener('mousedown', () => { selecting = true; selStart = [r, c]; selCells = [[r, c]]; updateSel(); });
+                el.addEventListener('mouseover', () => { if (selecting) { selCells = getCells(selStart, [r, c]); updateSel(); } });
+                el.addEventListener('mouseup', () => { if (selecting) { selecting = false; checkSel(); } });
+                g.appendChild(el);
+            }
+        }
+        document.addEventListener('mouseup', () => { if (selecting) { selecting = false; checkSel(); } });
+        function updateSel() { document.querySelectorAll('.letter-cell').forEach(el => { const r = +el.dataset.r, c = +el.dataset.c; if (selCells.some(([sr, sc]) => sr === r && sc === c)) el.classList.add('selected'); else el.classList.remove('selected'); if (found.has(`${r},${c}`)) el.classList.add('found'); }); }
+        function getCells([r1, c1], [r2, c2]) { const cells = []; const len = Math.max(Math.abs(r2 - r1), Math.abs(c2 - c1)); const dr = Math.sign(r2 - r1), dc = Math.sign(c2 - c1); for (let i = 0; i <= len; i++)cells.push([r1 + i * dr, c1 + i * dc]); return cells; }
+        function checkSel() {
+            const word = selCells.map(([r, c]) => grid[r][c]).join('');
+            const rev = word.split('').reverse().join('');
+            for (const p of placed) {
+                if (!found.has(p.word) && (p.word === word || p.word === rev)) {
+                    found.add(p.word); p.cells.forEach(([r, c]) => found.add(`${r},${c}`));
+                    document.querySelectorAll(`[data-word="${p.word}"]`).forEach(el => el.classList.add('found-word'));
+                    const foundWordsCount = [...found].filter(f => f.length > 2 && isNaN(+f)).length;
+                    document.getElementById('found-count').textContent = `Found: ${foundWordsCount} / ${placed.length}`;
+                    if (foundWordsCount === placed.length) {
+                        document.getElementById('msg').textContent = '🎉 All words found!';
+                        setTimeout(() => {
+                            const overlay = document.createElement('div');
+                            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.93);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99;font-family:inherit';
+                            overlay.innerHTML = `<div style="font-size:3.5rem;color:#38bdf8;text-shadow:0 0 30px #38bdf8;margin-bottom:12px">YOU WIN! 🎉</div><div style="font-size:1.2rem;color:#4ade80;margin-bottom:24px">All ${placed.length} words found!</div><button onclick="this.parentNode.remove();init()" style="padding:12px 28px;background:linear-gradient(135deg,#0284c7,#0ea5e9);border:none;color:#fff;border-radius:10px;cursor:pointer;font-size:1rem;font-family:inherit">New Puzzle</button>`;
+                            document.body.appendChild(overlay);
+                        }, 400);
+                    }
+                }
+            }
+            selCells = []; updateSel();
+        }
+        function renderWords(chosen) { const wl = document.getElementById('words-list'); wl.innerHTML = ''; chosen.forEach(w => { const d = document.createElement('div'); d.textContent = w; d.dataset.word = w; wl.appendChild(d); }); document.getElementById('found-count').textContent = `Found: 0 / ${chosen.length}`; }
+        init();
+    </script>
+</body>
+
+</html>

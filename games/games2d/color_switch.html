@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Color Switch</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #050505;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #fb923c;
+            font-size: 1.5rem;
+            text-shadow: 0 0 16px #fb923c;
+            margin-bottom: 6px
+        }
+
+        canvas {
+            border: 2px solid #fb923c;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(251, 146, 60, .4);
+            cursor: pointer
+        }
+
+        #ui {
+            display: flex;
+            gap: 20px;
+            color: #fb923c;
+            font-size: .85rem;
+            margin-top: 6px
+        }
+
+        #msg {
+            color: #facc15;
+            font-size: .9rem;
+            min-height: 20px;
+            margin-top: 4px
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🎨 Color Switch</h1>
+    <div id="ui"><span>Score: <b id="sc">0</b></span><span>Best: <b id="hi">0</b></span><span>Color: <b id="cl"
+                style="color:#4ade80">GREEN</b></span></div>
+    <canvas id="c" width="360" height="500"></canvas>
+    <div id="msg">Click/Space to jump. Match your color to pass! Switch on ★!</div>
+    <script>
+        const cv = document.getElementById('c'), cx = cv.getContext('2d');
+        const W = 360, H = 500;
+        const PCOLS = ['#4ade80', '#f43f5e', '#38bdf8', '#facc15'];
+        const CNAMES = ['GREEN', 'RED', 'BLUE', 'YELLOW'];
+        let ball = { x: W / 2, y: H - 80, r: 12, vy: 0, color: 0 };
+        let obstacles = [], switches = [], score = 0, best = 0, over = false, started = false;
+        let gravity = .5, jumpPow = -13;
+
+        function spawnObs(y) {
+            // Ring obstacle with a gap matching one color
+            const gap = Math.floor(Math.random() * 4);
+            return { y, speed: 2 + score * .03, gap, angle: 0, rotSpeed: .02 * (Math.random() > .5 ? 1 : -1), r: 70 };
+        }
+        function spawnSwitch(y) { return { x: W / 2, y, r: 15, taken: false }; }
+
+        obstacles.push(spawnObs(H - 200)); obstacles.push(spawnObs(H - 380));
+        switches.push(spawnSwitch(H - 290));
+
+        function jump() { if (!started) { started = true; return; } if (over) { reset(); return; } ball.vy = jumpPow; }
+        cv.addEventListener('click', jump);
+        document.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); jump(); } });
+
+        function reset() { ball.y = H - 80; ball.vy = 0; ball.color = 0; obstacles = []; switches = []; score = 0; over = false; started = true; obstacles.push(spawnObs(H - 200)); obstacles.push(spawnObs(H - 380)); switches.push(spawnSwitch(H - 290)); document.getElementById('sc').textContent = 0; document.getElementById('cl').textContent = CNAMES[0]; document.getElementById('cl').style.color = PCOLS[0]; }
+
+        function update() {
+            if (!started || over) return;
+            ball.vy += gravity; ball.y += ball.vy;
+            if (ball.y > H + 50) { over = true; return; }
+            if (ball.y < -50) ball.y = H + 50;
+            // Scroll: move everything up when ball passes mid
+            if (ball.y < H * .4) { const dy = H * .4 - ball.y; ball.y += dy; obstacles.forEach(o => o.y += dy); switches.forEach(s => s.y += dy); score += Math.floor(dy * .1); document.getElementById('sc').textContent = score; if (score > best) best = document.getElementById('hi').textContent = score; }
+            // Cleanup & spawn
+            obstacles = obstacles.filter(o => o.y < H + 100);
+            switches = switches.filter(s => s.y < H + 100);
+            if (obstacles.length < 3) { const top = Math.min(...obstacles.map(o => o.y)); obstacles.push(spawnObs(top - 220)); if (Math.random() < .5) switches.push(spawnSwitch(top - 110)); }
+            // Rotate obstacles
+            obstacles.forEach(o => { o.angle += o.rotSpeed; o.y += o.speed; });
+            // Switches
+            switches.forEach(s => { s.y += 2 + score * .015; if (!s.taken && Math.hypot(ball.x - s.x, ball.y - s.y) < ball.r + s.r) { s.taken = true; ball.color = (ball.color + 1) % 4; document.getElementById('cl').textContent = CNAMES[ball.color]; document.getElementById('cl').style.color = PCOLS[ball.color]; } });
+            // Collision with rings
+            obstacles.forEach(o => {
+                const dist = Math.hypot(ball.x - W / 2, ball.y - o.y);
+                if (dist > o.r - ball.r - 4 && dist < o.r + ball.r + 4) {
+                    // Check angle to detect color segment
+                    const a = Math.atan2(ball.y - o.y, ball.x - W / 2) - o.angle;
+                    const seg = Math.floor(((a + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 2));
+                    if (seg !== o.gap) over = true;
+                }
+            });
+        }
+
+        function draw() {
+            cx.fillStyle = '#050505'; cx.fillRect(0, 0, W, H);
+            obstacles.forEach(o => {
+                for (let i = 0; i < 4; i++) {
+                    const a0 = o.angle + i * Math.PI / 2, a1 = o.angle + (i + 1) * Math.PI / 2;
+                    if (i === o.gap) continue;
+                    cx.fillStyle = PCOLS[i]; cx.beginPath();
+                    cx.arc(W / 2, o.y, o.r + 14, a0, a1); cx.arc(W / 2, o.y, o.r - 14, a1, a0, true);
+                    cx.closePath(); cx.fill();
+                }
+            });
+            switches.forEach(s => {
+                if (s.taken) return;
+                cx.strokeStyle = 'rgba(255,255,255,.6)'; cx.lineWidth = 2; cx.beginPath(); cx.arc(s.x, s.y, s.r, 0, Math.PI * 2); cx.stroke();
+                cx.font = '18px monospace'; cx.textAlign = 'center'; cx.fillText('★', s.x, s.y + 6);
+            });
+            // Ball
+            cx.fillStyle = PCOLS[ball.color]; cx.shadowColor = PCOLS[ball.color]; cx.shadowBlur = 18;
+            cx.beginPath(); cx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); cx.fill(); cx.shadowBlur = 0;
+            if (!started) { cx.fillStyle = 'rgba(0,0,0,.7)'; cx.fillRect(0, 0, W, H); cx.fillStyle = PCOLS[0]; cx.font = 'bold 28px monospace'; cx.textAlign = 'center'; cx.fillText('CLICK TO START', W / 2, H / 2); }
+            if (over) { cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#f43f5e'; cx.font = 'bold 36px monospace'; cx.textAlign = 'center'; cx.fillText('WRONG COLOR!', W / 2, H / 2 - 20); cx.fillStyle = '#aaa'; cx.font = '16px monospace'; cx.fillText('Score: ' + score + ' | Click restart', W / 2, H / 2 + 18); }
+        }
+        function loop() { update(); draw(); requestAnimationFrame(loop); } loop();
+    </script>
+
+    <script src="../mobile_controls.js"></script>
+</body>
+
+</html>

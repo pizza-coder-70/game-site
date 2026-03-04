@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Trivia Quiz – The Pizza Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f172a, #1e1b4b);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Outfit', sans-serif;
+            color: #fff;
+            padding: 20px
+        }
+
+        h1 {
+            color: #818cf8;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px rgba(129, 140, 248, 0.5)
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(129, 140, 248, 0.3);
+            border-radius: 24px;
+            padding: 36px;
+            width: min(600px, 95vw)
+        }
+
+        #question {
+            font-size: 1.3rem;
+            margin-bottom: 24px;
+            line-height: 1.4;
+            color: #e2e8f0
+        }
+
+        #progress {
+            color: #64748b;
+            font-size: .9rem;
+            margin-bottom: 8px
+        }
+
+        .answers {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px
+        }
+
+        .ans-btn {
+            padding: 14px;
+            background: rgba(129, 140, 248, 0.1);
+            border: 2px solid rgba(129, 140, 248, 0.3);
+            color: #e2e8f0;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: .95rem;
+            font-family: inherit;
+            transition: all .2s;
+            text-align: left
+        }
+
+        .ans-btn:hover:not(:disabled) {
+            background: rgba(129, 140, 248, 0.25);
+            border-color: #818cf8
+        }
+
+        .ans-btn.correct {
+            background: rgba(34, 197, 94, 0.25);
+            border-color: #22c55e;
+            color: #4ade80
+        }
+
+        .ans-btn.wrong {
+            background: rgba(239, 68, 68, 0.25);
+            border-color: #ef4444;
+            color: #fca5a5
+        }
+
+        #score-board {
+            text-align: center;
+            font-size: 1.2rem;
+            color: #818cf8
+        }
+
+        #feedback {
+            min-height: 28px;
+            color: #facc15;
+            font-size: 1rem;
+            margin-bottom: 12px;
+            font-weight: 600
+        }
+
+        #next-btn {
+            display: none;
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            border: none;
+            color: #fff;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: all .2s
+        }
+
+        #next-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(124, 58, 237, 0.4)
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            margin-bottom: 20px
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #7c3aed, #818cf8);
+            border-radius: 3px;
+            transition: width .4s
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🧠 Trivia Quiz</h1>
+    <div class="card">
+        <div id="progress">Question 1 of 15</div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="pf" style="width:0%"></div>
+        </div>
+        <div id="question">Loading...</div>
+        <div class="answers" id="answers"></div>
+        <div id="feedback"></div>
+        <button id="next-btn" onclick="nextQ()">Next Question →</button>
+        <div id="score-board">Score: <span id="sc">0</span></div>
+    </div>
+    <script>
+        const QS = [
+            { q: "What is the capital of France?", a: ["Paris", "London", "Berlin", "Madrid"], c: 0 },
+            { q: "How many planets are in our solar system?", a: ["7", "8", "9", "10"], c: 1 },
+            { q: "What element does 'O' represent on the periodic table?", a: ["Osmium", "Oxygen", "Oganesson", "Gold"], c: 1 },
+            { q: "Who painted the Mona Lisa?", a: ["Michelangelo", "Vincent van Gogh", "Leonardo da Vinci", "Pablo Picasso"], c: 2 },
+            { q: "What year did World War II end?", a: ["1943", "1944", "1945", "1946"], c: 2 },
+            { q: "What is the largest ocean on Earth?", a: ["Atlantic", "Indian", "Arctic", "Pacific"], c: 3 },
+            { q: "How many sides does a hexagon have?", a: ["5", "6", "7", "8"], c: 1 },
+            { q: "What is the chemical symbol for gold?", a: ["Gd", "Au", "Ag", "Go"], c: 1 },
+            { q: "Which planet is known as the Red Planet?", a: ["Venus", "Jupiter", "Mars", "Saturn"], c: 2 },
+            { q: "Who wrote 'Romeo and Juliet'?", a: ["Charles Dickens", "William Shakespeare", "Mark Twain", "Homer"], c: 1 },
+            { q: "What is the fastest land animal?", a: ["Lion", "Cheetah", "Leopard", "Horse"], c: 1 },
+            { q: "How many continents are on Earth?", a: ["5", "6", "7", "8"], c: 2 },
+            { q: "What is 15 × 15?", a: ["200", "215", "225", "250"], c: 2 },
+            { q: "What gas do plants absorb from the atmosphere?", a: ["Oxygen", "Nitrogen", "Carbon Dioxide", "Helium"], c: 2 },
+            { q: "What is the longest river in the world?", a: ["Amazon", "Mississippi", "Yangtze", "Nile"], c: 3 },
+            { q: "What is the hardest natural substance on Earth?", a: ["Iron", "Diamond", "Quartz", "Sapphire"], c: 1 },
+            { q: "Who invented the telephone?", a: ["Nikola Tesla", "Alexander Graham Bell", "Thomas Edison", "Albert Einstein"], c: 1 },
+            { q: "How many strings does a standard guitar have?", a: ["4", "5", "6", "7"], c: 2 },
+            { q: "What is the capital of Japan?", a: ["Seoul", "Beijing", "Tokyo", "Osaka"], c: 2 },
+            { q: "What color is a ruby?", a: ["Blue", "Green", "Red", "Yellow"], c: 2 },
+        ];
+        let shuffled, idx, score, answered;
+        function init() { shuffled = [...QS].sort(() => Math.random() - .5).slice(0, 15); idx = 0; score = 0; answered = false; loadQ(); }
+        function loadQ() {
+            const q = shuffled[idx]; answered = false;
+            document.getElementById('question').textContent = q.q;
+            document.getElementById('progress').textContent = `Question ${idx + 1} of ${shuffled.length}`;
+            document.getElementById('pf').style.width = ((idx / shuffled.length) * 100) + '%';
+            document.getElementById('feedback').textContent = '';
+            document.getElementById('next-btn').style.display = 'none';
+            const ans = document.getElementById('answers');
+            ans.innerHTML = '';
+            // shuffle answers
+            const opts = [...q.a].map((a, i) => ({ a, i })).sort(() => Math.random() - .5);
+            opts.forEach(opt => {
+                const btn = document.createElement('button'); btn.className = 'ans-btn'; btn.textContent = opt.a;
+                btn.addEventListener('click', () => answer(opt.i, q.c, btn, opts));
+                ans.appendChild(btn);
+            });
+        }
+        function answer(chosen, correct, btn, opts) {
+            if (answered) return; answered = true;
+            const btns = document.querySelectorAll('.ans-btn');
+            btns.forEach(b => b.disabled = true);
+            if (chosen === correct) { score += 10; btn.classList.add('correct'); document.getElementById('feedback').textContent = '✅ Correct! +10 points'; document.getElementById('feedback').style.color = '#4ade80'; }
+            else {
+                btn.classList.add('wrong');// highlight correct
+                btns.forEach((b, i) => { if (opts[i].i === correct) b.classList.add('correct'); });
+                document.getElementById('feedback').textContent = '❌ Wrong! The correct answer is highlighted.'; document.getElementById('feedback').style.color = '#fca5a5';
+            }
+            document.getElementById('sc').textContent = score;
+            if (idx < shuffled.length - 1) document.getElementById('next-btn').style.display = 'block';
+            else setTimeout(showFinal, 800);
+        }
+        function nextQ() { idx++; loadQ(); }
+        function showFinal() {
+            document.getElementById('question').textContent = `Quiz Complete! You scored ${score}/${shuffled.length * 10}`;
+            document.getElementById('answers').innerHTML = '';
+            document.getElementById('feedback').textContent = '';
+            document.getElementById('next-btn').style.display = 'none';
+            document.getElementById('pf').style.width = '100%';
+            const btn = document.createElement('button'); btn.className = 'ans-btn'; btn.style.gridColumn = '1/-1'; btn.style.textAlign = 'center'; btn.textContent = '🔄 Play Again'; btn.addEventListener('click', init);
+            document.getElementById('answers').appendChild(btn);
+        }
+        init();
+    </script>
+</body>
+
+</html>

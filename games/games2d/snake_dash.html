@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Snake Dash</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #001a0a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #22c55e;
+            font-size: 1.5rem;
+            text-shadow: 0 0 16px #22c55e;
+            margin-bottom: 6px
+        }
+
+        canvas {
+            border: 2px solid #22c55e;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(34, 197, 94, .4)
+        }
+
+        #ui {
+            display: flex;
+            gap: 20px;
+            color: #22c55e;
+            font-size: .85rem;
+            margin-top: 6px
+        }
+
+        #msg {
+            color: #facc15;
+            font-size: .9rem;
+            min-height: 20px;
+            margin-top: 4px
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🐍 Snake Dash</h1>
+    <div id="ui"><span>Score: <b id="sc">0</b></span><span>Length: <b id="ln">3</b></span><span>Speed: <b
+                id="sp">1</b></span></div>
+    <canvas id="c" width="480" height="480"></canvas>
+    <div id="msg">Arrow keys / WASD to move! Eat ⭐ for bonus! Collect power-ups!</div>
+    <script>
+        const cv = document.getElementById('c'), cx = cv.getContext('2d');
+        const W = 480, H = 480, CS = 20, GW = W / CS, GH = H / CS;
+        const POWS = [{ e: '⚡', col: '#facc15', name: 'speed' }, { e: '🔵', col: '#38bdf8', name: 'slow' }, { e: '💜', col: '#a78bfa', name: 'shield' }, { e: '⭐', col: '#fbbf24', name: 'bonus' }];
+        let snake, dir, nextDir, food, special, powerup, score, over, won, step, stepMax, shield;
+        function init() { snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }]; dir = { x: 1, y: 0 }; nextDir = { x: 1, y: 0 }; food = rndFood(); special = null; powerup = null; score = 0; over = false; won = false; step = 0; stepMax = 8; shield = false; document.getElementById('sc').textContent = 0; document.getElementById('ln').textContent = 3; document.getElementById('sp').textContent = 1; }
+        function rndFood() { let f; do { f = { x: Math.floor(Math.random() * GW), y: Math.floor(Math.random() * GH) }; } while (snake.some(s => s.x === f.x && s.y === f.y)); return f; }
+        function rndSpecial() { return { x: Math.floor(Math.random() * GW), y: Math.floor(Math.random() * GH), e: '🍎', timer: 120 }; }
+        function rndPow() { const p = POWS[Math.floor(Math.random() * POWS.length)]; return { x: Math.floor(Math.random() * GW), y: Math.floor(Math.random() * GH), ...p, timer: 200 }; }
+        init();
+        const DMAP = { 'ArrowUp': { x: 0, y: -1 }, 'ArrowDown': { x: 0, y: 1 }, 'ArrowLeft': { x: -1, y: 0 }, 'ArrowRight': { x: 1, y: 0 }, 'KeyW': { x: 0, y: -1 }, 'KeyS': { x: 0, y: 1 }, 'KeyA': { x: -1, y: 0 }, 'KeyD': { x: 1, y: 0 } };
+        document.addEventListener('keydown', e => { const d = DMAP[e.code]; if (d && !(d.x === -dir.x && d.y === -dir.y)) nextDir = d; if (e.code.startsWith('Arrow')) e.preventDefault(); if (e.code === 'KeyR' && over) init(); });
+        let specialTimer = 0, powTimer = 0;
+        function update() {
+            step++; if (step < stepMax) return; step = 0;
+            dir = nextDir;
+            const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+            // Wall wrap
+            head.x = (head.x + GW) % GW; head.y = (head.y + GH) % GH;
+            // Self collision
+            if (!shield && snake.slice(1).some(s => s.x === head.x && s.y === head.y)) { over = true; return; }
+            snake.unshift(head);
+            // Eat food
+            if (head.x === food.x && head.y === food.y) { score += 10; food = rndFood(); } else snake.pop();
+            // Eat special
+            if (special && head.x === special.x && head.y === special.y) { score += 50; special = null; }
+            // Eat powerup
+            if (powerup && head.x === powerup.x && head.y === powerup.y) {
+                if (powerup.name === 'speed') stepMax = Math.max(4, stepMax - 2);
+                if (powerup.name === 'slow') { stepMax = Math.min(14, stepMax + 3); setTimeout(() => stepMax = Math.max(6, stepMax - 3), 5000); }
+                if (powerup.name === 'shield') { shield = true; setTimeout(() => shield = false, 5000); }
+                if (powerup.name === 'bonus') score += 100;
+                powerup = null;
+            }
+            // Timers
+            specialTimer++; if (specialTimer >= 180) { special = rndSpecial(); specialTimer = 0; }
+            if (special) { special.timer--; if (special.timer <= 0) special = null; }
+            powTimer++; if (powTimer >= 240) { powerup = rndPow(); powTimer = 0; }
+            if (powerup) { powerup.timer--; if (powerup.timer <= 0) powerup = null; }
+            document.getElementById('sc').textContent = score;
+            document.getElementById('ln').textContent = snake.length;
+            document.getElementById('sp').textContent = Math.round(10 / stepMax * 10) / 10;
+            if (snake.length >= 40) won = true;
+        }
+        function draw() {
+            cx.fillStyle = '#001a0a'; cx.fillRect(0, 0, W, H);
+            for (let i = 0; i < GW; i++)for (let j = 0; j < GH; j++) { cx.fillStyle = (i + j) % 2 === 0 ? 'rgba(255,255,255,.02)' : 'transparent'; cx.fillRect(i * CS, j * CS, CS, CS); }
+            // Food
+            cx.fillStyle = '#ef4444'; cx.shadowColor = '#ef4444'; cx.shadowBlur = 10; cx.font = '16px monospace'; cx.textAlign = 'center'; cx.fillText('🍎', food.x * CS + CS / 2, food.y * CS + CS - 2); cx.shadowBlur = 0;
+            if (special) { cx.font = '16px monospace'; cx.fillText(special.e, special.x * CS + CS / 2, special.y * CS + CS - 2); }
+            if (powerup) { cx.font = '14px monospace'; cx.fillStyle = powerup.col; cx.fillText(powerup.e, powerup.x * CS + CS / 2, powerup.y * CS + CS - 2); cx.strokeStyle = powerup.col; cx.lineWidth = 1; cx.strokeRect(powerup.x * CS + 1, powerup.y * CS + 1, CS - 2, CS - 2); }
+            // Snake
+            snake.forEach((s, i) => {
+                const t = i / snake.length;
+                cx.fillStyle = shield ? `rgba(147,197,253,${.9 - t * .4})` : `rgba(${Math.floor(34 + t * 50)},${Math.floor(197 - t * 80)},${Math.floor(94 - t * 30)},${.95 - t * .3})`;
+                cx.fillRect(s.x * CS + 1, s.y * CS + 1, CS - 2, CS - 2);
+                if (i === 0) { cx.fillStyle = '#fff'; cx.fillRect(s.x * CS + 4, s.y * CS + 4, 4, 4); cx.fillRect(s.x * CS + CS - 8, s.y * CS + 4, 4, 4); }
+            });
+            if (over) { cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#f43f5e'; cx.font = 'bold 38px monospace'; cx.textAlign = 'center'; cx.fillText('GAME OVER', W / 2, H / 2 - 20); cx.fillStyle = '#aaa'; cx.font = '16px monospace'; cx.fillText('Length: ' + snake.length + ' | R restart', W / 2, H / 2 + 18); }
+            if (won) { cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#facc15'; cx.font = 'bold 40px monospace'; cx.textAlign = 'center'; cx.fillText('YOU WIN! 🏆', W / 2, H / 2 - 20); cx.fillStyle = '#22c55e'; cx.font = '18px monospace'; cx.fillText('Score: ' + score + ' Length: 40!', W / 2, H / 2 + 20); }
+        }
+        function loop() { update(); draw(); requestAnimationFrame(loop); } loop();
+    </script>
+
+    <script src="../mobile_controls.js"></script>
+</body>
+
+</html>

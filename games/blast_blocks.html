@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blast Blocks | The Pizza Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d0d0d;
+            --primary-color: #ff4d4d;
+            --grid-bg: rgba(255, 255, 255, 0.05);
+            --cell-bg: rgba(255, 255, 255, 0.1);
+            --cell-border: rgba(255, 255, 255, 0.05);
+            --text-color: #fff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem;
+            user-select: none;
+        }
+
+        h1 {
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            font-weight: 800;
+            background: linear-gradient(45deg, #ff4d4d, #ff9f43);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .score-board {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .score-board span {
+            color: var(--primary-color);
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(8, 40px);
+            grid-template-rows: repeat(8, 40px);
+            gap: 2px;
+            background: var(--grid-bg);
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .cell {
+            width: 40px;
+            height: 40px;
+            background: var(--cell-bg);
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .cell.filled {
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .cell.hover-valid {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(0.95);
+        }
+
+        .cell.hover-invalid {
+            background: rgba(255, 77, 77, 0.5);
+            transform: scale(0.95);
+        }
+
+        .shapes-container {
+            display: flex;
+            gap: 2rem;
+            height: 120px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .shape-slot {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .shape-slot:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .shape-slot.selected {
+            border-color: var(--primary-color);
+            background: rgba(255, 77, 77, 0.1);
+            transform: scale(1.05);
+        }
+
+        .shape-slot.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .shape-mini {
+            display: grid;
+            gap: 2px;
+        }
+
+        .shape-mini .s-cell {
+            width: 25px;
+            height: 25px;
+            border-radius: 3px;
+            background: transparent;
+        }
+
+        .shape-mini .s-cell.active {
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-content {
+            background: #1a1a1a;
+            padding: 3rem;
+            border-radius: 1rem;
+            text-align: center;
+            border: 1px solid var(--primary-color);
+            box-shadow: 0 0 30px rgba(255, 77, 77, 0.2);
+        }
+
+        .modal h2 {
+            margin-bottom: 1rem;
+            font-size: 2rem;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, var(--primary-color), #ff9f43);
+            border: none;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 2rem;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            font-family: inherit;
+            margin-top: 1rem;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 2rem;
+            left: 2rem;
+            color: var(--text-color);
+            text-decoration: none;
+            font-weight: 600;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .back-btn:hover {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <a href="../games.html" class="back-btn">← Back to Games</a>
+    <h1>Blast Blocks</h1>
+    <div class="score-board">
+        <div>Score: <span id="score">0</span></div>
+        <div>Best: <span id="highScore">0</span></div>
+    </div>
+
+    <div class="game-container">
+        <div class="board" id="board"></div>
+        <div class="shapes-container" id="shapes">
+            <div class="shape-slot" id="slot0"></div>
+            <div class="shape-slot" id="slot1"></div>
+            <div class="shape-slot" id="slot2"></div>
+        </div>
+    </div>
+
+    <div class="modal" id="gameOverModal">
+        <div class="modal-content">
+            <h2>Game Over!</h2>
+            <p>Your Score: <span id="finalScore" style="color:var(--primary-color);font-weight:bold;">0</span></p>
+            <button class="btn" onclick="initGame()">Play Again</button>
+        </div>
+    </div>
+
+    <script src="../scripts/scores.js"></script>
+    <script>
+        const BOARD_SIZE = 8;
+        let board = [];
+        let score = 0;
+        let highScore = localStorage.getItem('blastBlocksHighScore') || 0;
+        let currentShapes = [];
+        let selectedShapeIndex = -1;
+
+        document.getElementById('highScore').innerText = highScore;
+
+        const SHAPES = [
+            // 1x1
+            { grid: [[1]], color: '#FF5E5B' },
+            // 2x2
+            { grid: [[1, 1], [1, 1]], color: '#00CECB' },
+            // 3x3
+            { grid: [[1, 1, 1], [1, 1, 1], [1, 1, 1]], color: '#FFED66' },
+            // horizontal line 2
+            { grid: [[1, 1]], color: '#32E875' },
+            // horizontal line 3
+            { grid: [[1, 1, 1]], color: '#32E875' },
+            // horizontal line 4
+            { grid: [[1, 1, 1, 1]], color: '#32E875' },
+            // vertical line 2
+            { grid: [[1], [1]], color: '#885DF1' },
+            // vertical line 3
+            { grid: [[1], [1], [1]], color: '#885DF1' },
+            // vertical line 4
+            { grid: [[1], [1], [1], [1]], color: '#885DF1' },
+            // L shapes
+            { grid: [[1, 0], [1, 1]], color: '#F896D8' },
+            { grid: [[0, 1], [1, 1]], color: '#F896D8' },
+            { grid: [[1, 1], [1, 0]], color: '#F896D8' },
+            { grid: [[1, 1], [0, 1]], color: '#F896D8' },
+            // big L shapes
+            { grid: [[1, 0, 0], [1, 0, 0], [1, 1, 1]], color: '#FF9F1C' },
+            { grid: [[1, 1, 1], [0, 0, 1], [0, 0, 1]], color: '#FF9F1C' }
+        ];
+
+        function initGame() {
+            board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(null));
+            score = 0;
+            updateScore();
+            document.getElementById('gameOverModal').style.display = 'none';
+            drawBoard();
+            generateShapes();
+        }
+
+        function drawBoard() {
+            const boardEl = document.getElementById('board');
+            boardEl.innerHTML = '';
+            for (let y = 0; y < BOARD_SIZE; y++) {
+                for (let x = 0; x < BOARD_SIZE; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.x = x;
+                    cell.dataset.y = y;
+                    if (board[y][x]) {
+                        cell.style.backgroundColor = board[y][x];
+                        cell.classList.add('filled');
+                    }
+
+                    cell.addEventListener('mouseenter', () => handleHover(x, y));
+                    cell.addEventListener('mouseleave', clearHover);
+                    cell.addEventListener('click', () => placeShape(x, y));
+
+                    boardEl.appendChild(cell);
+                }
+            }
+        }
+
+        function generateShapes() {
+            currentShapes = [];
+            selectedShapeIndex = -1;
+            for (let i = 0; i < 3; i++) {
+                const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+                currentShapes.push({ ...shape, used: false });
+                renderMiniShape(i, shape);
+            }
+            checkGameOver();
+        }
+
+        function renderMiniShape(index, shape) {
+            const slot = document.getElementById(`slot${index}`);
+            slot.innerHTML = '';
+            slot.className = 'shape-slot';
+            slot.onclick = () => selectShape(index);
+
+            if (shape.used) {
+                slot.classList.add('disabled');
+                return;
+            }
+
+            const rows = shape.grid.length;
+            const cols = shape.grid[0].length;
+
+            const mini = document.createElement('div');
+            mini.className = 'shape-mini';
+            mini.style.gridTemplateColumns = `repeat(${cols}, 25px)`;
+            mini.style.gridTemplateRows = `repeat(${rows}, 25px)`;
+
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    const sCell = document.createElement('div');
+                    sCell.className = 's-cell';
+                    if (shape.grid[y][x]) {
+                        sCell.classList.add('active');
+                        sCell.style.backgroundColor = shape.color;
+                    }
+                    mini.appendChild(sCell);
+                }
+            }
+            slot.appendChild(mini);
+        }
+
+        function selectShape(index) {
+            if (currentShapes[index].used) return;
+            selectedShapeIndex = selectedShapeIndex === index ? -1 : index;
+
+            for (let i = 0; i < 3; i++) {
+                const slot = document.getElementById(`slot${i}`);
+                if (i === selectedShapeIndex) slot.classList.add('selected');
+                else slot.classList.remove('selected');
+            }
+            clearHover();
+        }
+
+        function canPlace(shape, originX, originY) {
+            for (let y = 0; y < shape.grid.length; y++) {
+                for (let x = 0; x < shape.grid[y].length; x++) {
+                    if (shape.grid[y][x]) {
+                        const boardX = originX + x;
+                        const boardY = originY + y;
+                        if (boardX < 0 || boardX >= BOARD_SIZE || boardY < 0 || boardY >= BOARD_SIZE) return false;
+                        if (board[boardY][boardX] !== null) return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function handleHover(x, y) {
+            if (selectedShapeIndex === -1) return;
+            const shape = currentShapes[selectedShapeIndex];
+            const isValid = canPlace(shape, x, y);
+
+            const cells = document.querySelectorAll('.board .cell');
+
+            for (let sy = 0; sy < shape.grid.length; sy++) {
+                for (let sx = 0; sx < shape.grid[sy].length; sx++) {
+                    if (shape.grid[sy][sx]) {
+                        const boardX = x + sx;
+                        const boardY = y + sy;
+                        if (boardX >= 0 && boardX < BOARD_SIZE && boardY >= 0 && boardY < BOARD_SIZE) {
+                            const index = boardY * BOARD_SIZE + boardX;
+                            cells[index].classList.add(isValid ? 'hover-valid' : 'hover-invalid');
+                            if (isValid) cells[index].style.backgroundColor = shape.color;
+                        }
+                    }
+                }
+            }
+        }
+
+        function clearHover() {
+            const cells = document.querySelectorAll('.board .cell');
+            cells.forEach(c => {
+                c.classList.remove('hover-valid', 'hover-invalid');
+                if (!c.classList.contains('filled')) {
+                    c.style.backgroundColor = 'var(--cell-bg)';
+                } else {
+                    const x = parseInt(c.dataset.x);
+                    const y = parseInt(c.dataset.y);
+                    c.style.backgroundColor = board[y][x];
+                }
+            });
+        }
+
+        function placeShape(x, y) {
+            if (selectedShapeIndex === -1) return;
+            const shape = currentShapes[selectedShapeIndex];
+
+            if (canPlace(shape, x, y)) {
+                // Place
+                let blocksPlaced = 0;
+                for (let sy = 0; sy < shape.grid.length; sy++) {
+                    for (let sx = 0; sx < shape.grid[sy].length; sx++) {
+                        if (shape.grid[sy][sx]) {
+                            board[y + sy][x + sx] = shape.color;
+                            blocksPlaced++;
+                        }
+                    }
+                }
+                score += blocksPlaced;
+
+                currentShapes[selectedShapeIndex].used = true;
+                document.getElementById(`slot${selectedShapeIndex}`).classList.remove('selected');
+                selectedShapeIndex = -1;
+
+                clearLines();
+                drawBoard();
+
+                // Redraw shapes
+                currentShapes.forEach((s, i) => renderMiniShape(i, s));
+
+                // If all used, generate new
+                if (currentShapes.every(s => s.used)) {
+                    generateShapes();
+                } else {
+                    checkGameOver();
+                }
+            }
+        }
+
+        function clearLines() {
+            const linesToClear = { rows: [], cols: [] };
+
+            // Check rows
+            for (let y = 0; y < BOARD_SIZE; y++) {
+                if (board[y].every(cell => cell !== null)) {
+                    linesToClear.rows.push(y);
+                }
+            }
+
+            // Check cols
+            for (let x = 0; x < BOARD_SIZE; x++) {
+                let full = true;
+                for (let y = 0; y < BOARD_SIZE; y++) {
+                    if (board[y][x] === null) { full = false; break; }
+                }
+                if (full) linesToClear.cols.push(x);
+            }
+
+            // Clear them
+            linesToClear.rows.forEach(y => {
+                for (let x = 0; x < BOARD_SIZE; x++) board[y][x] = null;
+            });
+            linesToClear.cols.forEach(x => {
+                for (let y = 0; y < BOARD_SIZE; y++) board[y][x] = null;
+            });
+
+            const linesCleared = linesToClear.rows.length + linesToClear.cols.length;
+            if (linesCleared > 0) {
+                // Bonus points
+                score += linesCleared * 10 + (linesCleared > 1 ? linesCleared * 5 : 0);
+            }
+            updateScore();
+        }
+
+        function updateScore() {
+            document.getElementById('score').innerText = score;
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('blastBlocksHighScore', highScore);
+                document.getElementById('highScore').innerText = highScore;
+            }
+        }
+
+        function checkGameOver() {
+            // Check if any unused shape can be placed
+            let canPlay = false;
+            for (let s of currentShapes) {
+                if (s.used) continue;
+                for (let y = 0; y < BOARD_SIZE; y++) {
+                    for (let x = 0; x < BOARD_SIZE; x++) {
+                        if (canPlace(s, x, y)) {
+                            canPlay = true;
+                            break;
+                        }
+                    }
+                    if (canPlay) break;
+                }
+                if (canPlay) break;
+            }
+
+            if (!canPlay) {
+                document.getElementById('finalScore').innerText = score;
+                PizzaScores.save('Blast Blocks', score);
+                document.getElementById('gameOverModal').style.display = 'flex';
+            }
+        }
+
+        initGame();
+    </script>
+</body>
+
+</html>

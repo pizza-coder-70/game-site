@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Blackjack | The Pizza Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #062a15;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Outfit', sans-serif;
+            color: #e2e8f0;
+            padding: 20px
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: 3px;
+            color: #fbbf24;
+            text-shadow: 0 0 20px rgba(251, 191, 36, 0.5);
+            margin-bottom: 8px
+        }
+
+        .table {
+            background: #0a3d1f;
+            border: 3px solid rgba(251, 191, 36, 0.3);
+            border-radius: 24px;
+            padding: 28px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 0 60px rgba(0, 0, 0, 0.7)
+        }
+
+        .area-label {
+            font-size: .75rem;
+            letter-spacing: 2px;
+            color: #4ade80;
+            margin-bottom: 8px;
+            font-weight: 700
+        }
+
+        .hand {
+            display: flex;
+            gap: 8px;
+            min-height: 90px;
+            flex-wrap: wrap;
+            margin-bottom: 4px;
+            align-items: center
+        }
+
+        .card {
+            width: 58px;
+            height: 82px;
+            border-radius: 8px;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            font-weight: 800;
+            box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.5);
+            flex-shrink: 0;
+            position: relative
+        }
+
+        .card.red {
+            color: #dc2626
+        }
+
+        .card.black {
+            color: #1e293b
+        }
+
+        .card.back {
+            background: linear-gradient(135deg, #1e40af, #7c3aed);
+            color: transparent
+        }
+
+        .card.back::after {
+            content: '🂠';
+            font-size: 2rem;
+            color: rgba(255, 255, 255, 0.15)
+        }
+
+        .score-display {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fbbf24;
+            margin-bottom: 14px;
+            min-height: 1.4em
+        }
+
+        .divider {
+            border: none;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            margin: 14px 0
+        }
+
+        #chips {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 12px 0
+        }
+
+        .chip {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            border: 3px dashed rgba(255, 255, 255, 0.4);
+            font-weight: 800;
+            font-size: .85rem;
+            cursor: pointer;
+            transition: transform .15s;
+            display: flex;
+            align-items: center;
+            justify-content: center
+        }
+
+        .chip:hover {
+            transform: scale(1.15)
+        }
+
+        #controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 14px
+        }
+
+        .btn {
+            padding: 10px 22px;
+            border: none;
+            border-radius: 10px;
+            font-family: 'Outfit', sans-serif;
+            font-size: .95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all .15s
+        }
+
+        .btn-green {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            color: #fff
+        }
+
+        .btn-red {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            color: #fff
+        }
+
+        .btn-purple {
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            color: #fff
+        }
+
+        .btn-gold {
+            background: linear-gradient(135deg, #d97706, #b45309);
+            color: #fff
+        }
+
+        .btn:hover {
+            filter: brightness(1.15);
+            transform: translateY(-1px)
+        }
+
+        .btn:disabled {
+            opacity: .4;
+            cursor: not-allowed;
+            transform: none
+        }
+
+        #status {
+            text-align: center;
+            font-size: 1.1rem;
+            font-weight: 700;
+            min-height: 1.5em;
+            color: #fff;
+            margin: 10px 0
+        }
+
+        #bankLabel {
+            text-align: center;
+            font-size: .9rem;
+            color: #4ade80;
+            margin-bottom: 4px
+        }
+
+        #betLabel {
+            text-align: center;
+            font-size: .85rem;
+            color: #fbbf24;
+            margin-bottom: 8px
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(6, 42, 21, 0.95);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: bold;
+            border: 1px solid #4ade80;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999
+        }
+
+        #menuBtn {
+            display: none
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>🃏 BLACKJACK</h1>
+    <div class="table">
+        <div class="area-label">DEALER</div>
+        <div class="hand" id="dealerHand"></div>
+        <div class="score-display" id="dealerScore"></div>
+        <hr class="divider">
+        <div class="area-label">YOU</div>
+        <div class="hand" id="playerHand"></div>
+        <div class="score-display" id="playerScore"></div>
+        <div id="status">Place your bet and deal!</div>
+        <div id="bankLabel">Bank: <b id="bank">1000</b></div>
+        <div id="betLabel">Bet: <b id="betDisplay">0</b></div>
+        <div id="chips">
+            <div class="chip" style="background:#ef4444" onclick="addBet(5)">$5</div>
+            <div class="chip" style="background:#3b82f6" onclick="addBet(10)">$10</div>
+            <div class="chip" style="background:#8b5cf6" onclick="addBet(25)">$25</div>
+            <div class="chip" style="background:#f59e0b" onclick="addBet(50)">$50</div>
+            <div class="chip" style="background:#10b981" onclick="addBet(100)">$100</div>
+        </div>
+        <div id="controls">
+            <button class="btn btn-gold" id="dealBtn" onclick="deal()">DEAL</button>
+            <button class="btn btn-green" id="hitBtn" onclick="hit()" disabled>HIT</button>
+            <button class="btn btn-red" id="standBtn" onclick="stand()" disabled>STAND</button>
+            <button class="btn btn-purple" id="doubleBtn" onclick="doubleDown()" disabled>DOUBLE</button>
+            <button class="btn" style="background:#374151;color:#fff" id="clearBtn" onclick="clearBet()">CLEAR</button>
+        </div>
+        <div style="text-align:center;margin-top:12px">
+            <button class="btn btn-purple" id="menuBtn" onclick="window.close()">🏠 Return to Menu</button>
+        </div>
+    </div>
+    <script src="../scripts/scores.js"></script>
+    <script>
+        const SUITS = ['♠', '♥', '♦', '♣'];
+        const VALS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+        let deck = [], playerHand = [], dealerHand = [], bank = 1000, bet = 0, gameActive = false, maxWin = 0;
+
+        function makeDeck() {
+            deck = [];
+            for (let s of SUITS) for (let v of VALS) deck.push({ s, v });
+            // Shuffle
+            for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[deck[i], deck[j]] = [deck[j], deck[i]]; }
+        }
+
+        function cardVal(card) {
+            if (['J', 'Q', 'K'].includes(card.v)) return 10;
+            if (card.v === 'A') return 11;
+            return parseInt(card.v);
+        }
+
+        function handValue(hand) {
+            let val = hand.reduce((s, c) => s + cardVal(c), 0);
+            let aces = hand.filter(c => c.v === 'A').length;
+            while (val > 21 && aces-->0) val -= 10;
+            return val;
+        }
+
+        function cardHTML(card, hidden = false) {
+            if (hidden) return `<div class="card back"></div>`;
+            const red = ['♥', '♦'].includes(card.s) ? 'red' : 'black';
+            return `<div class="card ${red}">${card.v}${card.s}</div>`;
+        }
+
+        function renderHands(hideDealer = true) {
+            document.getElementById('playerHand').innerHTML = playerHand.map(c => cardHTML(c)).join('');
+            document.getElementById('dealerHand').innerHTML = dealerHand.map((c, i) => cardHTML(c, hideDealer && i === 1)).join('');
+            document.getElementById('playerScore').textContent = `Value: ${handValue(playerHand)}`;
+            document.getElementById('dealerScore').textContent = hideDealer ? '' : 'Value: ' + handValue(dealerHand);
+        }
+
+        function addBet(n) {
+            if (gameActive) return;
+            if (bank < n) { setStatus('Not enough chips!'); return; }
+            bet += n; bank -= n;
+            document.getElementById('betDisplay').textContent = bet;
+            document.getElementById('bank').textContent = bank;
+        }
+
+        function clearBet() {
+            if (gameActive) return;
+            bank += bet; bet = 0;
+            document.getElementById('betDisplay').textContent = 0;
+            document.getElementById('bank').textContent = bank;
+        }
+
+        function setStatus(msg) { document.getElementById('status').textContent = msg; }
+
+        function deal() {
+            if (bet === 0) { setStatus('Place a bet first!'); return; }
+            makeDeck();
+            playerHand = [deck.pop(), deck.pop()];
+            dealerHand = [deck.pop(), deck.pop()];
+            gameActive = true;
+            setBtn(true);
+            renderHands(true);
+            setStatus('Hit or Stand?');
+            // Natural blackjack check
+            if (handValue(playerHand) === 21) {
+                endRound();
+            }
+        }
+
+        function hit() {
+            playerHand.push(deck.pop());
+            renderHands(true);
+            if (handValue(playerHand) > 21) { setStatus('Bust!'); endRound(); }
+            else if (handValue(playerHand) === 21) endRound();
+        }
+
+        function stand() { endRound(); }
+
+        function doubleDown() {
+            if (bank < bet) { setStatus('Not enough for double!'); return; }
+            bank -= bet; bet *= 2;
+            document.getElementById('betDisplay').textContent = bet;
+            document.getElementById('bank').textContent = bank;
+            playerHand.push(deck.pop());
+            renderHands(true);
+            if (handValue(playerHand) > 21) { setStatus('Bust!'); endRound(); }
+            else endRound();
+        }
+
+        function endRound() {
+            gameActive = false; setBtn(false);
+            // Dealer draws to 17
+            while (handValue(dealerHand) < 17) dealerHand.push(deck.pop());
+            renderHands(false);
+            const pv = handValue(playerHand), dv = handValue(dealerHand);
+            let msg = '';
+            if (pv > 21) { msg = '💥 Bust! You lose.'; bank += 0; }
+            else if (dv > 21) { msg = '🎉 Dealer busts! You win!'; bank += bet * 2; }
+            else if (pv > dv) { msg = '🏆 You win!'; bank += bet * 2; }
+            else if (pv === dv) { msg = '🤝 Push — bet returned.'; bank += bet; }
+            else { msg = '😞 Dealer wins.'; }
+            bet = 0; document.getElementById('betDisplay').textContent = 0;
+            document.getElementById('bank').textContent = bank;
+            setStatus(msg);
+            if (bank > maxWin) maxWin = bank;
+            if (bank <= 0) {
+                setStatus('💀 Out of chips! Game over.');
+                PizzaScores.save('Blackjack', maxWin, `Peak bank: $${maxWin}`);
+                document.getElementById('menuBtn').style.display = '';
+                bank = 1000; document.getElementById('bank').textContent = bank; maxWin = 0;
+            }
+        }
+
+        function setBtn(active) {
+            document.getElementById('dealBtn').disabled = active;
+            document.getElementById('hitBtn').disabled = !active;
+            document.getElementById('standBtn').disabled = !active;
+            document.getElementById('doubleBtn').disabled = !active;
+        }
+
+        makeDeck();
+    </script>
+</body>
+
+</html>

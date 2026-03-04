@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake | The Pizza Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d0d0d;
+            --primary-color: #2ECC71;
+            --text-color: #fff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem;
+            user-select: none;
+            overflow: hidden;
+        }
+
+        h1 {
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            font-weight: 800;
+            background: linear-gradient(45deg, var(--primary-color), #27AE60);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .score-board {
+            margin-bottom: 2rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+            min-height: 2rem;
+        }
+
+        canvas {
+            background: #1a1a1a;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 2rem;
+            left: 2rem;
+            color: var(--text-color);
+            text-decoration: none;
+            font-weight: 600;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .back-btn:hover {
+            opacity: 1;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-content {
+            background: #1a1a1a;
+            padding: 3rem;
+            border-radius: 1rem;
+            text-align: center;
+            border: 1px solid var(--primary-color);
+            box-shadow: 0 0 30px rgba(46, 204, 113, 0.2);
+        }
+
+        .modal h2 {
+            margin-bottom: 1rem;
+            font-size: 2rem;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, var(--primary-color), #27AE60);
+            border: none;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 2rem;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            font-family: inherit;
+            margin-top: 1rem;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+
+<body>
+    <a href="../games.html" class="back-btn">← Back to Games</a>
+    <h1>Snake</h1>
+    <div class="score-board">Score: <span id="score">0</span></div>
+
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
+
+    <div class="modal" id="gameOverModal">
+        <div class="modal-content">
+            <h2>Game Over!</h2>
+            <p>Your Score: <span id="finalScore" style="color:var(--primary-color);font-weight:bold;">0</span></p>
+            <button class="btn" onclick="resetGame()">Play Again</button>
+        </div>
+    </div>
+
+    <script src="../scripts/scores.js"></script>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const finalScoreEl = document.getElementById('finalScore');
+        const modal = document.getElementById('gameOverModal');
+
+        const gridSize = 20;
+        const tileCount = canvas.width / gridSize;
+        let snake = [];
+        let dx = 0;
+        let dy = -1;
+        let foodX;
+        let foodY;
+        let score = 0;
+        let gameLoop;
+        let gameActive = false;
+
+        function resetGame() {
+            snake = [
+                { x: 10, y: 10 },
+                { x: 10, y: 11 },
+                { x: 10, y: 12 }
+            ];
+            dx = 0;
+            dy = -1;
+            score = 0;
+            scoreEl.innerText = score;
+            spawnFood();
+            modal.style.display = 'none';
+            gameActive = true;
+            if (gameLoop) clearInterval(gameLoop);
+            gameLoop = setInterval(drawGame, 100);
+        }
+
+        function drawGame() {
+            clearScreen();
+            updateSnake();
+            if (!gameActive) return;
+            checkFoodCollision();
+            drawFood();
+            drawSnake();
+        }
+
+        function clearScreen() {
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function drawSnake() {
+            snake.forEach((segment, index) => {
+                ctx.fillStyle = index === 0 ? '#27AE60' : '#2ECC71';
+                ctx.fillRect(segment.x * gridSize + 1, segment.y * gridSize + 1, gridSize - 2, gridSize - 2);
+            });
+        }
+
+        function updateSnake() {
+            const headX = snake[0].x + dx;
+            const headY = snake[0].y + dy;
+
+            // Check walls
+            if (headX < 0 || headX >= tileCount || headY < 0 || headY >= tileCount) {
+                gameOver();
+                return;
+            }
+
+            // Check self collision
+            for (let i = 0; i < snake.length; i++) {
+                if (headX === snake[i].x && headY === snake[i].y) {
+                    gameOver();
+                    return;
+                }
+            }
+
+            snake.unshift({ x: headX, y: headY });
+
+            // Pop tail if no food eaten
+            if (headX !== foodX || headY !== foodY) {
+                snake.pop();
+            }
+        }
+
+        function drawFood() {
+            ctx.fillStyle = '#E74C3C';
+            ctx.fillRect(foodX * gridSize + 1, foodY * gridSize + 1, gridSize - 2, gridSize - 2);
+        }
+
+        function checkFoodCollision() {
+            if (snake[0].x === foodX && snake[0].y === foodY) {
+                score += 10;
+                scoreEl.innerText = score;
+                spawnFood();
+            }
+        }
+
+        function spawnFood() {
+            foodX = Math.floor(Math.random() * tileCount);
+            foodY = Math.floor(Math.random() * tileCount);
+
+            // Ensure food doesn't spawn on snake
+            snake.forEach(segment => {
+                if (segment.x === foodX && segment.y === foodY) {
+                    spawnFood();
+                }
+            });
+        }
+
+        function gameOver() {
+            gameActive = false;
+            clearInterval(gameLoop);
+            finalScoreEl.innerText = score;
+            PizzaScores.save('Snake', score);
+            modal.style.display = 'flex';
+        }
+
+        window.addEventListener('keydown', e => {
+            if (!gameActive) {
+                if (e.code === 'Enter' || e.code === 'Space') {
+                    if (modal.style.display !== 'flex') resetGame();
+                }
+                return;
+            }
+
+            // Prevent reversing direction directly
+            switch (e.key) {
+                case 'ArrowUp':
+                case 'w':
+                    if (dy !== 1) { dx = 0; dy = -1; }
+                    break;
+                case 'ArrowDown':
+                case 's':
+                    if (dy !== -1) { dx = 0; dy = 1; }
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                    if (dx !== 1) { dx = -1; dy = 0; }
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                    if (dx !== -1) { dx = 1; dy = 0; }
+                    break;
+            }
+        });
+
+        // Initial draw
+        clearScreen();
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.font = '20px Outfit';
+        ctx.textAlign = 'center';
+        ctx.fillText('Press any arrow key to start', canvas.width / 2, canvas.height / 2);
+
+        // Start game on first key press if not active
+        window.addEventListener('keydown', e => {
+            if (!gameActive && modal.style.display !== 'flex' &&
+                ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd'].includes(e.key)) {
+                resetGame();
+            }
+        }, { once: true }); // Needs slightly different logic, but simple enough to just let 'resetGame' handle it via button or first enter
+
+    </script>
+</body>
+
+</html>

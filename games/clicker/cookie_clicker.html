@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Cookie Clicker – The Pizza Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0a0010;
+            min-height: 100vh;
+            font-family: 'Outfit', sans-serif;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px
+        }
+
+        h1 {
+            color: #f97316;
+            font-size: 2rem;
+            text-shadow: 0 0 20px #f97316;
+            margin-bottom: 4px
+        }
+
+        #counter {
+            font-size: 1.2rem;
+            color: #fb923c;
+            margin-bottom: 4px
+        }
+
+        #cps {
+            font-size: .85rem;
+            color: #78716c;
+            margin-bottom: 8px
+        }
+
+        #special-zone {
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px
+        }
+
+        #golden-cookie {
+            display: none;
+            font-size: 2.2rem;
+            cursor: pointer;
+            animation: spin 3s linear infinite, pulse 1s ease-in-out infinite;
+            filter: drop-shadow(0 0 12px gold)
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0)
+            }
+
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1) rotate(0deg)
+            }
+
+            50% {
+                transform: scale(1.2) rotate(180deg)
+            }
+        }
+
+        #gc-timer {
+            color: #facc15;
+            font-size: .8rem;
+            text-align: center
+        }
+
+        .layout {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            max-width: 900px
+        }
+
+        #click-zone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px
+        }
+
+        #cookie {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #d97706, #92400e);
+            border: 4px solid #f97316;
+            cursor: pointer;
+            font-size: 78px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 30px rgba(249, 115, 22, .5);
+            user-select: none;
+            transition: transform .1s
+        }
+
+        #cookie:active {
+            transform: scale(.92)
+        }
+
+        #click-val {
+            color: #fb923c;
+            font-size: .9rem
+        }
+
+        #shop {
+            flex: 1;
+            min-width: 260px;
+            background: rgba(255, 255, 255, .04);
+            border: 1px solid rgba(249, 115, 22, .2);
+            border-radius: 20px;
+            padding: 20px;
+            max-height: 70vh;
+            overflow-y: auto
+        }
+
+        #shop h2 {
+            color: #f97316;
+            font-size: 1.1rem;
+            margin-bottom: 14px
+        }
+
+        .upg {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(249, 115, 22, .07);
+            border: 1px solid rgba(249, 115, 22, .2);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background .15s
+        }
+
+        .upg:hover {
+            background: rgba(249, 115, 22, .18)
+        }
+
+        .upg.locked {
+            opacity: .4;
+            cursor: not-allowed
+        }
+
+        .ui {
+            font-size: 1.6rem;
+            flex-shrink: 0
+        }
+
+        .inf {
+            flex: 1
+        }
+
+        .un {
+            font-weight: 700;
+            font-size: .9rem
+        }
+
+        .ud {
+            font-size: .72rem;
+            color: #a8a29e
+        }
+
+        .uc {
+            font-size: .78rem;
+            color: #fb923c;
+            margin-top: 2px
+        }
+
+        .uo {
+            font-size: .72rem;
+            color: #4ade80
+        }
+
+        #toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(245, 158, 11, .9);
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-weight: 700;
+            opacity: 0;
+            transition: opacity .3s;
+            pointer-events: none;
+            z-index: 99
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🍪 Cookie Clicker</h1>
+    <div id="counter">0 cookies</div>
+    <div id="cps">0/sec | +1/click</div>
+    <div id="special-zone">
+        <div>
+            <div id="golden-cookie" onclick="catchGolden()" title="Click for bonus!">🌟</div>
+            <div id="gc-timer"></div>
+        </div>
+    </div>
+    <div class="layout">
+        <div id="click-zone">
+            <div id="cookie" onclick="clickCookie()">🍪</div>
+            <div id="click-val">+1 per click</div>
+        </div>
+        <div id="shop">
+            <h2>🏪 Shop</h2>
+            <div id="upgrades"></div>
+        </div>
+    </div>
+    <div id="toast"></div>
+    <script>
+        let cookies = 0, cps = 0, cp = 1; // cp = click power
+        const UPS = [
+            { n: 'Grandma', i: '👵', d: 'Bakes 0.5/s', base: 15, own: 0, cpsPer: .5 },
+            { n: 'Magic Oven', i: '🔥', d: 'Produces 2/s', base: 100, own: 0, cpsPer: 2 },
+            { n: 'Cookie Farm', i: '🌾', d: 'Grows 8/s', base: 500, own: 0, cpsPer: 8 },
+            { n: 'Factory', i: '🏭', d: 'Makes 30/s', base: 2000, own: 0, cpsPer: 30 },
+            { n: 'Cookie Mine', i: '⛏️', d: 'Mines 100/s', base: 8000, own: 0, cpsPer: 100 },
+            { n: 'Cookie Ship', i: '🚀', d: 'Collects 320/s', base: 30000, own: 0, cpsPer: 320 },
+            { n: 'Better Click', i: '👆', d: '+2 per click', base: 50, own: 0, cpsPer: 0, cp: 2 },
+            { n: 'Power Gloves', i: '🥊', d: '+10 per click', base: 500, own: 0, cpsPer: 0, cp: 10 },
+        ];
+        function fmt(n) { if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B'; if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M'; if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K'; return Math.floor(n) + '' }
+        function c(u) { return Math.floor(u.base * Math.pow(1.15, u.own)) }
+
+        function clickCookie() {
+            cookies += cp;
+            const el = document.createElement('div');
+            el.textContent = '+' + cp;
+            el.style.cssText = 'position:fixed;color:#fb923c;font-weight:700;pointer-events:none;font-size:1rem;z-index:50';
+            const r = document.getElementById('cookie').getBoundingClientRect();
+            el.style.left = (r.left + r.width / 2 - 15 + (Math.random() - .5) * 40) + 'px';
+            el.style.top = (r.top + (Math.random() - .5) * 20) + 'px';
+            el.animate([{ opacity: 1, transform: 'translateY(0)' }, { opacity: 0, transform: 'translateY(-55px)' }], { duration: 700, fill: 'forwards' });
+            document.body.appendChild(el); setTimeout(() => el.remove(), 700);
+        }
+
+        // Golden Cookie — appears randomly every 30-90s
+        let gcActive = false, gcTimeout, gcTimer = 0, gcInterval;
+        function spawnGolden() {
+            if (gcActive) return;
+            gcActive = true; gcTimer = 12;
+            document.getElementById('golden-cookie').style.display = 'block';
+            gcInterval = setInterval(() => {
+                gcTimer--;
+                document.getElementById('gc-timer').textContent = gcTimer > 0 ? '⏱ ' + gcTimer + 's' : 'Gone!';
+                if (gcTimer <= 0) { hideGolden(); }
+            }, 1000);
+            scheduleGolden();
+        }
+        function hideGolden() {
+            clearInterval(gcInterval); gcActive = false;
+            document.getElementById('golden-cookie').style.display = 'none';
+            document.getElementById('gc-timer').textContent = '';
+        }
+        function catchGolden() {
+            const bonus = Math.max(13, Math.floor(cps * 13));
+            cookies += bonus; hideGolden();
+            toast('✨ Golden Cookie! +' + fmt(bonus) + ' cookies!');
+        }
+        function scheduleGolden() {
+            clearTimeout(gcTimeout);
+            gcTimeout = setTimeout(spawnGolden, 30000 + Math.random() * 60000);
+        }
+        scheduleGolden();
+
+        function buy(u) {
+            const co = c(u); if (cookies < co) return;
+            cookies -= co; u.own++;
+            if (u.cpsPer) cps += u.cpsPer;
+            if (u.cp) cp += u.cp;
+            renderUpgrades();
+            toast('✅ ' + u.n + ' purchased!');
+        }
+
+        function toast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg; t.style.opacity = 1;
+            clearTimeout(t._to); t._to = setTimeout(() => t.style.opacity = 0, 2200);
+        }
+
+        // Render upgrades only when needed (not every frame!)
+        function renderUpgrades() {
+            const d = document.getElementById('upgrades'); d.innerHTML = '';
+            UPS.forEach(u => {
+                const co = c(u), div = document.createElement('div');
+                div.className = 'upg' + (cookies < co ? ' locked' : '');
+                div.innerHTML = `<div class="ui">${u.i}</div><div class="inf"><div class="un">${u.n}</div><div class="ud">${u.d}</div><div class="uc">🍪 ${fmt(co)}</div><div class="uo">Owned: ${u.own}</div></div>`;
+                div.addEventListener('click', () => buy(u));
+                d.appendChild(div);
+            });
+        }
+
+        // Separate counter update from upgrade render
+        function updateCounters() {
+            document.getElementById('counter').textContent = fmt(cookies) + ' cookies';
+            document.getElementById('cps').textContent = cps.toFixed(1) + '/sec | +' + cp + '/click';
+            document.getElementById('click-val').textContent = '+' + cp + ' per click';
+            // Re-render locked states every 500ms
+            if (Date.now() - lastRender > 500) { lastRender = Date.now(); renderUpgrades(); }
+        }
+
+        let last = 0, lastRender = 0;
+        function loop(ts) {
+            if (last) cookies += cps * (ts - last) / 1000;
+            last = ts; updateCounters();
+            requestAnimationFrame(loop);
+        }
+        renderUpgrades();
+        requestAnimationFrame(loop);
+    </script>
+</body>
+
+</html>

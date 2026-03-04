@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Breakout Blitz</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #040014;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #fb7185;
+            font-size: 1.5rem;
+            text-shadow: 0 0 16px #fb7185;
+            margin-bottom: 6px
+        }
+
+        canvas {
+            border: 2px solid #fb7185;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(251, 113, 133, .4)
+        }
+
+        #ui {
+            display: flex;
+            gap: 20px;
+            color: #fb7185;
+            font-size: .85rem;
+            margin-top: 6px
+        }
+
+        #msg {
+            color: #facc15;
+            font-size: .9rem;
+            min-height: 20px;
+            margin-top: 4px
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🧱 Breakout Blitz</h1>
+    <div id="ui"><span>Score: <b id="sc">0</b></span><span>Lives: <b id="li">3</b></span><span>Level: <b
+                id="lv">1</b></span></div>
+    <canvas id="c" width="480" height="440"></canvas>
+    <div id="msg">Mouse to move paddle! Click or Space to launch!</div>
+    <script>
+        const cv = document.getElementById('c'), cx = cv.getContext('2d');
+        const W = 480, H = 440;
+        let paddle = { x: W / 2, w: 90, y: H - 25, h: 14 };
+        let ball = { x: W / 2, y: H - 50, vx: 3, vy: -4, r: 9, launched: false };
+        let bricks = [], particles = [], score = 0, lives = 3, level = 1, over = false, won = false, mouse = { x: W / 2 };
+        cv.addEventListener('mousemove', e => { const r = cv.getBoundingClientRect(); mouse.x = e.clientX - r.left; });
+        cv.addEventListener('click', () => { if (!ball.launched && !over && !won) ball.launched = true; });
+        document.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); if (!ball.launched) ball.launched = true; } if (e.code === 'KeyR' && (over || won)) reset(); });
+        const BCOLS = ['#fb7185', '#f97316', '#facc15', '#4ade80', '#38bdf8', '#a78bfa'];
+        function initBricks(l) { bricks = []; for (let r = 0; r < 3 + l; r++)for (let c = 0; c < 10; c++) { const hp = r < 2 ? 1 : r < 4 ? 2 : 3; bricks.push({ x: 9 + c * 44, y: 40 + r * 21, w: 42, h: 18, hp, maxHp: hp, col: BCOLS[r % BCOLS.length] }); } }
+        initBricks(1);
+        function reset() { score = 0; lives = 3; level = 1; over = false; won = false; ball = { x: W / 2, y: H - 50, vx: 3, vy: -4, r: 9, launched: false }; initBricks(1); document.getElementById('sc').textContent = 0; document.getElementById('li').textContent = 3; document.getElementById('lv').textContent = 1; }
+        function explode(x, y, col) { for (let i = 0; i < 8; i++) { const a = Math.PI * 2 * i / 8; particles.push({ x, y, vx: Math.cos(a) * 3, vy: Math.sin(a) * 3, life: 20, col }); } }
+        function update() {
+            paddle.x = Math.max(paddle.w / 2, Math.min(W - paddle.w / 2, mouse.x));
+            if (!ball.launched) { ball.x = paddle.x; return; } if (over || won) return;
+            ball.x += ball.vx; ball.y += ball.vy;
+            if (ball.x - ball.r < 0 || ball.x + ball.r > W) ball.vx *= -1;
+            if (ball.y - ball.r < 0) ball.vy *= -1;
+            if (ball.y + ball.r >= paddle.y && ball.y - ball.r <= paddle.y + paddle.h && ball.x >= paddle.x - paddle.w / 2 && ball.x <= paddle.x + paddle.w / 2 && ball.vy > 0) { ball.vy = -Math.abs(ball.vy); ball.vx += (ball.x - paddle.x) * .05; ball.vx = Math.max(-8, Math.min(8, ball.vx)); }
+            if (ball.y > H + 30) { lives--; document.getElementById('li').textContent = lives; ball.launched = false; ball.x = W / 2; ball.y = H - 50; ball.vx = 3 * (Math.random() > .5 ? 1 : -1); ball.vy = -4; if (lives <= 0) over = true; }
+            bricks = bricks.filter(b => { if (ball.x + ball.r > b.x && ball.x - ball.r < b.x + b.w && ball.y + ball.r > b.y && ball.y - ball.r < b.y + b.h) { const ox = Math.min(ball.x + ball.r - b.x, b.x + b.w - (ball.x - ball.r)), oy = Math.min(ball.y + ball.r - b.y, b.y + b.h - (ball.y - ball.r)); if (ox < oy) ball.vx *= -1; else ball.vy *= -1; b.hp--; score += 10 * level; document.getElementById('sc').textContent = score; if (b.hp <= 0) { explode(b.x + b.w / 2, b.y + b.h / 2, b.col); return false; } return true; } return true; });
+            particles = particles.filter(p => { p.x += p.vx; p.y += p.vy; p.life--; return p.life > 0; });
+            if (bricks.length === 0) { level++; document.getElementById('lv').textContent = level; if (level > 5) { won = true; return; } initBricks(level); ball.launched = false; ball.x = W / 2; ball.y = H - 50; ball.vx = (3 + level * .3) * (Math.random() > .5 ? 1 : -1); ball.vy = -(4 + level * .3); }
+        }
+        function draw() {
+            cx.fillStyle = '#040014'; cx.fillRect(0, 0, W, H);
+            bricks.forEach(b => { cx.fillStyle = b.col + 'cc'; cx.fillRect(b.x, b.y, b.w, b.h); cx.fillStyle = 'rgba(255,255,255,.2)'; cx.fillRect(b.x, b.y, b.w, 3); if (b.hp > 1) { cx.fillStyle = 'rgba(255,255,255,.5)'; cx.font = '9px monospace'; cx.textAlign = 'center'; cx.fillText(b.hp, b.x + b.w / 2, b.y + b.h - 3); } });
+            particles.forEach(p => { cx.globalAlpha = p.life / 20; cx.fillStyle = p.col; cx.fillRect(p.x - 2, p.y - 2, 4, 4); }); cx.globalAlpha = 1;
+            cx.fillStyle = '#fb7185'; cx.shadowColor = '#fb7185'; cx.shadowBlur = 12; cx.beginPath(); cx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); cx.fill(); cx.shadowBlur = 0;
+            const pg = cx.createLinearGradient(paddle.x - paddle.w / 2, 0, paddle.x + paddle.w / 2, 0); pg.addColorStop(0, '#7c3aed'); pg.addColorStop(.5, '#fb7185'); pg.addColorStop(1, '#7c3aed'); cx.fillStyle = pg; cx.fillRect(paddle.x - paddle.w / 2, paddle.y, paddle.w, paddle.h);
+            if (over) { cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#f43f5e'; cx.font = 'bold 38px monospace'; cx.textAlign = 'center'; cx.fillText('GAME OVER', W / 2, H / 2 - 20); cx.fillStyle = '#aaa'; cx.font = '16px monospace'; cx.fillText('Score: ' + score + ' | R restart', W / 2, H / 2 + 18); }
+            if (won) { cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#facc15'; cx.font = 'bold 42px monospace'; cx.textAlign = 'center'; cx.fillText('YOU WIN! 🏆', W / 2, H / 2 - 20); cx.fillStyle = '#fb7185'; cx.font = '20px monospace'; cx.fillText('Score: ' + score, W / 2, H / 2 + 20); }
+        }
+        function loop() { update(); draw(); requestAnimationFrame(loop); } loop();
+    </script>
+
+    <script src="../mobile_controls.js"></script>
+</body>
+
+</html>

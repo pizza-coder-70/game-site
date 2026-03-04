@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Crossy Hop</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #030f08;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #86efac;
+            font-size: 1.5rem;
+            text-shadow: 0 0 16px #86efac;
+            margin-bottom: 6px
+        }
+
+        canvas {
+            border: 2px solid #86efac;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(134, 239, 172, .4)
+        }
+
+        #ui {
+            display: flex;
+            gap: 20px;
+            color: #86efac;
+            font-size: .85rem;
+            margin-top: 6px
+        }
+
+        #msg {
+            color: #facc15;
+            font-size: .9rem;
+            min-height: 20px;
+            margin-top: 4px
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🐸 Crossy Hop</h1>
+    <div id="ui"><span>Score: <b id="sc">0</b></span><span>Best: <b id="hi">0</b></span><span>Lives: <b
+                id="li">3</b></span></div>
+    <canvas id="c" width="420" height="480"></canvas>
+    <div id="msg">Arrow keys / WASD to hop! Cross the road & river safely!</div>
+    <script>
+        const cv = document.getElementById('c'), cx = cv.getContext('2d');
+        const W = 420, H = 480, TILE = 48;
+        const LANES = 9, START_LANE = LANES - 1;
+        // Lane types: safe, road, river
+        const LANE_TYPES = ['safe', 'road', 'road', 'river', 'river', 'road', 'safe', 'road', 'river'];
+        const LANE_COLS = ['#1a5c2a', '#333', '#332222', '#0a3060', '#0a2850', '#332222', '#1a5c2a', '#332222', '#0a3060'];
+        let frog = { lane: START_LANE, col: 4, x: 4 * TILE + TILE / 2, y: (START_LANE) * TILE + TILE / 2, invuln: 0 };
+        let logs = [], cars = [], score = 0, best = 0, lives = 3, over = false, won = false, keys = {};
+        let moveCD = 0;
+        document.addEventListener('keydown', e => { keys[e.code] = true; if (e.code.startsWith('Arrow')) e.preventDefault(); });
+        document.addEventListener('keyup', e => keys[e.code] = false);
+
+        function spawnLane(lane) {
+            const type = LANE_TYPES[lane];
+            const items = [];
+            if (type === 'road') { const n = 2 + Math.floor(Math.random() * 2); for (let i = 0; i < n; i++) { const spd = (1 + Math.random() * 2) * (Math.random() < .5 ? 1 : -1); items.push({ x: Math.random() * W, y: lane * TILE + TILE / 2 - 4, w: 44, h: 28, spd, lane, type: 'car', col: ['#f43f5e', '#f97316', '#facc15', '#38bdf8', '#a78bfa'][Math.floor(Math.random() * 5)] }); } }
+            if (type === 'river') { const n = 2 + Math.floor(Math.random() * 2); for (let i = 0; i < n; i++) { const spd = (1 + Math.random() * 1.5) * (Math.random() < .5 ? 1 : -1); items.push({ x: Math.random() * W * 1.5 - W * .25, y: lane * TILE + TILE / 2 - 8, w: 90 + Math.random() * 60, h: 24, spd, lane, type: 'log' }); } }
+            return items;
+        }
+        for (let l = 0; l < LANES; l++) { const items = spawnLane(l); items.forEach(it => { it.type === 'car' ? cars.push(it) : logs.push(it); }); }
+
+        let frogY = frog.lane * TILE + TILE / 2;
+
+        function update() {
+            if (over || won) return;
+            moveCD--;
+            if (moveCD <= 0) {
+                let moved = false;
+                if (keys['ArrowUp'] || keys['KeyW']) { if (frog.lane > 0) { frog.lane--; moved = true; } }
+                else if (keys['ArrowDown'] || keys['KeyS']) { if (frog.lane < LANES - 1) { frog.lane++; moved = true; } }
+                else if (keys['ArrowLeft'] || keys['KeyA']) { frog.col = Math.max(0, frog.col - 1); moved = true; }
+                else if (keys['ArrowRight'] || keys['KeyD']) { frog.col = Math.min(7, frog.col + 1); moved = true; }
+                if (moved) { frogY = frog.lane * TILE + TILE / 2; frog.x = frog.col * TILE + TILE / 2; moveCD = 10; if (frog.lane === 0) { score += 10; if (score > best) best = document.getElementById('hi').textContent = score; document.getElementById('sc').textContent = score; if (score >= 100) won = true; frog.lane = START_LANE; frog.col = 4; frogY = START_LANE * TILE + TILE / 2; frog.x = 4 * TILE + TILE / 2; } }
+            }
+            // Move traffic
+            cars.forEach(c => { c.x += c.spd; if (c.x > W + 60) c.x = -60; if (c.x < -60) c.x = W + 60; });
+            logs.forEach(l => { l.x += l.spd; if (l.x > W + 100) l.x = -100; if (l.x < -100) l.x = W + 100; });
+            if (frog.invuln > 0) { frog.invuln--; return; }
+            // Check road death
+            if (LANE_TYPES[frog.lane] === 'road') {
+                cars.forEach(c => { if (c.lane === frog.lane && Math.abs(frog.x - c.x) < c.w / 2 + 12 && Math.abs(frogY - c.y) < c.h / 2 + 12) { lives--; frog.invuln = 60; document.getElementById('li').textContent = lives; if (lives <= 0) over = true; frog.lane = START_LANE; frog.col = 4; frog.x = 4 * TILE + TILE / 2; frogY = START_LANE * TILE + TILE / 2; } });
+            }
+            // Check river (stand on log)
+            if (LANE_TYPES[frog.lane] === 'river') {
+                const onLog = logs.some(l => l.lane === frog.lane && frog.x > l.x - l.w / 2 - 8 && frog.x < l.x + l.w / 2 + 8);
+                if (onLog) { const log = logs.find(l => l.lane === frog.lane && frog.x > l.x - l.w / 2 - 8 && frog.x < l.x + l.w / 2 + 8); if (log) frog.x += log.spd; }
+                else { lives--; frog.invuln = 60; document.getElementById('li').textContent = lives; if (lives <= 0) over = true; frog.lane = START_LANE; frog.col = 4; frog.x = 4 * TILE + TILE / 2; frogY = START_LANE * TILE + TILE / 2; }
+                frog.x = Math.max(12, Math.min(W - 12, frog.x));
+            }
+        }
+
+        function draw() {
+            for (let l = 0; l < LANES; l++) {
+                cx.fillStyle = LANE_COLS[l]; cx.fillRect(0, l * TILE, W, TILE);
+                if (LANE_TYPES[l] === 'road') { cx.fillStyle = 'rgba(255,255,255,.05)'; for (let c = 0; c < W; c += TILE * 2)cx.fillRect(c, l * TILE + TILE / 2 - 2, TILE, 4); }
+                if (LANE_TYPES[l] === 'river') { cx.fillStyle = 'rgba(56,189,248,.08)'; cx.fillRect(0, l * TILE + 4, W, TILE - 8); }
+            }
+            logs.forEach(l => { cx.fillStyle = '#8B5E3C'; cx.fillRect(l.x - l.w / 2, l.y - l.h / 2, l.w, l.h); cx.fillStyle = 'rgba(255,255,255,.1)'; cx.fillRect(l.x - l.w / 2 + 4, l.y - l.h / 2, l.w - 8, 4); });
+            cars.forEach(c => { cx.fillStyle = c.col; cx.fillRect(c.x - c.w / 2, c.y - c.h / 2, c.w, c.h); cx.fillStyle = 'rgba(255,255,255,.6)'; if (c.spd > 0) { cx.fillRect(c.x + c.w / 2 - 14, c.y - c.h / 2, 10, 8); } else { cx.fillRect(c.x - c.w / 2 + 4, c.y - c.h / 2, 10, 8); } });
+            // Frog
+            const fa = frog.invuln > 0 && Math.floor(frog.invuln / 8) % 2 === 0 ? .3 : 1;
+            cx.globalAlpha = fa; cx.font = '28px monospace'; cx.textAlign = 'center'; cx.fillText('🐸', frog.x, frogY + 10); cx.globalAlpha = 1;
+            // Goal row
+            cx.fillStyle = 'rgba(250,204,21,.15)'; cx.fillRect(0, 0, W, TILE); cx.fillStyle = '#facc15'; cx.font = '12px monospace'; cx.textAlign = 'center'; cx.fillText('🏁 GOAL 🏁', W / 2, TILE / 2 + 5);
+            if (over) { cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#f43f5e'; cx.font = 'bold 38px monospace'; cx.textAlign = 'center'; cx.fillText('SQUASHED! 💀', W / 2, H / 2 - 20); cx.fillStyle = '#aaa'; cx.font = '16px monospace'; cx.fillText('Score: ' + score + ' | R restart', W / 2, H / 2 + 18); }
+            if (won) { cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#facc15'; cx.font = 'bold 40px monospace'; cx.textAlign = 'center'; cx.fillText('YOU WIN! 🏆', W / 2, H / 2 - 20); cx.fillStyle = '#86efac'; cx.font = '20px monospace'; cx.fillText('Score: ' + score, W / 2, H / 2 + 20); }
+        }
+        document.addEventListener('keydown', e => { if (e.code === 'KeyR' && (over || won)) { lives = 3; score = 0; over = false; won = false; frog.lane = START_LANE; frog.col = 4; frog.x = 4 * TILE + TILE / 2; frogY = START_LANE * TILE + TILE / 2; document.getElementById('sc').textContent = 0; document.getElementById('li').textContent = 3; } });
+        function loop() { update(); draw(); requestAnimationFrame(loop); } loop();
+    </script>
+
+    <script src="../mobile_controls.js"></script>
+</body>
+
+</html>

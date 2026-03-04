@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Click Hunt</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #080010;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #f472b6;
+            font-size: 1.5rem;
+            text-shadow: 0 0 16px #f472b6;
+            margin-bottom: 6px
+        }
+
+        canvas {
+            border: 2px solid #f472b6;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(244, 114, 182, .4);
+            cursor: crosshair
+        }
+
+        #ui {
+            display: flex;
+            gap: 20px;
+            color: #f472b6;
+            font-size: .85rem;
+            margin-top: 6px
+        }
+
+        #msg {
+            color: #facc15;
+            font-size: .9rem;
+            min-height: 20px;
+            margin-top: 4px
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🎯 Click Hunt</h1>
+    <div id="ui"><span>Score: <b id="sc">0</b></span><span>Time: <b id="tm">30</b>s</span><span>Combo: <b
+                id="cb">x1</b></span><span>Misses: <b id="ms">0</b></span></div>
+    <canvas id="c" width="520" height="400"></canvas>
+    <div id="msg">Click the targets! Gold targets = bonus! Don't miss!</div>
+    <script>
+        const cv = document.getElementById('c'), cx = cv.getContext('2d');
+        const W = 520, H = 400;
+        const TARGET_TYPES = [
+            { r: 22, pts: 10, col: '#f43f5e', time: 2.5, freq: .6 },
+            { r: 16, pts: 20, col: '#f97316', time: 2, freq: .2 },
+            { r: 12, pts: 40, col: '#facc15', time: 1.5, freq: .1 },
+            { r: 28, pts: 5, col: '#4ade80', time: 3, freq: .1 },
+        ];
+        let targets = [], particles = [], score = 0, misses = 0, combo = 1, comboTimer = 0, timeLeft = 30, over = false, won = false, started = false;
+
+        function spawn() {
+            const t = TARGET_TYPES[Math.random() < .6 ? 0 : Math.floor(Math.random() * TARGET_TYPES.length)];
+            return { x: t.r + 20 + Math.random() * (W - t.r * 2 - 40), y: t.r + 20 + Math.random() * (H - t.r * 2 - 40), r: t.r, pts: t.pts, col: t.col, life: t.time, maxLife: t.time, pulse: 0 };
+        }
+        let spawnTimer = 0;
+
+        cv.addEventListener('click', e => {
+            if (!started) { started = true; return; }
+            if (over) return;
+            const r = cv.getBoundingClientRect(); const mx = e.clientX - r.left, my = e.clientY - r.top;
+            let hit = false;
+            targets = targets.filter(t => {
+                if (!hit && Math.hypot(mx - t.x, my - t.y) < t.r) {
+                    hit = true; score += t.pts * combo; combo = Math.min(12, combo + 1); comboTimer = 90;
+                    document.getElementById('sc').textContent = score; document.getElementById('cb').textContent = 'x' + combo;
+                    explode(t.x, t.y, t.col, t.pts * combo); return false;
+                } return true;
+            });
+            if (!hit) { misses++; comboTimer = 0; combo = 1; document.getElementById('ms').textContent = misses; document.getElementById('cb').textContent = 'x1'; }
+        });
+        function explode(x, y, col, pts) {
+            for (let i = 0; i < 8; i++) { const a = Math.PI * 2 * i / 8; particles.push({ x, y, vx: Math.cos(a) * 4, vy: Math.sin(a) * 4, life: 25, col }); }
+            particles.push({ x, y, vx: 0, vy: -1.5, life: 50, text: '+' + pts, col: '#fff' });
+        }
+
+        let lastSec = Date.now();
+        function update() {
+            if (!started || over) return;
+            comboTimer--; if (comboTimer <= 0) { combo = 1; document.getElementById('cb').textContent = 'x1'; }
+            // Timer
+            if (Date.now() - lastSec >= 1000) { timeLeft--; document.getElementById('tm').textContent = timeLeft; lastSec = Date.now(); if (timeLeft <= 0) { over = true; won = score >= 500; return; } }
+            spawnTimer--; if (spawnTimer <= 0) { targets.push(spawn()); spawnTimer = Math.max(15, 40 - Math.floor((30 - timeLeft) * 1.5)); }
+            // Age targets
+            targets = targets.filter(t => { t.life -= 1 / 60; t.pulse += .15; if (t.life <= 0) { misses++; combo = 1; document.getElementById('ms').textContent = misses; document.getElementById('cb').textContent = 'x1'; return false; } return true; });
+            particles = particles.filter(p => { p.x += p.vx; p.y += p.vy; p.life--; return p.life > 0; });
+        }
+
+        function draw() {
+            cx.fillStyle = '#080010'; cx.fillRect(0, 0, W, H);
+            targets.forEach(t => {
+                const fade = t.life / t.maxLife; const pulse = Math.sin(t.pulse) * .15 + .85;
+                cx.globalAlpha = fade; cx.fillStyle = t.col; cx.beginPath(); cx.arc(t.x, t.y, t.r * pulse, 0, Math.PI * 2); cx.fill();
+                cx.strokeStyle = 'rgba(255,255,255,.4)'; cx.lineWidth = 2; cx.stroke();
+                cx.fillStyle = 'rgba(255,255,255,.3)'; cx.beginPath(); cx.arc(t.x - t.r * .3, t.y - t.r * .3, t.r * .3, 0, Math.PI * 2); cx.fill();
+                // Timer ring
+                cx.strokeStyle = 'rgba(255,255,255,.6)'; cx.lineWidth = 3; cx.beginPath(); cx.arc(t.x, t.y, t.r + 4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * fade); cx.stroke();
+                cx.globalAlpha = 1;
+            });
+            particles.forEach(p => {
+                if (p.text) { cx.globalAlpha = p.life / 50; cx.fillStyle = p.col; cx.font = 'bold 18px monospace'; cx.textAlign = 'center'; cx.fillText(p.text, p.x, p.y); }
+                else { cx.globalAlpha = p.life / 25; cx.fillStyle = p.col; cx.fillRect(p.x - 3, p.y - 3, 6, 6); }
+            }); cx.globalAlpha = 1;
+            // Time bar
+            cx.fillStyle = 'rgba(244,114,182,.15)'; cx.fillRect(0, H - 8, W, 8);
+            cx.fillStyle = timeLeft > 10 ? '#f472b6' : '#f43f5e'; cx.fillRect(0, H - 8, W * timeLeft / 30, 8);
+            if (!started) { cx.fillStyle = 'rgba(0,0,0,.7)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#f472b6'; cx.font = 'bold 30px monospace'; cx.textAlign = 'center'; cx.fillText('CLICK TO START', W / 2, H / 2); }
+            if (over) {
+                cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H);
+                if (won) { cx.fillStyle = '#facc15'; cx.font = 'bold 44px monospace'; cx.textAlign = 'center'; cx.fillText('YOU WIN! 🏆', W / 2, H / 2 - 24); cx.fillStyle = '#f472b6'; cx.font = '22px monospace'; cx.fillText('Score: ' + score, W / 2, H / 2 + 20); }
+                else { cx.fillStyle = '#f43f5e'; cx.font = 'bold 36px monospace'; cx.textAlign = 'center'; cx.fillText('TIME UP!', W / 2, H / 2 - 20); cx.fillStyle = '#aaa'; cx.font = '18px monospace'; cx.fillText('Score: ' + score + ' | Need 500', W / 2, H / 2 + 20); }
+                cx.fillStyle = '#666'; cx.font = '14px monospace'; cx.fillText('R to play again', W / 2, H / 2 + 54);
+            }
+        }
+        document.addEventListener('keydown', e => { if (e.code === 'KeyR' && over) { score = 0; misses = 0; combo = 1; timeLeft = 30; targets = []; particles = []; over = false; won = false; started = true; lastSec = Date.now(); document.getElementById('sc').textContent = 0; document.getElementById('tm').textContent = 30; document.getElementById('cb').textContent = 'x1'; document.getElementById('ms').textContent = 0; } });
+        function loop() { update(); draw(); requestAnimationFrame(loop); } loop();
+    </script>
+
+    <script src="../mobile_controls.js"></script>
+</body>
+
+</html>

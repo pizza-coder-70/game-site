@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Reverse Reaction – The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0f172a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #34d399;
+            font-size: 2rem;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px #34d399
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(52, 211, 153, 0.3);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            width: min(420px, 90vw)
+        }
+
+        #click-zone {
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            margin: 24px auto;
+            border: 3px solid #334155;
+            transition: all .2s;
+            user-select: none;
+            font-weight: bold
+        }
+
+        #click-zone.waiting {
+            background: rgba(255, 255, 255, 0.05);
+            color: #64748b;
+            cursor: default
+        }
+
+        #click-zone.ready {
+            background: radial-gradient(circle, #166534, #14532d);
+            border-color: #22c55e;
+            color: #4ade80;
+            animation: pulse .8s infinite alternate
+        }
+
+        #click-zone.clicked {
+            background: radial-gradient(circle, #ef4444, #7f1d1d);
+            border-color: #ef4444
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 20px rgba(34, 197, 94, 0.3)
+            }
+
+            100% {
+                box-shadow: 0 0 40px rgba(34, 197, 94, 0.7)
+            }
+        }
+
+        #stats {
+            color: #94a3b8;
+            font-size: .9rem;
+            margin-top: 16px
+        }
+
+        #best {
+            color: #34d399;
+            font-weight: bold
+        }
+
+        #history {
+            margin-top: 12px;
+            max-height: 120px;
+            overflow-y: auto
+        }
+
+        .hist-item {
+            padding: 3px 0;
+            color: #64748b;
+            font-size: .85rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04)
+        }
+
+        button {
+            padding: 10px 28px;
+            background: linear-gradient(135deg, #059669, #047857);
+            border: none;
+            color: #fff;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-top: 12px;
+            transition: all .2s
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(5, 150, 105, 0.4)
+        }
+    </style>
+</head>
+
+<body>
+    <h1>⚡ Reaction Time</h1>
+    <div class="card">
+        <div id="instruction">Wait for GREEN – then click as fast as possible!</div>
+        <div id="click-zone" class="waiting">Click to Start</div>
+        <div id="result" style="font-size:1.4rem;min-height:36px;color:#facc15"></div>
+        <div id="stats">Best: <span id="best">–</span> ms &nbsp;|&nbsp; Avg: <span id="avg">–</span> ms</div>
+        <div id="history"></div>
+        <button onclick="startGame()">Start</button>
+    </div>
+    <script>
+        let state = 'idle', startTime, timer, times = [], best = Infinity;
+        const zone = document.getElementById('click-zone');
+        function startGame() {
+            if (state === 'waiting') return;
+            state = 'waiting'; zone.className = 'click-zone waiting'; zone.textContent = 'Wait...';
+            document.getElementById('result').textContent = '';
+            const delay = 1500 + Math.random() * 3000;
+            timer = setTimeout(() => { state = 'ready'; zone.className = 'click-zone ready'; zone.textContent = 'CLICK NOW!'; startTime = Date.now(); }, delay);
+        }
+        zone.addEventListener('click', () => {
+            if (state === 'idle' || state === 'done') { startGame(); return; }
+            if (state === 'waiting') { clearTimeout(timer); state = 'idle'; zone.className = 'click-zone clicked'; zone.textContent = 'Too Early! 🤦'; document.getElementById('result').textContent = 'Too early! Wait for green.'; document.getElementById('result').style.color = '#ef4444'; setTimeout(() => { zone.className = 'click-zone waiting'; zone.textContent = 'Click to Start'; state = 'idle'; }, 1500); return; }
+            if (state === 'ready') {
+                const rt = Date.now() - startTime; times.push(rt);
+                if (rt < best) best = rt;
+                state = 'done';
+                zone.className = 'click-zone clicked'; zone.textContent = rt + 'ms';
+                const rating = rt < 150 ? '🚀 Incredible!' : rt < 200 ? '⚡ Excellent!' : rt < 300 ? '👍 Great!' : rt < 400 ? '😊 Good!' : rt < 500 ? '🙂 Average' : rt < 700 ? '🐢 Slow' : '🦥 Very Slow';
+                document.getElementById('result').textContent = `${rt} ms – ${rating}`;
+                document.getElementById('result').style.color = rt < 200 ? '#4ade80' : rt < 350 ? '#facc15' : '#f97316';
+                document.getElementById('best').textContent = best;
+                const avg = Math.round(times.reduce((a, b) => a + b, 0) / times.length);
+                document.getElementById('avg').textContent = avg;
+                const li = document.createElement('div'); li.className = 'hist-item'; li.textContent = `#${times.length}: ${rt}ms`;
+                document.getElementById('history').prepend(li);
+                setTimeout(() => { zone.className = 'click-zone waiting'; zone.textContent = 'Click to Try Again'; }, 1200);
+            }
+        });
+        zone.className = 'click-zone waiting'; zone.textContent = 'Click to Start';
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Bubble Shooter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #04001a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #c084fc;
+            font-size: 1.5rem;
+            text-shadow: 0 0 16px #c084fc;
+            margin-bottom: 6px
+        }
+
+        canvas {
+            border: 2px solid #c084fc;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(192, 132, 252, .4);
+            cursor: crosshair
+        }
+
+        #ui {
+            display: flex;
+            gap: 20px;
+            color: #c084fc;
+            font-size: .85rem;
+            margin-top: 6px
+        }
+
+        #msg {
+            color: #facc15;
+            font-size: .9rem;
+            min-height: 20px;
+            margin-top: 4px
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🫧 Bubble Shooter</h1>
+    <div id="ui"><span>Score: <b id="sc">0</b></span><span>Bubbles: <b id="bl">0</b></span><span>Shots: <b
+                id="sh">30</b></span></div>
+    <canvas id="c" width="400" height="520"></canvas>
+    <div id="msg">Aim with mouse, click to shoot! Match 3+ same color!</div>
+    <script>
+        const cv = document.getElementById('c'), cx = cv.getContext('2d');
+        const W = 400, H = 520, R = 20, COLS_N = 10, ROWS_N = 8;
+        const COLS = ['#f43f5e', '#f97316', '#facc15', '#4ade80', '#38bdf8', '#818cf8', '#f472b6'];
+        let grid = [], shooter = { x: W / 2, y: H - 30, color: COLS[0] }, bullet = null, nextColor = COLS[0];
+        let score = 0, shots = 30, over = false, won = false, mouse = { x: W / 2, y: 0 };
+
+        function initGrid() {
+            grid = [];
+            for (let r = 0; r < ROWS_N; r++) {
+                grid[r] = [];
+                const n = COLS_N - (r % 2 === 1 ? 1 : 0);
+                for (let c = 0; c < n; c++) {
+                    grid[r][c] = { color: COLS[Math.floor(Math.random() * COLS.length)], x: getX(r, c), y: R + r * (R * 1.73), alive: true };
+                }
+            }
+        }
+        function getX(r, c) { return R + (r % 2 === 1 ? R : 0) + c * R * 2; }
+        initGrid();
+        nextColor = COLS[Math.floor(Math.random() * COLS.length)];
+        shooter.color = COLS[Math.floor(Math.random() * COLS.length)];
+
+        cv.addEventListener('mousemove', e => { const r = cv.getBoundingClientRect(); mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top; });
+        cv.addEventListener('click', fire);
+        document.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); fire(); } if (e.code === 'KeyR' && (over || won)) restart(); });
+
+        function fire() {
+            if (bullet || over || won || shots <= 0) return;
+            const dx = mouse.x - shooter.x, dy = mouse.y - shooter.y;
+            const len = Math.hypot(dx, dy);
+            bullet = { x: shooter.x, y: shooter.y, vx: dx / len * 10, vy: dy / len * 10, color: shooter.color };
+            shooter.color = nextColor; nextColor = COLS[Math.floor(Math.random() * COLS.length)];
+            shots--; document.getElementById('sh').textContent = shots;
+        }
+
+        function snapBubble(bx, by, col) {
+            let best = null, bd = 999;
+            for (let r = 0; r < ROWS_N; r++) {
+                const n = COLS_N - (r % 2 === 1 ? 1 : 0);
+                for (let c = 0; c < n; c++) {
+                    if (!grid[r][c]) continue;
+                    if (!grid[r][c].alive) {
+                        const gx = getX(r, c), gy = R + r * R * 1.73;
+                        const d = Math.hypot(bx - gx, by - gy);
+                        if (d < bd) { bd = d; best = { r, c }; }
+                    }
+                }
+            }
+            if (!best) {
+                // Find nearest empty spot in row 0
+                const ny = Math.max(0, Math.floor((by - R) / (R * 1.73)));
+                const r = Math.min(3, ny);
+                const n = COLS_N - (r % 2 === 1 ? 1 : 0);
+                for (let c = 0; c < n; c++) { if (!grid[r][c] || !grid[r][c].alive) { best = { r, c: c }; break; } }
+            }
+            if (best) grid[best.r][best.c] = { color: col, x: getX(best.r, best.c), y: R + best.r * R * 1.73, alive: true };
+            checkMatches(col);
+            if (shots <= 0 && !won) { over = true; document.getElementById('bl').textContent = 0; }
+        }
+
+        function getNeighbors(r, c) {
+            const ns = []; const shift = r % 2 === 1 ? 1 : 0;
+            const dirs = [[-1, -1 + shift], [-1, shift], [0, -1], [0, 1], [1, -1 + shift], [1, shift]];
+            dirs.forEach(([dr, dc]) => { const nr = r + dr, nc = c + dc; if (nr >= 0 && nr < ROWS_N && nc >= 0 && nc < (COLS_N - (nr % 2 === 1 ? 1 : 0))) ns.push([nr, nc]); });
+            return ns;
+        }
+        function checkMatches(col) {
+            // BFS for color matches
+            let matched = [];
+            let visited = new Set();
+            function bfs(r, c) {
+                const q = [[r, c]]; visited.add(r + ',' + c);
+                while (q.length) { const [cr, cc] = q.shift(); if (!grid[cr][cc]?.alive || grid[cr][cc].color !== col) continue; matched.push([cr, cc]); getNeighbors(cr, cc).forEach(([nr, nc]) => { if (!visited.has(nr + ',' + nc)) { visited.add(nr + ',' + nc); if (grid[nr][nc]?.alive && grid[nr][nc].color === col) q.push([nr, nc]); } }); }
+            }
+            for (let r = 0; r < ROWS_N; r++)for (let c = 0; c < (COLS_N - (r % 2 === 1 ? 1 : 0)); c++)if (grid[r][c]?.alive && grid[r][c].color === col && !visited.has(r + ',' + c)) bfs(r, c);
+            if (matched.length >= 3) { matched.forEach(([r, c]) => { grid[r][c].alive = false; }); score += matched.length * 10; document.getElementById('sc').textContent = score; }
+            const total = grid.flat().filter(b => b && b.alive).length;
+            document.getElementById('bl').textContent = total;
+            if (total === 0) won = true;
+        }
+
+        function update() {
+            if (!bullet) return;
+            bullet.x += bullet.vx; bullet.y += bullet.vy;
+            if (bullet.x < R || bullet.x > W - R) bullet.vx *= -1;
+            if (bullet.y < R) {
+                snapBubble(bullet.x, bullet.y, bullet.color); bullet = null; return;
+            }
+            // Hit existing bubble
+            for (let r = 0; r < ROWS_N; r++) { const n = COLS_N - (r % 2 === 1 ? 1 : 0); for (let c = 0; c < n; c++) { if (!grid[r][c]?.alive) continue; if (Math.hypot(bullet.x - grid[r][c].x, bullet.y - grid[r][c].y) < R * 2 - .5) { snapBubble(bullet.x, bullet.y, bullet.color); bullet = null; return; } } }
+        }
+
+        function draw() {
+            cx.fillStyle = '#04001a'; cx.fillRect(0, 0, W, H);
+            for (let r = 0; r < ROWS_N; r++) { const n = COLS_N - (r % 2 === 1 ? 1 : 0); for (let c = 0; c < n; c++) { if (!grid[r][c]?.alive) continue; const b = grid[r][c]; cx.beginPath(); cx.arc(b.x, b.y, R - 1, 0, Math.PI * 2); cx.fillStyle = b.color; cx.fill(); cx.strokeStyle = 'rgba(255,255,255,.3)'; cx.lineWidth = 2; cx.stroke(); cx.fillStyle = 'rgba(255,255,255,.25)'; cx.beginPath(); cx.arc(b.x - 5, b.y - 5, 6, 0, Math.PI * 2); cx.fill(); } }
+            // Shooter
+            cx.beginPath(); cx.arc(shooter.x, shooter.y, R, 0, Math.PI * 2); cx.fillStyle = shooter.color; cx.fill(); cx.strokeStyle = '#fff'; cx.lineWidth = 2; cx.stroke();
+            // Next color preview
+            cx.font = '12px monospace'; cx.fillStyle = '#aaa'; cx.textAlign = 'center'; cx.fillText('NEXT', W - 35, H - 50);
+            cx.beginPath(); cx.arc(W - 35, H - 30, 14, 0, Math.PI * 2); cx.fillStyle = nextColor; cx.fill(); cx.stroke();
+            // Aim line
+            const dx = mouse.x - shooter.x, dy = mouse.y - shooter.y, len = Math.hypot(dx, dy);
+            if (len > 10 && !bullet) { cx.strokeStyle = 'rgba(255,255,255,.2)'; cx.setLineDash([6, 6]); cx.lineWidth = 1; cx.beginPath(); let x = shooter.x, y = shooter.y, vx = dx / len * 12, vy = dy / len * 12; for (let i = 0; i < 30; i++) { x += vx; y += vy; if (x < R || x > W - R) vx *= -1; if (y < 0) break; cx.moveTo(x - 1, y); cx.lineTo(x + 1, y); } cx.stroke(); cx.setLineDash([]); }
+            if (bullet) { cx.beginPath(); cx.arc(bullet.x, bullet.y, R, 0, Math.PI * 2); cx.fillStyle = bullet.color; cx.fill(); cx.strokeStyle = 'rgba(255,255,255,.5)'; cx.stroke(); }
+            if (over) { cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#f43f5e'; cx.font = 'bold 34px monospace'; cx.textAlign = 'center'; cx.fillText('OUT OF SHOTS!', W / 2, H / 2 - 16); cx.fillStyle = '#aaa'; cx.font = '15px monospace'; cx.fillText('Score: ' + score + ' | R restart', W / 2, H / 2 + 18); }
+            if (won) { cx.fillStyle = 'rgba(0,0,0,.82)'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#facc15'; cx.font = 'bold 40px monospace'; cx.textAlign = 'center'; cx.fillText('YOU WIN! 🏆', W / 2, H / 2 - 20); cx.fillStyle = '#c084fc'; cx.font = '20px monospace'; cx.fillText('Score: ' + score, W / 2, H / 2 + 20); }
+        }
+        function restart() { score = 0; shots = 30; over = false; won = false; bullet = null; initGrid(); shooter.color = COLS[Math.floor(Math.random() * COLS.length)]; nextColor = COLS[Math.floor(Math.random() * COLS.length)]; document.getElementById('sc').textContent = 0; document.getElementById('sh').textContent = 30; }
+        function loop() { update(); draw(); requestAnimationFrame(loop); } loop();
+    </script>
+
+    <script src="../mobile_controls.js"></script>
+</body>
+
+</html>

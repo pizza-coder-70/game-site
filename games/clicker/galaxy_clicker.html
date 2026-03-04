@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Galaxy Clicker – The Pizza Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #000208;
+            min-height: 100vh;
+            font-family: 'Outfit', sans-serif;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px
+        }
+
+        h1 {
+            color: #818cf8;
+            font-size: 2rem;
+            text-shadow: 0 0 20px #818cf8;
+            margin-bottom: 4px
+        }
+
+        #counter {
+            font-size: 1.2rem;
+            color: #a5b4fc;
+            margin-bottom: 4px
+        }
+
+        #cps {
+            font-size: .85rem;
+            color: #374151;
+            margin-bottom: 8px
+        }
+
+        /* Space event */
+        #event-zone {
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 8px
+        }
+
+        #event-box {
+            display: none;
+            background: rgba(129, 140, 248, .1);
+            border: 2px solid #818cf8;
+            border-radius: 14px;
+            padding: 10px 20px;
+            text-align: center;
+            animation: glow 1.5s ease-in-out infinite
+        }
+
+        @keyframes glow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 10px rgba(129, 140, 248, .3)
+            }
+
+            50% {
+                box-shadow: 0 0 30px rgba(129, 140, 248, .7)
+            }
+        }
+
+        #event-name {
+            font-weight: 700;
+            color: #c7d2fe;
+            margin-bottom: 4px
+        }
+
+        #event-targets {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center
+        }
+
+        .evt-target {
+            font-size: 2rem;
+            cursor: pointer;
+            user-select: none;
+            filter: drop-shadow(0 0 8px #818cf8);
+            transition: transform .1s
+        }
+
+        .evt-target:hover {
+            transform: scale(1.3)
+        }
+
+        #event-timer {
+            font-size: .75rem;
+            color: #818cf8;
+            margin-top: 4px
+        }
+
+        #planets-collected {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+            justify-content: center;
+            max-width: 350px;
+            min-height: 28px;
+            margin-bottom: 4px;
+            font-size: 1.1rem
+        }
+
+        .layout {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            max-width: 900px
+        }
+
+        #click-zone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px
+        }
+
+        #galaxy {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, #818cf8, #4f46e5, #7c3aed, #818cf8);
+            border: 3px solid #818cf8;
+            cursor: pointer;
+            font-size: 68px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 50px rgba(129, 140, 248, .5);
+            user-select: none;
+            transition: filter .1s
+        }
+
+        #galaxy:hover {
+            filter: brightness(1.3)
+        }
+
+        #galaxy:active {
+            transform: scale(.93)
+        }
+
+        #shop {
+            flex: 1;
+            min-width: 260px;
+            background: rgba(255, 255, 255, .03);
+            border: 1px solid rgba(129, 140, 248, .2);
+            border-radius: 20px;
+            padding: 20px;
+            max-height: 70vh;
+            overflow-y: auto
+        }
+
+        #shop h2 {
+            color: #818cf8;
+            font-size: 1.1rem;
+            margin-bottom: 14px
+        }
+
+        .upg {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(129, 140, 248, .06);
+            border: 1px solid rgba(129, 140, 248, .18);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background .15s
+        }
+
+        .upg:hover {
+            background: rgba(129, 140, 248, .18)
+        }
+
+        .upg.locked {
+            opacity: .4;
+            cursor: not-allowed
+        }
+
+        .ui {
+            font-size: 1.6rem;
+            flex-shrink: 0
+        }
+
+        .inf {
+            flex: 1
+        }
+
+        .un {
+            font-weight: 700;
+            font-size: .9rem
+        }
+
+        .ud {
+            font-size: .72rem;
+            color: #6b7280
+        }
+
+        .uc {
+            font-size: .78rem;
+            color: #a5b4fc;
+            margin-top: 2px
+        }
+
+        .uo {
+            font-size: .72rem;
+            color: #4ade80
+        }
+
+        #toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(129, 140, 248, .9);
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-weight: 700;
+            opacity: 0;
+            transition: opacity .3s;
+            pointer-events: none;
+            z-index: 99
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🌌 Galaxy Clicker</h1>
+    <div id="counter">0 stardust</div>
+    <div id="cps">0/sec | <span id="planet-ct">0</span> planets</div>
+    <div id="event-zone">
+        <div id="event-box">
+            <div id="event-name">🌠 Meteor Shower!</div>
+            <div id="event-targets"></div>
+            <div id="event-timer">⏱ 15s</div>
+        </div>
+    </div>
+    <div id="planets-collected"></div>
+    <div class="layout">
+        <div id="click-zone">
+            <div id="galaxy" onclick="collect()">🌌</div>
+            <div style="font-size:.78rem;color:#374151;text-align:center">Click to collect stardust</div>
+        </div>
+        <div id="shop">
+            <h2>🔭 Explore</h2>
+            <div id="upgrades"></div>
+        </div>
+    </div>
+    <div id="toast"></div>
+    <script>
+        let dust = 0, dps = 0, cp = 1, planetsFound = [];
+        let eventActive = false, eventTargets = [];
+        const UPS = [
+            { n: 'Telescope', i: '🔭', d: '+0.4/s dust', base: 20, own: 0, rate: .4 },
+            { n: 'Satellite', i: '🛸', d: '+2/s dust', base: 100, own: 0, rate: 2 },
+            { n: 'Asteroid Belt', i: '☄️', d: '+7/s dust', base: 450, own: 0, rate: 7 },
+            { n: 'Moon Base', i: '🌕', d: '+22/s dust', base: 2000, own: 0, rate: 22 },
+            { n: 'Space Suit', i: '👨‍🚀', d: '+4/collect', base: 300, own: 0, rate: 0, cp: 4 },
+            { n: 'Planet Miner', i: '🪐', d: '+75/s dust', base: 10000, own: 0, rate: 75 },
+            { n: 'Nebula Farm', i: '🌠', d: '+260/s dust', base: 60000, own: 0, rate: 260 },
+        ];
+        const SPACE_EVENTS = [
+            { name: '🌠 Meteor Shower!', targets: '☄️', count: 5, reward: 80 },
+            { name: '💫 Supernova Flash!', targets: '💫', count: 3, reward: 150 },
+            { name: '🌀 Wormhole!', targets: '🌀', count: 4, reward: 120 },
+            { name: '👾 Alien Contact!', targets: '👾', count: 6, reward: 60 },
+            { name: '⭐ Star Birth!', targets: '⭐', count: 4, reward: 100 },
+        ];
+        const PLANETS = ['🌍', '🌑', '🪐', '🔴', '🟤', '🟡', '🔵', '🌛', '🌝', '🌠'];
+        function fmt(n) { if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B'; if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M'; if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K'; return Math.floor(n) + '' }
+        function cost(u) { return Math.floor(u.base * Math.pow(1.15, u.own)) }
+        function collect() {
+            dust += cp;
+            if (Math.random() < .02) { planetsFound.push(PLANETS[Math.floor(Math.random() * PLANETS.length)]); renderPlanets(); }
+            const el = document.createElement('div');
+            el.textContent = '✨+' + cp; el.style.cssText = 'position:fixed;color:#a5b4fc;font-weight:700;pointer-events:none;z-index:50';
+            const r = document.getElementById('galaxy').getBoundingClientRect();
+            el.style.left = (r.left + r.width / 2 + (Math.random() - .5) * 50) + 'px'; el.style.top = r.top + 'px';
+            el.animate([{ opacity: 1, transform: 'translateY(0)' }, { opacity: 0, transform: 'translateY(-65px)' }], { duration: 800, fill: 'forwards' });
+            document.body.appendChild(el); setTimeout(() => el.remove(), 800);
+        }
+        function renderPlanets() {
+            document.getElementById('planets-collected').textContent = planetsFound.slice(-20).join(' ');
+            document.getElementById('planet-ct').textContent = planetsFound.length;
+        }
+        // Space events
+        function spawnEvent() {
+            if (eventActive) return;
+            eventActive = true;
+            const ev = SPACE_EVENTS[Math.floor(Math.random() * SPACE_EVENTS.length)];
+            const reward = Math.floor((ev.reward + dps * 5) * (1 + planetsFound.length * .02));
+            eventTargets = Array.from({ length: ev.count }, (_, i) => ({ id: i, reward: Math.floor(reward / ev.count) }));
+            document.getElementById('event-name').textContent = ev.name;
+            renderEventTargets(ev.targets);
+            document.getElementById('event-box').style.display = 'block';
+            let t = 15; document.getElementById('event-timer').textContent = '⏱ ' + t + 's';
+            const iv = setInterval(() => {
+                t--; document.getElementById('event-timer').textContent = t > 0 ? '⏱ ' + t + 's' : 'Missed!';
+                if (t <= 0 || eventTargets.length === 0) { clearInterval(iv); endEvent(); }
+            }, 1000);
+            setTimeout(() => { clearInterval(iv); endEvent(); }, 15000);
+        }
+        function renderEventTargets(emoji) {
+            const w = document.getElementById('event-targets'); w.innerHTML = '';
+            eventTargets.forEach(t => {
+                const div = document.createElement('div'); div.className = 'evt-target';
+                div.textContent = emoji || '✨';
+                div.addEventListener('click', () => clickEventTarget(t.id, div));
+                w.appendChild(div);
+            });
+        }
+        function clickEventTarget(id, el) {
+            const i = eventTargets.findIndex(t => t.id === id); if (i < 0) return;
+            dust += eventTargets[i].reward;
+            el.style.transform = 'scale(0)'; el.style.opacity = '0'; el.style.transition = 'all .3s';
+            setTimeout(() => {
+                eventTargets.splice(i, 1);
+                if (eventTargets.length === 0) { toast('🎉 All caught! +' + fmt(eventTargets.reduce ? 0 : 0) + ' stardust!'); endEvent(); }
+            }, 300);
+        }
+        function endEvent() { eventActive = false; document.getElementById('event-box').style.display = 'none'; eventTargets = []; setTimeout(spawnEvent, 20000 + Math.random() * 30000); }
+        setTimeout(spawnEvent, 15000);
+        function buy(u) {
+            const co = cost(u); if (dust < co) return;
+            dust -= co; u.own++;
+            if (u.rate) dps += u.rate; if (u.cp) cp += u.cp;
+            if (u.own === 1) planetsFound.push(PLANETS[Math.floor(Math.random() * PLANETS.length)]);
+            renderUpgrades(); renderPlanets(); toast('✅ ' + u.n + '!');
+        }
+        function toast(msg) {
+            const t = document.getElementById('toast'); t.textContent = msg; t.style.opacity = 1;
+            clearTimeout(t._t); t._t = setTimeout(() => t.style.opacity = 0, 2200);
+        }
+        function renderUpgrades() {
+            const d = document.getElementById('upgrades'); d.innerHTML = '';
+            UPS.forEach(u => {
+                const co = cost(u), div = document.createElement('div');
+                div.className = 'upg' + (dust < co ? ' locked' : '');
+                div.innerHTML = `<div class="ui">${u.i}</div><div class="inf"><div class="un">${u.n}</div><div class="ud">${u.d}</div><div class="uc">✨ ${fmt(co)}</div><div class="uo">Built: ${u.own}</div></div>`;
+                div.addEventListener('click', () => buy(u));
+                d.appendChild(div);
+            });
+        }
+        let last = 0, lastR = 0;
+        function loop(ts) {
+            if (last) dust += dps * (ts - last) / 1000;
+            last = ts;
+            document.getElementById('counter').textContent = fmt(dust) + ' stardust';
+            document.getElementById('cps').textContent = dps.toFixed(1) + '/sec | ';
+            if (ts - lastR > 500) { lastR = ts; renderUpgrades(); }
+            requestAnimationFrame(loop);
+        }
+        renderUpgrades(); requestAnimationFrame(loop);
+    </script>
+</body>
+
+</html>

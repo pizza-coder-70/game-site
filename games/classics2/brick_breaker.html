@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Brick Breaker – The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0a0010;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #f472b6;
+            font-size: 2rem;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px #f472b6
+        }
+
+        canvas {
+            border: 2px solid #f472b6;
+            box-shadow: 0 0 30px rgba(244, 114, 182, 0.4)
+        }
+
+        #hud {
+            margin-top: 10px;
+            color: #f472b6
+        }
+
+        #ctrl {
+            margin-top: 6px;
+            color: #555;
+            font-size: .8rem
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Brick Breaker</h1>
+    <canvas id="c" width="500" height="560"></canvas>
+    <div id="hud">Score: <span id="sc">0</span> &nbsp; Level: <span id="lv">1</span> &nbsp; Lives: <span
+            id="li">3</span></div>
+    <div id="ctrl">Mouse to move paddle | Click to launch | R: restart</div>
+    <script>
+        const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+        const W = 500, H = 560;
+        let paddle, ball, bricks, score, lives, level, launched, over, won;
+        const PW = 90, PH = 12;
+        function makeBricks(lvl) {
+            const rows = 3 + lvl, cols = 8, bw = 54, bh = 18, gp = 2;
+            const bricks = [];
+            const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#a855f7', '#ec4899'];
+            for (let r = 0; r < rows; r++)for (let c = 0; c < cols; c++) {
+                bricks.push({ x: c * (bw + gp) + 8, y: r * (bh + gp) + 50, w: bw, h: bh, alive: true, color: colors[r % colors.length], hits: r < 2 ? 1 : r < 4 ? 2 : 3 });
+            }
+            return bricks;
+        }
+        function init() {
+            level = 1; score = 0; lives = 3; over = false; won = false; launched = false;
+            paddle = { x: W / 2 - PW / 2, y: H - 30, w: PW, h: PH };
+            ball = { x: W / 2, y: H - 50, vx: 3, vy: -4, r: 8 };
+            bricks = makeBricks(level);
+            document.getElementById('sc').textContent = 0; document.getElementById('lv').textContent = 1; document.getElementById('li').textContent = 3;
+        }
+        canvas.addEventListener('mousemove', e => { const r = canvas.getBoundingClientRect(); paddle.x = e.clientX - r.left - paddle.w / 2; });
+        canvas.addEventListener('click', () => { if (!launched && !over && !won) launched = true; });
+        document.addEventListener('keydown', e => { if (e.key === 'r' || e.key === 'R') init(); if (e.key === ' ') { launched = true; } e.preventDefault(); });
+        function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+        function update() {
+            if (over || won) return;
+            paddle.x = clamp(paddle.x, 0, W - paddle.w);
+            if (!launched) { ball.x = paddle.x + paddle.w / 2; ball.y = paddle.y - ball.r - 2; return; }
+            ball.x += ball.vx; ball.y += ball.vy;
+            if (ball.x - ball.r < 0 || ball.x + ball.r > W) ball.vx *= -1;
+            if (ball.y - ball.r < 0) ball.vy *= -1;
+            if (ball.y + ball.r > H) { lives--; document.getElementById('li').textContent = lives; launched = false; if (lives <= 0) over = true; return; }
+            if (ball.y + ball.r >= paddle.y && ball.x >= paddle.x && ball.x <= paddle.x + paddle.w && ball.vy > 0) { ball.vy = -Math.abs(ball.vy); ball.vx += (ball.x - (paddle.x + paddle.w / 2)) * 0.1; }
+            for (const b of bricks) {
+                if (!b.alive) continue;
+                if (ball.x + ball.r > b.x && ball.x - ball.r < b.x + b.w && ball.y + ball.r > b.y && ball.y - ball.r < b.y + b.h) {
+                    ball.vy *= -1; b.hits--; if (b.hits <= 0) { b.alive = false; score += 10 * (level); }
+                }
+            }
+            document.getElementById('sc').textContent = score;
+            if (bricks.every(b => !b.alive)) { level++; if (level > 5) { won = true; } else { launched = false; bricks = makeBricks(level); ball.vx = 3 + level * 0.3; ball.vy = -(4 + level * 0.3); document.getElementById('lv').textContent = level; } }
+        }
+        function draw() {
+            ctx.fillStyle = '#0a0010'; ctx.fillRect(0, 0, W, H);
+            bricks.forEach(b => { if (!b.alive) return; const alpha = b.hits / 3; ctx.fillStyle = b.color + 'dd'; ctx.beginPath(); ctx.roundRect(b.x, b.y, b.w, b.h, 3); ctx.fill(); if (b.hits > 1) { ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center'; ctx.fillText(b.hits, b.x + b.w / 2, b.y + b.h / 2 + 4); } });
+            ctx.fillStyle = '#f472b6'; ctx.beginPath(); ctx.roundRect(paddle.x, paddle.y, paddle.w, paddle.h, 6); ctx.fill();
+            const grad = ctx.createRadialGradient(ball.x, ball.y, 0, ball.x, ball.y, ball.r); grad.addColorStop(0, '#fff'); grad.addColorStop(1, '#f472b6'); ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); ctx.fillStyle = grad; ctx.fill();
+            if (won) { ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#f472b6'; ctx.font = 'bold 36px monospace'; ctx.textAlign = 'center'; ctx.fillText('YOU WIN!', W / 2, H / 2 - 20); ctx.font = '20px monospace'; ctx.fillText(`Score: ${score} | Press R`, W / 2, H / 2 + 20); }
+            if (over) { ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#ef4444'; ctx.font = 'bold 36px monospace'; ctx.textAlign = 'center'; ctx.fillText('GAME OVER', W / 2, H / 2 - 20); ctx.font = '20px monospace'; ctx.fillStyle = '#fff'; ctx.fillText(`Score: ${score} | Press R`, W / 2, H / 2 + 20); }
+        }
+        function loop() { update(); draw(); requestAnimationFrame(loop); }
+        init(); loop();
+    </script>
+</body>
+
+</html>

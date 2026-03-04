@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Centipede | The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #4ade80;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            letter-spacing: 4px;
+            text-shadow: 0 0 20px #4ade80;
+        }
+
+        #hud {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+
+        canvas {
+            border: 2px solid #4ade80;
+            box-shadow: 0 0 30px #4ade8033;
+        }
+
+        #msg {
+            margin-top: 12px;
+            font-size: 1.2rem;
+            min-height: 1.5em;
+            color: #fff;
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 10px 32px;
+            background: linear-gradient(135deg, #4ade80, #16a34a);
+            color: #000;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            letter-spacing: 2px;
+        }
+
+        button:hover {
+            transform: scale(1.07);
+        }
+
+        #menuBtn {
+            background: linear-gradient(135deg, #334155, #1e293b);
+            color: #fff;
+            display: none;
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999;
+        }
+
+        #homeBtn:hover {
+            background: #1e40af;
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>🐛 CENTIPEDE</h1>
+    <div id="hud"><span>SCORE: <b id="score">0</b></span><span>LIVES: <b id="lives">3</b></span><span>LEVEL: <b
+                id="level">1</b></span></div>
+    <canvas id="c" width="480" height="560"></canvas>
+    <div id="msg">Arrow Keys to move, Space to shoot!</div>
+    <button onclick="startGame()">START</button>
+    <button id="menuBtn" onclick="window.close()">🏠 Return to Menu</button>
+    <script src="../scripts/scores.js"></script>
+    <script>
+        const C = document.getElementById('c'), ctx = C.getContext('2d');
+        const W = 480, H = 560, CELL = 24, COLS = 20, ROWS = 22;
+        let player, bullets, centipede, mushrooms, fleas, score, lives, level, running, animId, shootCD;
+        const keys = {};
+
+        function makeCentipede(len) {
+            const segs = [];
+            for (let i = 0; i < len; i++) segs.push({ x: i, y: 0, dir: 1, head: i === 0 });
+            return segs;
+        }
+
+        function makeMushrooms() {
+            const m = [];
+            for (let i = 0; i < 40; i++) {
+                const c = Math.floor(Math.random() * COLS), r = 2 + Math.floor(Math.random() * (ROWS - 5));
+                if (!m.find(x => x.c === c && x.r === r)) m.push({ c, r, hp: 4 });
+            }
+            return m;
+        }
+
+        function startGame() {
+            score = 0; lives = 3; level = 1; running = true; shootCD = 0;
+            player = { c: COLS / 2, r: ROWS - 2, speed: 3, x: COLS / 2 * CELL, y: (ROWS - 2) * CELL };
+            bullets = []; fleas = [];
+            centipede = makeCentipede(10);
+            mushrooms = makeMushrooms();
+            document.getElementById('score').textContent = 0;
+            document.getElementById('lives').textContent = 3;
+            document.getElementById('level').textContent = 1;
+            document.getElementById('msg').textContent = '';
+            if (animId) cancelAnimationFrame(animId);
+            loop();
+        }
+
+        document.addEventListener('keydown', e => { keys[e.key] = true; if (e.key === ' ') { e.preventDefault(); if (!running) startGame(); } });
+        document.addEventListener('keyup', e => keys[e.key] = false);
+
+        let centipedeTimer = 0;
+        function update() {
+            if (!running) return;
+            // Player move
+            const spd = 3;
+            if (keys['ArrowLeft']) player.x = Math.max(0, player.x - spd);
+            if (keys['ArrowRight']) player.x = Math.min((COLS - 1) * CELL, player.x + spd);
+            if (keys['ArrowUp']) player.y = Math.max((ROWS - 5) * CELL, player.y - spd);
+            if (keys['ArrowDown']) player.y = Math.min((ROWS - 1) * CELL, player.y + spd);
+            // Shoot
+            if (shootCD > 0) shootCD--;
+            if (keys[' '] && shootCD === 0) { bullets.push({ x: player.x + 8, y: player.y, speed: 8 }); shootCD = 12; }
+            bullets = bullets.filter(b => { b.y -= b.speed; return b.y > 0; });
+            // Move centipede
+            centipedeTimer++;
+            if (centipedeTimer > Math.max(3, 8 - level)) {
+                centipedeTimer = 0;
+                for (let i = centipede.length - 1; i >= 0; i--) {
+                    const s = centipede[i];
+                    if (i > 0) { s.c = centipede[i - 1].c; s.r = centipede[i - 1].r; s.dir = centipede[i - 1].dir; }
+                    else {
+                        s.c += s.dir;
+                        const mushroomAhead = mushrooms.find(m => m.c === s.c && m.r === s.r);
+                        const wallHit = s.c < 0 || s.c >= COLS;
+                        if (wallHit || mushroomAhead) { s.r++; s.dir *= -1; if (wallHit) s.c = Math.max(0, Math.min(COLS - 1, s.c)); }
+                        if (s.r >= ROWS) { s.r = ROWS - 1; running = false; document.getElementById('msg').textContent = 'INVADED! Press Start.'; document.getElementById('menuBtn').style.display = ''; PizzaScores.save('Centipede', score); }
+                    }
+                }
+            }
+            // Bullet-mushroom
+            bullets.forEach((b, bi) => {
+                mushrooms.forEach((m, mi) => {
+                    if (b.x >= m.c * CELL && b.x < (m.c + 1) * CELL && b.y >= m.r * CELL && b.y < (m.r + 1) * CELL) {
+                        m.hp--; if (m.hp <= 0) { mushrooms.splice(mi, 1); score += 5; }
+                        bullets.splice(bi, 1); document.getElementById('score').textContent = score;
+                    }
+                });
+            });
+            // Bullet-centipede
+            bullets.forEach((b, bi) => {
+                centipede.forEach((s, si) => {
+                    if (b.x >= s.c * CELL && b.x < (s.c + 1) * CELL && b.y >= s.r * CELL && b.y < (s.r + 1) * CELL) {
+                        score += s.head ? 100 : 10; document.getElementById('score').textContent = score;
+                        mushrooms.push({ c: s.c, r: s.r, hp: 4 });
+                        // Split
+                        if (si < centipede.length - 1) centipede[si + 1].head = true;
+                        centipede.splice(si, 1); bullets.splice(bi, 1);
+                    }
+                });
+            });
+            // Centipede-player collision
+            centipede.forEach(s => {
+                if (Math.hypot(s.c * CELL + 12 - player.x - 8, s.r * CELL + 12 - player.y - 8) < 20) {
+                    lives--; document.getElementById('lives').textContent = lives;
+                    player.x = COLS / 2 * CELL; player.y = (ROWS - 2) * CELL;
+                    if (lives <= 0) { running = false; document.getElementById('msg').textContent = 'GAME OVER! Press Start.'; document.getElementById('menuBtn').style.display = ''; PizzaScores.save('Centipede', score); }
+                }
+            });
+            if (centipede.length === 0) {
+                level++; centipede = makeCentipede(10 + level); document.getElementById('level').textContent = level;
+                document.getElementById('msg').textContent = `Level ${level}!`; setTimeout(() => document.getElementById('msg').textContent = '', 1200);
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+            // Mushrooms
+            mushrooms.forEach(m => {
+                const alpha = m.hp / 4; ctx.fillStyle = `rgba(34,197,94,${0.4 + alpha * 0.6})`;
+                ctx.beginPath(); ctx.arc(m.c * CELL + 12, m.r * CELL + 12, 10, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = `rgba(134,239,172,${alpha})`;
+                ctx.beginPath(); ctx.arc(m.c * CELL + 10, m.r * CELL + 10, 4, 0, Math.PI * 2); ctx.fill();
+            });
+            // Bullets
+            ctx.fillStyle = '#fff'; bullets.forEach(b => { ctx.fillRect(b.x, b.y, 4, 8); });
+            // Centipede
+            centipede.forEach((s, i) => {
+                const x = s.c * CELL, y = s.r * CELL;
+                ctx.fillStyle = s.head ? '#ef4444' : '#f97316';
+                ctx.beginPath(); ctx.arc(x + 12, y + 12, 10, 0, Math.PI * 2); ctx.fill();
+                if (s.head) {
+                    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x + 8, y + 8, 3, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.arc(x + 16, y + 8, 3, 0, Math.PI * 2); ctx.fill();
+                }
+                // Segment connector
+                if (i < centipede.length - 1) {
+                    const ns = centipede[i + 1];
+                    ctx.strokeStyle = '#f97316'; ctx.lineWidth = 6;
+                    ctx.beginPath(); ctx.moveTo(x + 12, y + 12); ctx.lineTo(ns.c * CELL + 12, ns.r * CELL + 12); ctx.stroke();
+                }
+            });
+            // Player
+            ctx.fillStyle = '#4ade80'; ctx.shadowColor = '#4ade80'; ctx.shadowBlur = 12;
+            ctx.beginPath(); ctx.moveTo(player.x + 8, player.y); ctx.lineTo(player.x, player.y + 20); ctx.lineTo(player.x + 16, player.y + 20); ctx.closePath(); ctx.fill();
+            ctx.shadowBlur = 0;
+            // Player zone indicator
+            ctx.strokeStyle = 'rgba(74,222,128,0.1)'; ctx.setLineDash([4, 4]);
+            ctx.strokeRect(0, (ROWS - 5) * CELL, W, 5 * CELL); ctx.setLineDash([]);
+        }
+
+        function loop() { update(); draw(); if (running) animId = requestAnimationFrame(loop); }
+        draw();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Number Puzzle (15) | The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: radial-gradient(ellipse at center, #0f172a, #000);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #e2e8f0;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px #fbbf24;
+        }
+
+        #hud {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 16px;
+            font-size: 1rem;
+            color: #fbbf24;
+        }
+
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(4, 100px);
+            gap: 8px;
+            margin: 10px;
+        }
+
+        .tile {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #1d4ed8, #2563eb);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all .15s;
+            border: 2px solid #3b82f6;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .tile:hover:not(.empty) {
+            transform: scale(1.06);
+            box-shadow: 0 0 16px #fbbf2488;
+        }
+
+        .tile.empty {
+            background: rgba(255, 255, 255, 0.04);
+            border: 2px dashed #334155;
+            cursor: default;
+        }
+
+        .tile.solved {
+            background: linear-gradient(135deg, #065f46, #059669);
+            border-color: #10b981;
+        }
+
+        #msg {
+            margin-top: 14px;
+            font-size: 1.2rem;
+            min-height: 1.5em;
+            color: #fff;
+        }
+
+        button {
+            margin-top: 12px;
+            padding: 10px 32px;
+            background: linear-gradient(135deg, #fbbf24, #d97706);
+            color: #000;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            letter-spacing: 2px;
+        }
+
+        button:hover {
+            transform: scale(1.07);
+        }
+
+        #menuBtn {
+            background: linear-gradient(135deg, #334155, #1e293b);
+            color: #fff;
+            display: none;
+        }
+
+        #homeBtn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            padding: 8px 18px;
+            background: rgba(30, 41, 59, 0.9);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: bold;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 999;
+        }
+
+        #homeBtn:hover {
+            background: #1e40af;
+        }
+    </style>
+</head>
+
+<body>
+    <a id="homeBtn" href="../index.html">🏠 Menu</a>
+    <h1>🔢 15 PUZZLE</h1>
+    <div id="hud"><span>MOVES: <b id="moves">0</b></span><span>TIME: <b id="time">0</b>s</span><span>BEST: <b
+                id="best">-</b></span></div>
+    <div id="grid"></div>
+    <div id="msg">Click a tile adjacent to the blank space!</div>
+    <button onclick="newGame()">SHUFFLE</button>
+    <button id="menuBtn" onclick="window.close()">🏠 Return to Menu</button>
+    <script src="../scripts/scores.js"></script>
+    <script>
+        let tiles, blank, moves, timer, timerInt, best = Infinity, started = false;
+
+        function newGame() {
+            const arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0];
+            // Shuffle with solvability check
+            let attempts = 0;
+            do { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[arr[i], arr[j]] = [arr[j], arr[i]]; } attempts++; }
+            while (!isSolvable(arr) && attempts < 100);
+            tiles = [...arr]; blank = arr.indexOf(0); moves = 0; started = false;
+            document.getElementById('moves').textContent = 0;
+            clearInterval(timerInt); timer = 0; document.getElementById('time').textContent = 0;
+            document.getElementById('msg').textContent = 'Click a tile to start!';
+            renderGrid();
+        }
+
+        function isSolvable(arr) {
+            let inv = 0;
+            for (let i = 0; i < 15; i++) for (let j = i + 1; j < 16; j++) if (arr[i] && arr[j] && arr[i] > arr[j]) inv++;
+            const blankRow = Math.floor(arr.indexOf(0) / 4);
+            return (inv + blankRow) % 2 === 0;
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('grid'); grid.innerHTML = '';
+            const solved = isSolvedState();
+            tiles.forEach((v, i) => {
+                const tile = document.createElement('div');
+                if (v === 0) { tile.className = 'tile empty'; }
+                else {
+                    tile.className = 'tile' + (solved ? ' solved' : '');
+                    tile.textContent = v;
+                    tile.onclick = () => moveTile(i);
+                }
+                grid.appendChild(tile);
+            });
+        }
+
+        function moveTile(i) {
+            const r = Math.floor(i / 4), c = i % 4;
+            const br = Math.floor(blank / 4), bc = blank % 4;
+            const adj = (Math.abs(r - br) === 1 && c === bc) || (Math.abs(c - bc) === 1 && r === br);
+            if (!adj) return;
+            if (!started) { started = true; timerInt = setInterval(() => { timer++; document.getElementById('time').textContent = timer; }, 1000); }
+            [tiles[i], tiles[blank]] = [tiles[blank], tiles[i]];
+            blank = i; moves++; document.getElementById('moves').textContent = moves;
+            renderGrid();
+            if (isSolvedState()) {
+                clearInterval(timerInt);
+                if (moves < best || (best === Infinity)) best = moves;
+                if (timer < (best || Infinity)) document.getElementById('best').textContent = `${moves}m ${timer}s`;
+                document.getElementById('msg').textContent = `🎉 Solved in ${moves} moves & ${timer}s!`;
+                document.getElementById('menuBtn').style.display = '';
+                PizzaScores.save('15 Puzzle', moves, `${moves} moves, ${timer}s`);
+                renderGrid();
+            }
+        }
+
+        function isSolvedState() { return tiles.every((v, i) => v === (i === 15 ? 0 : i + 1)); }
+
+        newGame();
+    </script>
+</body>
+
+</html>

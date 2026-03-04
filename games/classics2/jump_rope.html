@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Jump Rope – The Pizza Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #0f172a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff
+        }
+
+        h1 {
+            color: #fbbf24;
+            font-size: 2rem;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px #fbbf24
+        }
+
+        canvas {
+            border: 2px solid #fbbf24;
+            box-shadow: 0 0 30px rgba(251, 191, 36, 0.4)
+        }
+
+        #hud {
+            margin-top: 10px;
+            color: #fbbf24
+        }
+
+        #ctrl {
+            margin-top: 6px;
+            color: #555;
+            font-size: .8rem
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Jump Rope!</h1>
+    <canvas id="c" width="500" height="400"></canvas>
+    <div id="hud">Score: <span id="sc">0</span> &nbsp; Best: <span id="bs">0</span></div>
+    <div id="ctrl">Space / Up Arrow / Click to jump! Don't get hit by the rope!</div>
+    <script>
+        const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+        const W = 500, H = 400;
+        let player, rope, score, best, over, started, jumpPressed, ropespeed;
+        function init() {
+            player = { x: 250, y: 330, vy: 0, onGround: true, w: 30, h: 50 };
+            rope = { angle: 0, speed: 0.06, phase: 0 };
+            score = 0; over = false; started = false; jumpPressed = false; ropespeed = 0.06;
+            document.getElementById('sc').textContent = 0;
+        }
+        function jump() { if (!started) { started = true; } if (player.onGround) { player.vy = -14; player.onGround = false; } }
+        document.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') { jump(); e.preventDefault(); } if (e.key === 'r' || e.key === 'R') init(); });
+        canvas.addEventListener('click', jump);
+        const GROUND_Y = 360;
+        function update() {
+            if (!started || over) return;
+            player.vy += 0.7; player.y += player.vy;
+            if (player.y >= GROUND_Y - player.h) { player.y = GROUND_Y - player.h; player.vy = 0; player.onGround = true; }
+            else { player.onGround = false; }
+            rope.angle += rope.speed;
+            // rope sweeps through ground level when sin(angle) crosses 0
+            const sinVal = Math.sin(rope.angle);
+            if (Math.abs(sinVal) < 0.12) {
+                if (player.onGround) {
+                    // Player didn't jump - get hit!
+                    over = true;
+                } else {
+                    // Player is in the air - jumped over rope! Score a point
+                    // Only award point once per rope pass (use a flag)
+                    if (!rope.scored) {
+                        score++;
+                        rope.scored = true;
+                        document.getElementById('sc').textContent = score;
+                        const bs = +document.getElementById('bs').textContent;
+                        if (score > bs) document.getElementById('bs').textContent = score;
+                        rope.speed = Math.min(0.18, 0.06 + score * 0.005);
+                    }
+                }
+            } else {
+                rope.scored = false;
+            }
+        }
+        function draw() {
+            ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, W, H);
+            // background
+            for (let i = 0; i < 3; i++) { ctx.fillStyle = `rgba(251,191,36,${0.05 - i * 0.01})`; ctx.fillRect(0, H - 80 + i * 20, W, 20); }
+            // ground
+            ctx.fillStyle = '#1e3a5f'; ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+            // rope holders (people)
+            ctx.fillStyle = '#f97316';
+            ['😄', '😄'].forEach((e, i) => { ctx.font = '32px monospace'; ctx.textAlign = 'center'; ctx.fillText(e, i === 0 ? 90 : 410, GROUND_Y - 10); });
+            // rope
+            ctx.save(); ctx.translate(250, GROUND_Y);
+            ctx.beginPath();
+            for (let t = 0; t <= 1; t += 0.02) { const x = (t - 0.5) * 260; const y = Math.sin(rope.angle + t * Math.PI) * -120; ctx.lineTo(x, y); }
+            ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 4; ctx.stroke(); ctx.restore();
+            // player
+            ctx.font = '42px monospace'; ctx.textAlign = 'center'; ctx.fillText('🧒', player.x, player.y + player.h);
+            // score display
+            ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 24px monospace'; ctx.textAlign = 'center'; ctx.fillText(score, 250, 40);
+            if (!started) { ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 28px monospace'; ctx.textAlign = 'center'; ctx.fillText('Click or Space to Jump!', 250, 200); }
+            if (over) { ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#ef4444'; ctx.font = 'bold 32px monospace'; ctx.textAlign = 'center'; ctx.fillText('Ouch! 🤕', 250, 170); ctx.font = '22px monospace'; ctx.fillStyle = '#fbbf24'; ctx.fillText(`Score: ${score}`, 250, 220); ctx.font = '16px monospace'; ctx.fillStyle = '#aaa'; ctx.fillText('Press R or click to restart', 250, 265); }
+        }
+        function loop() { update(); draw(); requestAnimationFrame(loop); }
+        init(); loop();
+    </script>
+</body>
+
+</html>
