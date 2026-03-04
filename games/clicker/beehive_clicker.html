@@ -1,0 +1,105 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Beehive Clicker – The Pizza Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box }
+        body { background: #0a0a1a; min-height: 100vh; font-family: 'Outfit', sans-serif; color: #fff; display: flex; flex-direction: column; align-items: center; padding: 20px }
+        h1 { color: #eab308; font-size: 2rem; text-shadow: 0 0 20px #eab308; margin-bottom: 4px }
+        #counter { font-size: 1.2rem; color: #fca5a5; margin-bottom: 4px }
+        #cps { font-size: .85rem; color: #6b7280; margin-bottom: 8px }
+        .layout { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 900px; margin-top:20px; }
+        #click-zone { display: flex; flex-direction: column; align-items: center; gap: 10px }
+        #click-btn { width: 150px; height: 150px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #eab308, #a16207); border: 4px solid #eab308; cursor: pointer; font-size: 78px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 30px rgba(0,0,0, .5); user-select: none; transition: transform .1s }
+        #click-btn:active { transform: scale(.92) }
+        .xp-bar { height: 7px; background: rgba(255, 255, 255, .15); border-radius: 4px; width: 150px }
+        .xp-fill { height: 100%; background: linear-gradient(90deg, #eab308, #a16207); border-radius: 4px; transition: width .2s }
+        #lvl-lbl { font-size: .78rem; color: #eab308; text-align: center }
+        #shop { flex: 1; min-width: 260px; background: rgba(255, 255, 255, .04); border: 1px solid #a16207; border-radius: 20px; padding: 20px; max-height: 70vh; overflow-y: auto }
+        #shop h2 { color: #eab308; font-size: 1.1rem; margin-bottom: 14px }
+        .upg { display: flex; align-items: center; gap: 10px; padding: 10px; background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .2); border-radius: 12px; margin-bottom: 8px; cursor: pointer; transition: background .15s }
+        .upg:hover { background: rgba(255, 255, 255, .18) }
+        .upg.locked { opacity: .4; cursor: not-allowed }
+        .ui { font-size: 1.6rem; flex-shrink: 0 }
+        .inf { flex: 1 }
+        .un { font-weight: 700; font-size: .9rem }
+        .ud { font-size: .72rem; color: #9ca3af }
+        .uc { font-size: .78rem; color: #fca5a5; margin-top: 2px }
+        .uo { font-size: .72rem; color: #eab308 }
+        #toast { position: fixed; top: 20px; right: 20px; background: rgba(0,0,0, .9); border:1px solid #eab308; color: #fff; padding: 10px 18px; border-radius: 10px; font-weight: 700; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 99 }
+    </style>
+</head>
+<body>
+    <h1>🐝 Beehive Clicker</h1>
+    <div id="counter">0 honey</div>
+    <div id="cps">0/sec | Level 1</div>
+    <div class="layout">
+        <div id="click-zone">
+            <div id="click-btn" onclick="clickItem()">🐝</div>
+            <div class="xp-bar"><div class="xp-fill" id="xpf"></div></div>
+            <div id="lvl-lbl">Level 1 · +1/click</div>
+        </div>
+        <div id="shop">
+            <h2>🏪 Upgrades</h2>
+            <div id="upgrades"></div>
+        </div>
+    </div>
+    <div id="toast"></div>
+    <script>
+        let items = 0, cps = 0, cp = 1, level = 1, xp = 0, xpMax = 80;
+        const UPS = [
+            { n: 'Basic Worker', i: '👨‍🌾', d: '+0.5/s', base: 12, own: 0, rate: .5 },
+            { n: 'Advanced Tool', i: '🛠️', d: '+2/s', base: 80, own: 0, rate: 2 },
+            { n: 'Small Machine', i: '⚙️', d: '+8/s', base: 400, own: 0, rate: 8 },
+            { n: 'Large Factory', i: '🏭', d: '+25/s', base: 1800, own: 0, rate: 25 },
+            { n: 'Corporation', i: '🏢', d: '+80/s', base: 8000, own: 0, rate: 80 },
+            { n: 'AI Overlord', i: '🤖', d: '+280/s', base: 40000, own: 0, rate: 280 },
+        ];
+        function checkLevel() { if (xp >= xpMax) { level++; xp -= xpMax; xpMax = Math.floor(xpMax * 2); cp = level; } }
+        function fmt(n) { if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B'; if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M'; if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K'; return Math.floor(n) + '' }
+        function cost(u) { return Math.floor(u.base * Math.pow(1.15, u.own)) }
+        function clickItem() {
+            items += cp; xp += 1; checkLevel();
+            const el = document.createElement('div');
+            el.textContent = '+' + cp; el.style.cssText = 'position:fixed;color:#fff;font-weight:700;pointer-events:none;z-index:50';
+            const r = document.getElementById('click-btn').getBoundingClientRect();
+            el.style.left = (r.left + r.width / 2 + (Math.random() - .5) * 40) + 'px'; el.style.top = r.top + 'px';
+            el.animate([{ opacity: 1, transform: 'translateY(0)' }, { opacity: 0, transform: 'translateY(-55px)' }], { duration: 700, fill: 'forwards' });
+            document.body.appendChild(el); setTimeout(() => el.remove(), 700);
+        }
+        function buy(u) {
+            const co = cost(u); if (items < co) return;
+            items -= co; u.own++; cps += u.rate;
+            renderUpgrades(); toast('✅ ' + u.n + ' purchased!');
+        }
+        function toast(msg) {
+            const t = document.getElementById('toast'); t.textContent = msg; t.style.opacity = 1;
+            clearTimeout(t._t); t._t = setTimeout(() => t.style.opacity = 0, 2200);
+        }
+        function renderUpgrades() {
+            const d = document.getElementById('upgrades'); d.innerHTML = '';
+            UPS.forEach(u => {
+                const co = cost(u), div = document.createElement('div');
+                div.className = 'upg' + (items < co ? ' locked' : '');
+                div.innerHTML = `<div class="ui">${u.i}</div><div class="inf"><div class="un">${u.n}</div><div class="ud">${u.d}</div><div class="uc">💰 ${fmt(co)}</div><div class="uo">Owned: ${u.own}</div></div>`;
+                div.addEventListener('click', () => buy(u));
+                d.appendChild(div);
+            });
+        }
+        let last = 0, lastR = 0;
+        function loop(ts) {
+            if (last) items += cps * (ts - last) / 1000;
+            last = ts;
+            document.getElementById('counter').textContent = fmt(items) + ' honey';
+            document.getElementById('cps').textContent = cps.toFixed(1) + '/sec · Level ' + level + ' · +' + cp + '/click';
+            document.getElementById('xpf').style.width = Math.min(100, xp / xpMax * 100) + '%';
+            if (ts - lastR > 500) { lastR = ts; renderUpgrades(); }
+            requestAnimationFrame(loop);
+        }
+        renderUpgrades();
+        requestAnimationFrame(loop);
+    </script>
+</body>
+</html>
