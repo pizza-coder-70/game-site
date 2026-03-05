@@ -37,6 +37,10 @@ To run **The Pizza Edition** locally on your machine:
 3. Open your browser and navigate to `http://localhost:8000` (or the port provided by your server).
 4. Start gaming!
 
+To deploy **The Pizza Edition** to the your thumb drive:
+
+1. Run `npm run deploy` to deploy the project.
+
 ## 🤝 Contributing
 
 Contributions are welcome! Whether it's adding a new classic game, improving mobile control logic, or refining existing 3D environments, feel free to contribute to the codebase.

@@ -1,0 +1,178 @@
+﻿$clicker_themes = @(
+    @("Burger Tycoon", "burger_tycoon", "🍔", "burgers", "#f59e0b", "#d97706"),
+    @("Tech Startup", "tech_startup", "💡", "dollars", "#3b82f6", "#1d4ed8"),
+    @("Doge Miner", "doge_miner", "🐕", "dogecoins", "#fbbf24", "#b45309"),
+    @("Coffee Shop", "coffee_shop", "☕", "coffees", "#78350f", "#451a03"),
+    @("Sushi Bar", "sushi_bar", "🍣", "sushi", "#ef4444", "#991b1b"),
+    @("Crypto Tycoon", "crypto_tycoon", "₿", "crypto", "#10b981", "#047857"),
+    @("Ice Cream Stand", "ice_cream", "🍦", "ice creams", "#ec4899", "#be185d"),
+    @("Magic Academy", "magic_academy", "🔮", "mana", "#8b5cf6", "#5b21b6"),
+    @("Train Empire", "train_empire", "🚂", "tickets", "#64748b", "#334155"),
+    @("Farming Idle", "farming_idle", "🚜", "crops", "#84cc16", "#4d7c0f"),
+    @("Alien Invasion", "alien_invasion", "👽", "biomass", "#14b8a6", "#0f766e"),
+    @("Beehive Clicker", "beehive_clicker", "🐝", "honey", "#eab308", "#a16207"),
+    @("Knight's Quest", "knights_quest", "⚔️", "gold", "#9ca3af", "#4b5563"),
+    @("Pirate Cove", "pirate_cove", "🏴‍☠️", "doubloons", "#1f2937", "#111827"),
+    @("Vampire Coven", "vampire_coven", "🧛", "blood", "#991b1b", "#7f1d1d"),
+    @("Car Factory", "car_factory", "🚗", "cars", "#ef4444", "#dc2626"),
+    @("Cat Cafe", "cat_cafe", "🐈", "purrs", "#fb923c", "#c2410c"),
+    @("Book Publisher", "book_publisher", "📚", "books", "#8b5cf6", "#7c3aed"),
+    @("Music Studio", "music_studio", "🎸", "fans", "#ec4899", "#db2777"),
+    @("Gym Tycoon", "gym_tycoon", "💪", "gains", "#3b82f6", "#2563eb"),
+    @("Lumberjack Idle", "lumberjack_idle", "🪓", "wood", "#78350f", "#451a03"),
+    @("Aquarium", "aquarium", "🐠", "fish", "#0ea5e9", "#0284c7"),
+    @("Pet Rescue", "pet_rescue", "🐶", "pets", "#f59e0b", "#d97706"),
+    @("Museum Empire", "museum_empire", "🏛️", "artifacts", "#fef08a", "#ca8a04"),
+    @("Casino Tycoon", "casino_tycoon", "🎰", "chips", "#ef4444", "#b91c1c"),
+    @("Ant Colony", "ant_colony", "🐜", "leaves", "#15803d", "#14532d"),
+    @("Snowman Builder", "snowman_builder", "⛄", "snowflakes", "#bae6fd", "#0284c7"),
+    @("Dinosaur Park", "dinosaur_park", "🦖", "fossils", "#16a34a", "#15803d"),
+    @("Robot Factory", "robot_factory", "🤖", "gears", "#94a3b8", "#475569"),
+    @("Shoe Store", "shoe_store", "👟", "shoes", "#38bdf8", "#0369a1"),
+    @("Bakery Idle", "bakery_idle", "🥐", "pastries", "#fcd34d", "#b45309"),
+    @("Candy Factory", "candy_factory2", "🍭", "candies", "#f472b6", "#be185d"),
+    @("Toy Maker", "toy_maker", "🧸", "toys", "#fbbf24", "#b45309"),
+    @("Juice Stand", "juice_stand", "🧃", "juice", "#a3e635", "#4d7c0f"),
+    @("Flower Shop", "flower_shop", "🌸", "flowers", "#f472b6", "#db2777"),
+    @("Cinema Tycoon", "cinema_tycoon", "🍿", "tickets", "#f87171", "#dc2626"),
+    @("Planet Builder", "planet_builder", "🌎", "stardust", "#3b82f6", "#1d4ed8"),
+    @("Ghost Hunter", "ghost_hunter", "👻", "souls", "#c084fc", "#7e22ce"),
+    @("Zombie Outpost", "zombie_outpost", "🧟", "supplies", "#4ade80", "#166534"),
+    @("Hero Academy", "hero_academy", "🦸", "heroes", "#60a5fa", "#2563eb")
+)
+
+$template = @'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>__TITLE__ – The Pizza Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box }
+        body { background: #0a0a1a; min-height: 100vh; font-family: 'Outfit', sans-serif; color: #fff; display: flex; flex-direction: column; align-items: center; padding: 20px }
+        h1 { color: __COLOR1__; font-size: 2rem; text-shadow: 0 0 20px __COLOR1__; margin-bottom: 4px }
+        #counter { font-size: 1.2rem; color: #fca5a5; margin-bottom: 4px }
+        #cps { font-size: .85rem; color: #6b7280; margin-bottom: 8px }
+        .layout { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 900px; margin-top:20px; }
+        #click-zone { display: flex; flex-direction: column; align-items: center; gap: 10px }
+        #click-btn { width: 150px; height: 150px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, __COLOR1__, __COLOR2__); border: 4px solid __COLOR1__; cursor: pointer; font-size: 78px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 30px rgba(0,0,0, .5); user-select: none; transition: transform .1s }
+        #click-btn:active { transform: scale(.92) }
+        .xp-bar { height: 7px; background: rgba(255, 255, 255, .15); border-radius: 4px; width: 150px }
+        .xp-fill { height: 100%; background: linear-gradient(90deg, __COLOR1__, __COLOR2__); border-radius: 4px; transition: width .2s }
+        #lvl-lbl { font-size: .78rem; color: __COLOR1__; text-align: center }
+        #shop { flex: 1; min-width: 260px; background: rgba(255, 255, 255, .04); border: 1px solid __COLOR2__; border-radius: 20px; padding: 20px; max-height: 70vh; overflow-y: auto }
+        #shop h2 { color: __COLOR1__; font-size: 1.1rem; margin-bottom: 14px }
+        .upg { display: flex; align-items: center; gap: 10px; padding: 10px; background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .2); border-radius: 12px; margin-bottom: 8px; cursor: pointer; transition: background .15s }
+        .upg:hover { background: rgba(255, 255, 255, .18) }
+        .upg.locked { opacity: .4; cursor: not-allowed }
+        .ui { font-size: 1.6rem; flex-shrink: 0 }
+        .inf { flex: 1 }
+        .un { font-weight: 700; font-size: .9rem }
+        .ud { font-size: .72rem; color: #9ca3af }
+        .uc { font-size: .78rem; color: #fca5a5; margin-top: 2px }
+        .uo { font-size: .72rem; color: __COLOR1__ }
+        #toast { position: fixed; top: 20px; right: 20px; background: rgba(0,0,0, .9); border:1px solid __COLOR1__; color: #fff; padding: 10px 18px; border-radius: 10px; font-weight: 700; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 99 }
+    </style>
+</head>
+<body>
+    <h1>__EMOJI__ __TITLE__</h1>
+    <div id="counter">0 __RESOURCE__</div>
+    <div id="cps">0/sec | Level 1</div>
+    <div class="layout">
+        <div id="click-zone">
+            <div id="click-btn" onclick="clickItem()">__EMOJI__</div>
+            <div class="xp-bar"><div class="xp-fill" id="xpf"></div></div>
+            <div id="lvl-lbl">Level 1 · +1/click</div>
+        </div>
+        <div id="shop">
+            <h2>🏪 Upgrades</h2>
+            <div id="upgrades"></div>
+        </div>
+    </div>
+    <div id="toast"></div>
+    <script>
+        let items = 0, cps = 0, cp = 1, level = 1, xp = 0, xpMax = 80;
+        const UPS = [
+            { n: 'Basic Worker', i: '👨‍🌾', d: '+0.5/s', base: 12, own: 0, rate: .5 },
+            { n: 'Advanced Tool', i: '🛠️', d: '+2/s', base: 80, own: 0, rate: 2 },
+            { n: 'Small Machine', i: '⚙️', d: '+8/s', base: 400, own: 0, rate: 8 },
+            { n: 'Large Factory', i: '🏭', d: '+25/s', base: 1800, own: 0, rate: 25 },
+            { n: 'Corporation', i: '🏢', d: '+80/s', base: 8000, own: 0, rate: 80 },
+            { n: 'AI Overlord', i: '🤖', d: '+280/s', base: 40000, own: 0, rate: 280 },
+        ];
+        function checkLevel() { if (xp >= xpMax) { level++; xp -= xpMax; xpMax = Math.floor(xpMax * 2); cp = level; } }
+        function fmt(n) { if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B'; if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M'; if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K'; return Math.floor(n) + '' }
+        function cost(u) { return Math.floor(u.base * Math.pow(1.15, u.own)) }
+        function clickItem() {
+            items += cp; xp += 1; checkLevel();
+            const el = document.createElement('div');
+            el.textContent = '+' + cp; el.style.cssText = 'position:fixed;color:#fff;font-weight:700;pointer-events:none;z-index:50';
+            const r = document.getElementById('click-btn').getBoundingClientRect();
+            el.style.left = (r.left + r.width / 2 + (Math.random() - .5) * 40) + 'px'; el.style.top = r.top + 'px';
+            el.animate([{ opacity: 1, transform: 'translateY(0)' }, { opacity: 0, transform: 'translateY(-55px)' }], { duration: 700, fill: 'forwards' });
+            document.body.appendChild(el); setTimeout(() => el.remove(), 700);
+        }
+        function buy(u) {
+            const co = cost(u); if (items < co) return;
+            items -= co; u.own++; cps += u.rate;
+            renderUpgrades(); toast('✅ ' + u.n + ' purchased!');
+        }
+        function toast(msg) {
+            const t = document.getElementById('toast'); t.textContent = msg; t.style.opacity = 1;
+            clearTimeout(t._t); t._t = setTimeout(() => t.style.opacity = 0, 2200);
+        }
+        function renderUpgrades() {
+            const d = document.getElementById('upgrades'); d.innerHTML = '';
+            UPS.forEach(u => {
+                const co = cost(u), div = document.createElement('div');
+                div.className = 'upg' + (items < co ? ' locked' : '');
+                div.innerHTML = `<div class="ui">${u.i}</div><div class="inf"><div class="un">${u.n}</div><div class="ud">${u.d}</div><div class="uc">💰 ${fmt(co)}</div><div class="uo">Owned: ${u.own}</div></div>`;
+                div.addEventListener('click', () => buy(u));
+                d.appendChild(div);
+            });
+        }
+        let last = 0, lastR = 0;
+        function loop(ts) {
+            if (last) items += cps * (ts - last) / 1000;
+            last = ts;
+            document.getElementById('counter').textContent = fmt(items) + ' __RESOURCE__';
+            document.getElementById('cps').textContent = cps.toFixed(1) + '/sec · Level ' + level + ' · +' + cp + '/click';
+            document.getElementById('xpf').style.width = Math.min(100, xp / xpMax * 100) + '%';
+            if (ts - lastR > 500) { lastR = ts; renderUpgrades(); }
+            requestAnimationFrame(loop);
+        }
+        renderUpgrades();
+        requestAnimationFrame(loop);
+    </script>
+</body>
+</html>
+'@
+
+$html_inserts = @()
+
+foreach ($theme in $clicker_themes) {
+    $title = $theme[0]
+    $filename = $theme[1]
+    $emoji = $theme[2]
+    $resource = $theme[3]
+    $c1 = $theme[4]
+    $c2 = $theme[5]
+
+    $content = $template.Replace("__TITLE__", $title).Replace("__EMOJI__", $emoji).Replace("__RESOURCE__", $resource).Replace("__COLOR1__", $c1).Replace("__COLOR2__", $c2)
+    $filepath = "games\clicker\$filename.html"
+    Set-Content -Path $filepath -Value $content -Encoding UTF8
+
+    $html_inserts += "                    <div class=`"game-card`" onclick=`"window.open('games/clicker/$filename.html','_blank')`">
+                        <div class=`"game-thumb`">
+                            <div style=`"width:100%;height:100%;background:linear-gradient(135deg,$c1,$c2);display:flex;align-items:center;justify-content:center;font-size:3.5rem;`">
+                                $emoji</div>
+                        </div>
+                        <div class=`"game-info`">
+                            <h3>$title</h3><button class=`"play-btn`">PLAY</button>
+                        </div>
+                    </div>"
+}
+
+$final_insert = $html_inserts -join "`n"
+Set-Content -Path "clicker_cards.html" -Value $final_insert -Encoding UTF8
